@@ -20,7 +20,7 @@ from typing import Any, Callable, Iterable
 from urllib.parse import urljoin, urlsplit, urlunsplit
 
 from .artifact_bus import ArtifactBus
-from .validation import load_json, validate_artifact
+from .validation import load_bounded_json, validate_artifact
 
 PROTOCOL_VERSION = "1.0.0"
 MAX_FETCH_BYTES = 2 * 1024 * 1024
@@ -969,12 +969,9 @@ def diagnose(
     fetcher: Fetcher | None = None,
     resolver: Resolver = socket.getaddrinfo,
 ) -> dict[str, Any]:
-    try:
-        if input_path.stat().st_size > MAX_INPUT_BYTES:
-            raise ValueError(f"diagnosis brief exceeds {MAX_INPUT_BYTES} bytes")
-    except OSError as exc:
-        raise ValueError(f"diagnosis brief is unavailable: {input_path}") from exc
-    brief = validate_diagnosis_brief(load_json(input_path))
+    brief = validate_diagnosis_brief(
+        load_bounded_json(input_path, max_bytes=MAX_INPUT_BYTES, field="diagnosis brief")
+    )
     now = (clock or (lambda: datetime.now(timezone.utc)))()
     if now.tzinfo is None:
         now = now.replace(tzinfo=timezone.utc)
@@ -1176,6 +1173,7 @@ def diagnose(
         ensure_ascii=False,
         sort_keys=True,
         separators=(",", ":"),
+        allow_nan=False,
     )
     run_id = _stable_id("run", "diagnose", canonical)
     ledger_records = [{**record, "status": "provided"} for record in provided]

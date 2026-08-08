@@ -1,4 +1,5 @@
 import json
+import ast
 import subprocess
 import zipfile
 from copy import deepcopy
@@ -31,6 +32,19 @@ def test_all_eight_protocol_schemas_are_valid():
         schema = load_schema(name)
         Draft202012Validator.check_schema(schema)
         assert schema["properties"]["protocol_version"]["const"] == "1.0.0"
+
+
+def test_all_runtime_and_gate_json_writers_emit_standard_json():
+    root = repository_root()
+    for source in [*(root / "src" / "yao_geo").glob("*.py"), *(root / "scripts").glob("*.py")]:
+        tree = ast.parse(source.read_text(encoding="utf-8"))
+        for node in ast.walk(tree):
+            if not isinstance(node, ast.Call) or not isinstance(node.func, ast.Attribute):
+                continue
+            if not isinstance(node.func.value, ast.Name) or node.func.value.id != "json" or node.func.attr != "dumps":
+                continue
+            allow_nan = next((keyword.value for keyword in node.keywords if keyword.arg == "allow_nan"), None)
+            assert isinstance(allow_nan, ast.Constant) and allow_nan.value is False, f"{source}:{node.lineno}"
 
 
 def test_reserved_schemas_accept_protocol_examples():

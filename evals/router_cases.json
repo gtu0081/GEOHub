@@ -678,5 +678,207 @@
       "workflow_id": null,
       "runnable": true
     }
+  },
+  {
+    "id": "r069",
+    "text": "Do not under any circumstances create an article; audit our website instead",
+    "category": "adversarial",
+    "expected": {"skill_id": "geo-diagnose", "workflow_id": null, "runnable": true}
+  },
+  {
+    "id": "r070",
+    "text": "I don't want any keyword research at all; write an explainer",
+    "category": "adversarial",
+    "expected": {"skill_id": "geo-content", "workflow_id": null, "runnable": true}
+  },
+  {
+    "id": "r071",
+    "text": "无论如何都不要进行任何形式的意图挖掘和拓词工作，只需要诊断网站问题",
+    "category": "adversarial",
+    "expected": {"skill_id": "geo-diagnose", "workflow_id": null, "runnable": true}
+  },
+  {
+    "id": "r072",
+    "text": "Do not create an article; do keyword research instead",
+    "category": "adversarial",
+    "expected": {"skill_id": "geo-discover", "workflow_id": null, "runnable": true}
+  },
+  {
+    "id": "r073",
+    "text": "Don't create an article but audit the website",
+    "category": "adversarial",
+    "expected": {"skill_id": "geo-diagnose", "workflow_id": null, "runnable": true}
+  },
+  {
+    "id": "r074",
+    "text": "不要写文章但诊断网站",
+    "category": "adversarial",
+    "expected": {"skill_id": "geo-diagnose", "workflow_id": null, "runnable": true}
+  },
+  {
+    "id": "r075",
+    "text": "不需要生成内容但请拓词",
+    "category": "adversarial",
+    "expected": {"skill_id": "geo-discover", "workflow_id": null, "runnable": true}
+  },
+  {
+    "id": "r076",
+    "text": "Do not create an article however audit the website",
+    "category": "adversarial",
+    "expected": {
+      "skill_id": "geo-diagnose",
+      "workflow_id": null,
+      "runnable": true
+    }
+  },
+  {
+    "id": "r077",
+    "text": "Please do not, however, audit the website",
+    "category": "adversarial",
+    "expected": {"skill_id": "geo", "workflow_id": null, "runnable": true}
+  },
+  {
+    "id": "r078",
+    "text": "Please do not, however, discover questions and audit the website",
+    "category": "adversarial",
+    "expected": {"skill_id": "geo", "workflow_id": null, "runnable": true}
+  },
+  {
+    "id": "r079",
+    "text": "不要写文章请诊断网站",
+    "category": "adversarial",
+    "expected": {"skill_id": "geo-diagnose", "workflow_id": null, "runnable": true}
+  },
+  {
+    "id": "r080",
+    "text": "Do not write, however audit the website",
+    "category": "adversarial",
+    "expected": {"skill_id": "geo-diagnose", "workflow_id": null, "runnable": true}
+  },
+  {
+    "id": "r081",
+    "text": "Please do not, instead, audit the website",
+    "category": "adversarial",
+    "expected": {"skill_id": "geo", "workflow_id": null, "runnable": true}
+  },
+  {
+    "id": "r082",
+    "text": "Please do not instead discover questions and audit the website",
+    "category": "adversarial",
+    "expected": {"skill_id": "geo", "workflow_id": null, "runnable": true}
+  },
+  {
+    "id": "r083",
+    "text": "请不要改为诊断网站",
+    "category": "adversarial",
+    "expected": {"skill_id": "geo", "workflow_id": null, "runnable": true}
+  },
+  {
+    "id": "r084",
+    "text": "请不要改为拓词并诊断网站",
+    "category": "adversarial",
+    "expected": {"skill_id": "geo", "workflow_id": null, "runnable": true}
+  },
+  {
+    "id": "r085",
+    "text": "不要转而写文章",
+    "category": "adversarial",
+    "expected": {"skill_id": "geo", "workflow_id": null, "runnable": true}
+  },
+  {
+    "id": "r086",
+    "text": "You must not audit the website",
+    "category": "adversarial",
+    "expected": {"skill_id": "geo", "workflow_id": null, "runnable": true}
+  },
+  {
+    "id": "r087",
+    "text": "You should not create content",
+    "category": "adversarial",
+    "expected": {"skill_id": "geo", "workflow_id": null, "runnable": true}
+  },
+  {
+    "id": "r088",
+    "text": "You cannot run keyword research",
+    "category": "adversarial",
+    "expected": {"skill_id": "geo", "workflow_id": null, "runnable": true}
+  },
+  {
+    "id": "r089",
+    "text": "You can't discover questions and audit the website",
+    "category": "adversarial",
+    "expected": {"skill_id": "geo", "workflow_id": null, "runnable": true}
+  },
+  {
+    "id": "r090",
+    "text": "请勿诊断网站",
+    "category": "adversarial",
+    "expected": {"skill_id": "geo", "workflow_id": null, "runnable": true}
+  },
+  {
+    "id": "r091",
+    "text": "勿生成文章",
+    "category": "adversarial",
+    "expected": {"skill_id": "geo", "workflow_id": null, "runnable": true}
+  },
+  {
+    "id": "r092",
+    "text": "不要写文章，改为诊断网站",
+    "category": "adversarial",
+    "expected": {"skill_id": "geo-diagnose", "workflow_id": null, "runnable": true}
+  },
+  {
+    "id": "r093",
+    "text": "不断拓词",
+    "category": "adversarial",
+    "expected": {"skill_id": "geo-discover", "workflow_id": null, "runnable": true}
+  },
+  {
+    "id": "r094",
+    "text": "不仅要拓词还要诊断网站",
+    "category": "mixed",
+    "expected": {"skill_id": "geo-discover", "workflow_id": "brand-baseline-lite", "runnable": true}
+  },
+  {
+    "id": "r095",
+    "text": "帮我做个不错的网站诊断",
+    "category": "adversarial",
+    "expected": {"skill_id": "geo-diagnose", "workflow_id": null, "runnable": true}
+  },
+  {
+    "id": "r096",
+    "text": "不同网站 audit",
+    "category": "adversarial",
+    "expected": {"skill_id": "geo-diagnose", "workflow_id": null, "runnable": true}
+  },
+  {
+    "id": "r097",
+    "text": "不诊断网站",
+    "category": "adversarial",
+    "expected": {"skill_id": "geo", "workflow_id": null, "runnable": true}
+  },
+  {
+    "id": "r098",
+    "text": "不拓词",
+    "category": "adversarial",
+    "expected": {"skill_id": "geo", "workflow_id": null, "runnable": true}
+  },
+  {
+    "id": "r099",
+    "text": "不写文章",
+    "category": "adversarial",
+    "expected": {"skill_id": "geo", "workflow_id": null, "runnable": true}
+  },
+  {
+    "id": "r100",
+    "text": "不拓词但诊断网站",
+    "category": "adversarial",
+    "expected": {"skill_id": "geo-diagnose", "workflow_id": null, "runnable": true}
+  },
+  {
+    "id": "r101",
+    "text": "不拓词只诊断网站",
+    "category": "adversarial",
+    "expected": {"skill_id": "geo-diagnose", "workflow_id": null, "runnable": true}
   }
 ]

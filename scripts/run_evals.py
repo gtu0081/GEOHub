@@ -184,8 +184,8 @@ def write_blind_pack() -> None:
         pack.append({"id": case["id"], "prompt": f"Evaluate the {case['case_type']} result for {case['skill_id']}.", "variant_a": skilled if skilled_is_a else baseline, "variant_b": baseline if skilled_is_a else skilled, "review_status": "pending; missing evidence"})
         key.append({"id": case["id"], "with_skill_variant": "A" if skilled_is_a else "B"})
     reports = ROOT / "reports"
-    (reports / "output-blind-pack.json").write_text(json.dumps(pack, ensure_ascii=False, indent=2) + "\n", encoding="utf-8")
-    (reports / "output-blind-answer-key.json").write_text(json.dumps(key, ensure_ascii=False, indent=2) + "\n", encoding="utf-8")
+    (reports / "output-blind-pack.json").write_text(json.dumps(pack, ensure_ascii=False, indent=2, allow_nan=False) + "\n", encoding="utf-8")
+    (reports / "output-blind-answer-key.json").write_text(json.dumps(key, ensure_ascii=False, indent=2, allow_nan=False) + "\n", encoding="utf-8")
     lines = ["# Blind A/B Review Pack", "", "Answers are intentionally absent. Human review is pending; missing evidence.", ""]
     for item in pack:
         lines.extend([f"## {item['id']}", "", f"Prompt: {item['prompt']}", "", f"Variant A: {item['variant_a']}", "", f"Variant B: {item['variant_b']}", ""])
@@ -201,7 +201,7 @@ def main() -> int:
     summary = {"status": "pass" if passed else "fail", "thresholds": thresholds, "router": router, "triggers": triggers, "outputs": outputs}
     reports = ROOT / "reports"
     reports.mkdir(exist_ok=True)
-    (reports / "eval-summary.json").write_text(json.dumps(summary, ensure_ascii=False, indent=2) + "\n", encoding="utf-8")
+    (reports / "eval-summary.json").write_text(json.dumps(summary, ensure_ascii=False, indent=2, allow_nan=False) + "\n", encoding="utf-8")
     failed_routes = [item["id"] for item in router["results"] if not item["passed"]]
     failed_outputs = [item["id"] for item in outputs["results"] if not item["passed"]]
     md = f"""# Evaluation Summary
@@ -220,7 +220,7 @@ Status: **{summary['status']}**
 """
     (reports / "eval-summary.md").write_text(md, encoding="utf-8")
     write_blind_pack()
-    print(json.dumps({"status": summary["status"], "precision": router["precision"], "recall": router["recall"], "trigger_compliance": triggers["compliance"], "contract_compliance": outputs["contract_compliance"], "fabricated_citations": outputs["fabricated_citations"]}, indent=2))
+    print(json.dumps({"status": summary["status"], "precision": router["precision"], "recall": router["recall"], "trigger_compliance": triggers["compliance"], "contract_compliance": outputs["contract_compliance"], "fabricated_citations": outputs["fabricated_citations"]}, indent=2, allow_nan=False))
     return 0 if passed else 2
 
 

@@ -16,7 +16,7 @@ from typing import Any, Callable
 from urllib.parse import urlsplit
 
 from .artifact_bus import ArtifactBus
-from .validation import validate_artifact
+from .validation import read_bounded_regular_file, validate_artifact
 
 PROTOCOL_VERSION = "1.0.0"
 GENERATOR_VERSION = "0.1.0"
@@ -116,24 +116,13 @@ def _read_regular_fd(file_descriptor: int, max_bytes: int, field: str) -> bytes:
     return b"".join(chunks)
 
 
-def _read_regular_path(path: Path, max_bytes: int, field: str) -> bytes:
-    file_descriptor: int | None = None
-    try:
-        file_descriptor = os.open(path, _open_flags())
-        return _read_regular_fd(file_descriptor, max_bytes, field)
-    except OSError as exc:
-        raise ValueError(f"{field} is unavailable or unsafe: {path}") from exc
-    finally:
-        if file_descriptor is not None:
-            try:
-                os.close(file_descriptor)
-            except OSError:
-                pass
-
-
 def _load_content_brief(path: Path) -> dict[str, Any]:
     try:
-        raw = _read_regular_path(path, MAX_INPUT_BYTES, "content brief").decode("utf-8")
+        raw = read_bounded_regular_file(
+            path,
+            max_bytes=MAX_INPUT_BYTES,
+            field="content brief",
+        ).decode("utf-8")
         value = json.loads(raw)
     except (UnicodeDecodeError, json.JSONDecodeError) as exc:
         raise ValueError(f"content brief is not valid UTF-8 JSON: {path}: {exc}") from exc
@@ -499,6 +488,8 @@ def _ranking_score_cells(
         cells.setdefault(key, []).append(item)
     for (entity, dimension), records in cells.items():
         scores = {float(item["score"]) for item in records}
+        if any(not math.isfinite(score) for score in scores):
+            raise ValueError(f"ranking score must be finite for {entity} × {dimension}")
         if len(scores) > 1:
             raise ValueError(
                 f"ranking has conflicting duplicate scores for {entity} × {dimension}"
@@ -517,11 +508,22 @@ def _ranking_rows(
         evidence_ids: list[str] = []
         for dimension, weight in dimensions:
             records = cells[(entity.casefold(), dimension.casefold())]
-            weighted.append((float(records[0]["score"]), weight))
+            value = float(records[0]["score"])
+            product = value * weight
+            if not all(math.isfinite(number) for number in (value, weight, product)):
+                raise ValueError(f"ranking weighted product must be finite for {entity} × {dimension}")
+            weighted.append((value, weight))
             evidence_ids.extend(item["label"] for item in records)
-        score = sum(value * weight for value, weight in weighted) / sum(
-            weight for _, weight in weighted
-        )
+        try:
+            numerator = math.fsum(value * weight for value, weight in weighted)
+            denominator = math.fsum(weight for _, weight in weighted)
+        except OverflowError as exc:
+            raise ValueError(f"ranking aggregate must be finite for {entity}") from exc
+        if not all(math.isfinite(number) for number in (numerator, denominator)) or denominator <= 0:
+            raise ValueError(f"ranking aggregate must be finite for {entity}")
+        score = numerator / denominator
+        if not math.isfinite(score):
+            raise ValueError(f"ranking result must be finite for {entity}")
         rows.append(
             {
                 "entity": entity,
@@ -838,7 +840,7 @@ def _body_blocks(content: dict[str, Any]) -> list[TypedBlock]:
                     ("heading", item["title"]),
                     ("bullet", f"模式：{item['pattern']}"),
                     ("bullet", f"意图：{item['intent']}；场景：{item['scenario']}"),
-                    ("bullet", f"评分：{json.dumps(item['scores'], ensure_ascii=False, sort_keys=True)}"),
+                    ("bullet", f"评分：{json.dumps(item['scores'], ensure_ascii=False, sort_keys=True, allow_nan=False)}"),
                 ]
             )
     elif "explainer" in mode_data:
@@ -848,7 +850,7 @@ def _body_blocks(content: dict[str, Any]) -> list[TypedBlock]:
             blocks.extend(
                 [
                     ("heading", heading),
-                    ("paragraph", json.dumps(value, ensure_ascii=False) if not isinstance(value, str) else value),
+                    ("paragraph", json.dumps(value, ensure_ascii=False, allow_nan=False) if not isinstance(value, str) else value),
                 ]
             )
     elif "comparison" in mode_data:
@@ -868,7 +870,7 @@ def _body_blocks(content: dict[str, Any]) -> list[TypedBlock]:
         blocks.extend(
             [
                 ("heading", "评估方法"),
-                ("paragraph", json.dumps(data["evaluation_method"], ensure_ascii=False)),
+                ("paragraph", json.dumps(data["evaluation_method"], ensure_ascii=False, allow_nan=False)),
                 ("heading", "排序结果"),
             ]
         )
@@ -884,7 +886,7 @@ def _body_blocks(content: dict[str, Any]) -> list[TypedBlock]:
             blocks.extend(
                 [
                     ("heading", key.replace("_", " ").title()),
-                    ("paragraph", json.dumps(value, ensure_ascii=False, indent=2)),
+                    ("paragraph", json.dumps(value, ensure_ascii=False, indent=2, allow_nan=False)),
                 ]
             )
     else:
@@ -1052,7 +1054,7 @@ def content(input_path: Path, output_path: Path, *, clock: Clock | None = None) 
     brief = validate_content_brief(_load_content_brief(input_path))
     normalized, source_text = _normalize_brief(brief, input_path)
     validate_content_brief(normalized)
-    canonical = json.dumps(normalized, ensure_ascii=False, sort_keys=True, separators=(",", ":"))
+    canonical = json.dumps(normalized, ensure_ascii=False, sort_keys=True, separators=(",", ":"), allow_nan=False)
     run_id = _stable_id("run", canonical)
     now = (clock or (lambda: datetime.now(timezone.utc)))()
     if now.tzinfo is None:

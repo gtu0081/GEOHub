@@ -148,3 +148,137 @@ def test_planned_route_exposes_inputs_and_closest_v0_artifact():
     assert result["runnable"] is False
     assert result["required_inputs"]
     assert result["closest_v0_artifact"]
+
+
+def test_long_scope_negations_exclude_only_the_negated_stage():
+    cases = (
+        ("Do not under any circumstances create an article; audit our website instead", "geo-diagnose"),
+        ("I don't want any keyword research at all; write an explainer", "geo-content"),
+        ("无论如何都不要进行任何形式的意图挖掘和拓词工作，只需要诊断网站问题", "geo-diagnose"),
+    )
+    for text, skill_id in cases:
+        result = route(text)
+        assert result["skill_id"] == skill_id
+        assert "workflow" not in result
+
+
+def test_negated_content_is_excluded_from_positive_multistage_dag():
+    result = route(
+        "Do not under any circumstances create an article; discover questions, then audit our site"
+    )
+    assert result["workflow"]["id"] == "brand-baseline-lite"
+    assert [step["skill_id"] for step in result["workflow"]["steps"]] == [
+        "geo-discover",
+        "geo-diagnose",
+    ]
+
+
+def test_positive_intent_after_negated_clause_remains_routable():
+    result = route("Don't create an article; do keyword research instead")
+    assert result["skill_id"] == "geo-discover"
+    assert "workflow" not in result
+
+
+def test_bare_transition_word_starts_a_positive_clause():
+    result = route("Do not create an article however audit the website")
+    assert result["skill_id"] == "geo-diagnose"
+    assert "workflow" not in result
+
+
+def test_parenthetical_however_does_not_cancel_negation():
+    for text in (
+        "Please do not, however, audit the website",
+        "Please do not, however, discover questions and audit the website",
+    ):
+        result = route(text)
+        assert result["skill_id"] == "geo"
+        assert "workflow" not in result
+
+    transition = route("Do not write, however audit the website")
+    assert transition["skill_id"] == "geo-diagnose"
+    assert "workflow" not in transition
+
+
+def test_connector_inside_negation_scope_does_not_start_a_route_or_dag():
+    cases = (
+        "Please do not, instead, audit the website",
+        "Please do not instead discover questions and audit the website",
+        "请不要改为诊断网站",
+        "请不要改为拓词并诊断网站",
+        "不要转而写文章",
+    )
+    for text in cases:
+        result = route(text)
+        assert result["skill_id"] == "geo"
+        assert "workflow" not in result
+
+
+def test_connector_after_negated_explicit_intent_starts_positive_scope():
+    cases = (
+        ("Do not write, instead audit the website", "geo-diagnose"),
+        ("不要写文章，改为诊断网站", "geo-diagnose"),
+        ("不要诊断网站，转而写文章", "geo-content"),
+    )
+    for text, expected in cases:
+        result = route(text)
+        assert result["skill_id"] == expected
+        assert "workflow" not in result
+
+
+def test_modal_and_chinese_prohibitions_exclude_single_and_dag_intents():
+    cases = (
+        "You must not audit the website",
+        "You should not create content",
+        "You cannot run keyword research",
+        "You can't discover questions and audit the website",
+        "请勿诊断网站",
+        "勿生成文章",
+        "请勿拓词并诊断网站",
+    )
+    for text in cases:
+        result = route(text)
+        assert result["skill_id"] == "geo"
+        assert "workflow" not in result
+
+
+def test_chinese_bu_compounds_remain_positive_intents():
+    cases = (
+        ("不断拓词", "geo-discover", None),
+        ("不仅要拓词还要诊断网站", "geo-discover", "brand-baseline-lite"),
+        ("帮我做个不错的网站诊断", "geo-diagnose", None),
+        ("不同网站 audit", "geo-diagnose", None),
+    )
+    for text, skill_id, workflow_id in cases:
+        result = route(text)
+        assert result["skill_id"] == skill_id
+        assert result.get("workflow", {}).get("id") == workflow_id
+
+
+def test_chinese_bu_directly_governing_action_remains_negative():
+    for text in ("不诊断网站", "不拓词", "不写文章"):
+        result = route(text)
+        assert result["skill_id"] == "geo"
+        assert "workflow" not in result
+
+    for text in ("不拓词但诊断网站", "不拓词只诊断网站"):
+        transition = route(text)
+        assert transition["skill_id"] == "geo-diagnose"
+        assert "workflow" not in transition
+
+
+def test_bare_chinese_request_marker_starts_positive_clause():
+    result = route("不要写文章请诊断网站")
+    assert result["skill_id"] == "geo-diagnose"
+    assert "workflow" not in result
+
+
+def test_bare_contrast_connector_starts_positive_clause():
+    cases = (
+        ("Don't create an article but audit the website", "geo-diagnose"),
+        ("不要写文章但诊断网站", "geo-diagnose"),
+        ("不需要生成内容但请拓词", "geo-discover"),
+    )
+    for text, skill_id in cases:
+        result = route(text)
+        assert result["skill_id"] == skill_id
+        assert "workflow" not in result

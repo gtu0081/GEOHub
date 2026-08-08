@@ -209,7 +209,24 @@ def main() -> int:
     waiver = json.loads((ROOT / "reports" / "review-waivers.json").read_text(encoding="utf-8"))
     waiver_schema = json.loads((ROOT / "reports" / "review-waivers.schema.json").read_text(encoding="utf-8"))
     waiver_errors = list(Draft202012Validator(waiver_schema, format_checker=FormatChecker()).iter_errors(waiver))
-    if waiver_errors or any(date.fromisoformat(item["expires_on"]) < date.today() for item in waiver.get("waivers", [])):
+    expected_waivers = {
+        *((skill_id, gate) for skill_id in ("geo", "geo-discover", "geo-diagnose", "geo-content") for gate in ("operations-loop", "release-notes")),
+        *(("suite", gate) for gate in ("human-blind-review", "real-platform-benchmark", "commercial-legal-review")),
+    }
+    observed_waivers = [(item.get("skill_id"), item.get("gate")) for item in waiver.get("waivers", [])]
+    try:
+        expired_waivers = any(
+            date.fromisoformat(item["expires_on"]) < date.today()
+            for item in waiver.get("waivers", [])
+        )
+    except (KeyError, TypeError, ValueError):
+        expired_waivers = True
+    if (
+        waiver_errors
+        or len(observed_waivers) != len(set(observed_waivers))
+        or set(observed_waivers) != expected_waivers
+        or expired_waivers
+    ):
         fail("review waiver ledger is invalid or expired")
 
     print("repository verification passed")

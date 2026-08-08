@@ -15,7 +15,7 @@ from .router import route
 class JsonArgumentParser(argparse.ArgumentParser):
     def error(self, message: str) -> None:
         print(
-            json.dumps({"status": "error", "message": message}, ensure_ascii=False),
+            json.dumps({"status": "error", "message": message}, ensure_ascii=False, allow_nan=False),
             file=sys.stderr,
         )
         raise SystemExit(2)
@@ -55,7 +55,7 @@ def main(argv: Sequence[str] | None = None) -> int:
         else:
             result = content(args.input, args.output)
     except (OSError, ValueError) as exc:
-        print(json.dumps({"status": "error", "message": str(exc)}, ensure_ascii=False), file=sys.stderr)
+        print(json.dumps({"status": "error", "message": str(exc)}, ensure_ascii=False, allow_nan=False), file=sys.stderr)
         return 2
-    print(json.dumps(result, ensure_ascii=False, indent=2, sort_keys=True))
+    print(json.dumps(result, ensure_ascii=False, indent=2, sort_keys=True, allow_nan=False))
     return 0

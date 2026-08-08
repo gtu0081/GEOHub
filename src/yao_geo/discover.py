@@ -7,7 +7,7 @@ from pathlib import Path
 from typing import Any, Callable
 
 from .artifact_bus import ArtifactBus
-from .validation import load_json, validate_artifact
+from .validation import load_bounded_json, validate_artifact
 
 PROTOCOL_VERSION = "1.0.0"
 Clock = Callable[[], datetime]
@@ -146,12 +146,12 @@ def discover(
     clock: Clock | None = None,
 ) -> dict[str, Any]:
     """Generate one validated discover run and return a compact run summary."""
-    brief = load_json(input_path)
+    brief = load_bounded_json(input_path, max_bytes=1024 * 1024, field="GEO brief")
     validate_artifact("geo-brief", brief)
     evidence_ids = [item["evidence_id"] for item in brief.get("evidence", [])]
     if len(evidence_ids) != len(set(evidence_ids)):
         raise ValueError("GEO brief contains duplicate evidence_id values")
-    canonical = json.dumps(brief, ensure_ascii=False, sort_keys=True, separators=(",", ":"))
+    canonical = json.dumps(brief, ensure_ascii=False, sort_keys=True, separators=(",", ":"), allow_nan=False)
     run_id = _stable_id("run", canonical)
     now = (clock or (lambda: datetime.now(timezone.utc)))()
     if now.tzinfo is None:

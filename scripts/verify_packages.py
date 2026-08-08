@@ -153,11 +153,11 @@ def main() -> int:
         raise SystemExit(f"package verification failed: {exc}") from exc
     report = {"status": "pass", "package_count": len(results), "deterministic_repeat": True, "packages": results}
     REPORTS.mkdir(exist_ok=True)
-    (REPORTS / "package-verification.json").write_text(json.dumps(report, indent=2) + "\n", encoding="utf-8")
+    (REPORTS / "package-verification.json").write_text(json.dumps(report, indent=2, allow_nan=False) + "\n", encoding="utf-8")
     lines = ["# Package Verification", "", "Status: **pass**", "", f"Packages: {len(results)}; repeated build hashes: identical.", "", "| Package | SHA-256 | Members | SKILL.md |", "| --- | --- | ---: | ---: |"]
     lines.extend(f"| {item['name']} | `{item['sha256']}` | {item['members']} | {item['skill_count']} |" for item in results)
     (REPORTS / "package-verification.md").write_text("\n".join(lines) + "\n", encoding="utf-8")
-    print(json.dumps({"status": "pass", "package_count": len(results), "deterministic_repeat": True}, indent=2))
+    print(json.dumps({"status": "pass", "package_count": len(results), "deterministic_repeat": True}, indent=2, allow_nan=False))
     return 0
 
 

@@ -7,6 +7,9 @@
     "schema_version": {"const": "1.0.0"},
     "waivers": {
       "type": "array",
+      "minItems": 11,
+      "maxItems": 11,
+      "uniqueItems": true,
       "items": {
         "type": "object",
         "additionalProperties": false,
@@ -19,7 +22,14 @@
           "reason": {"type": "string", "minLength": 1},
           "expires_on": {"type": "string", "format": "date"},
           "recheck": {"type": "string", "minLength": 1}
-        }
+        },
+        "allOf": [
+          {
+            "if": {"properties": {"skill_id": {"const": "suite"}}, "required": ["skill_id"]},
+            "then": {"properties": {"gate": {"enum": ["human-blind-review", "real-platform-benchmark", "commercial-legal-review"]}}},
+            "else": {"properties": {"gate": {"enum": ["operations-loop", "release-notes"]}}}
+          }
+        ]
       }
     }
   }

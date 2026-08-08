@@ -82,11 +82,11 @@ def source_smoke(source_zip: Path, temp_root: Path, wheelhouse: Path) -> dict:
     fixtures = temp_root / "fixtures"
     fixtures.mkdir()
     brief = fixtures / "brief.json"
-    brief.write_text(json.dumps({"protocol_version":"1.0.0","brief_id":"synthetic-install","subject":"Synthetic knowledge base","locale":"en","seed_queries":["synthetic query"],"audiences":["tester"],"scenarios":["test"],"competitors":[],"evidence":[]}), encoding="utf-8")
+    brief.write_text(json.dumps({"protocol_version":"1.0.0","brief_id":"synthetic-install","subject":"Synthetic knowledge base","locale":"en","seed_queries":["synthetic query"],"audiences":["tester"],"scenarios":["test"],"competitors":[],"evidence":[]}, allow_nan=False), encoding="utf-8")
     diagnosis = fixtures / "diagnosis.json"
-    diagnosis.write_text(json.dumps({"subject":"Synthetic brand","scope":"brand","evidence":[{"evidence_id":"synthetic","claim":"Synthetic brand has a documented page.","source_uri":"https://example.invalid/synthetic"}]}), encoding="utf-8")
+    diagnosis.write_text(json.dumps({"subject":"Synthetic brand","scope":"brand","evidence":[{"evidence_id":"synthetic","claim":"Synthetic brand has a documented page.","source_uri":"https://example.invalid/synthetic"}]}, allow_nan=False), encoding="utf-8")
     content = fixtures / "content.json"
-    content.write_text(json.dumps({"mode":"explainer","topic":"Synthetic GEO topic","evidence":[],"desired_formats":["markdown","json","html"]}), encoding="utf-8")
+    content.write_text(json.dumps({"mode":"explainer","topic":"Synthetic GEO topic","evidence":[],"desired_formats":["markdown","json","html"]}, allow_nan=False), encoding="utf-8")
     runs = temp_root / "runs"
     commands = [
         [str(python), "-m", "yao_geo", "route", "--text", "Discover AI search questions"],
@@ -137,9 +137,9 @@ def structural_smoke(path: Path, temp_root: Path, wheelhouse: Path) -> dict:
         "geo-diagnose": destination / "install-diagnose.json",
         "geo-content": destination / "install-content.json",
     }
-    fixtures["geo-discover"].write_text(json.dumps({"protocol_version":"1.0.0","brief_id":"zip-install","subject":"Synthetic ZIP install","locale":"zh-CN","seed_queries":["拓词"],"audiences":["tester"],"scenarios":["install"],"competitors":[],"evidence":[]}), encoding="utf-8")
-    fixtures["geo-diagnose"].write_text(json.dumps({"subject":"Synthetic ZIP install","scope":"brand","evidence":[{"evidence_id":"zip-install","claim":"Synthetic evidence for install smoke.","source_uri":"https://example.invalid/install"}]}), encoding="utf-8")
-    fixtures["geo-content"].write_text(json.dumps({"mode":"explainer","topic":"Synthetic ZIP install","evidence":[],"desired_formats":["markdown","json","html"]}), encoding="utf-8")
+    fixtures["geo-discover"].write_text(json.dumps({"protocol_version":"1.0.0","brief_id":"zip-install","subject":"Synthetic ZIP install","locale":"zh-CN","seed_queries":["拓词"],"audiences":["tester"],"scenarios":["install"],"competitors":[],"evidence":[]}, allow_nan=False), encoding="utf-8")
+    fixtures["geo-diagnose"].write_text(json.dumps({"subject":"Synthetic ZIP install","scope":"brand","evidence":[{"evidence_id":"zip-install","claim":"Synthetic evidence for install smoke.","source_uri":"https://example.invalid/install"}]}, allow_nan=False), encoding="utf-8")
+    fixtures["geo-content"].write_text(json.dumps({"mode":"explainer","topic":"Synthetic ZIP install","evidence":[],"desired_formats":["markdown","json","html"]}, allow_nan=False), encoding="utf-8")
     runs = destination / "install-runs"
     routed = {
         "geo-discover": ("Discover AI search questions", "run_discover.py"),
@@ -175,7 +175,7 @@ def main() -> int:
     source = DIST / f"yao-geo-source-{VERSION}.zip"
     packages = sorted(path for path in DIST.glob("*.zip") if path.name != source.name)
     with tempfile.TemporaryDirectory(prefix="yao-geo-install-") as raw:
-        temp_root = Path(raw)
+        temp_root = Path(raw).resolve()
         clean_env = os.environ.copy()
         clean_env.pop("PYTHONPATH", None)
         clean_env["PIP_DISABLE_PIP_VERSION_CHECK"] = "1"
@@ -185,10 +185,10 @@ def main() -> int:
         structural = [structural_smoke(path, temp_root, wheelhouse) for path in packages]
     report = {"status": "pass", "target": "all", "source": source_result, "structural_packages": structural, "scratch_retained": False}
     REPORTS.mkdir(exist_ok=True)
-    (REPORTS / "install-simulation.json").write_text(json.dumps(report, indent=2) + "\n", encoding="utf-8")
+    (REPORTS / "install-simulation.json").write_text(json.dumps(report, indent=2, allow_nan=False) + "\n", encoding="utf-8")
     lines = ["# Install Simulation", "", "Status: **pass**", "", f"Fresh source install and CLI smokes: {', '.join(source_result['cli_smokes'])}.", f"Fresh per-ZIP `pip install .`, route-entry resolution, and provider executions: {len(structural)}.", "Temporary install roots were removed."]
     (REPORTS / "install-simulation.md").write_text("\n\n".join(lines) + "\n", encoding="utf-8")
-    print(json.dumps({"status": "pass", "source_cli_smokes": len(source_result["cli_smokes"]), "structural_packages": len(structural)}, indent=2))
+    print(json.dumps({"status": "pass", "source_cli_smokes": len(source_result["cli_smokes"]), "structural_packages": len(structural)}, indent=2, allow_nan=False))
     return 0
 
 

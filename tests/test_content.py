@@ -1,5 +1,6 @@
 import importlib
 import json
+import math
 import os
 import re
 import zipfile
@@ -315,6 +316,34 @@ def test_ranking_rejects_conflicting_duplicate_entity_dimension_scores(tmp_path)
         content(_write(tmp_path, brief), tmp_path / "runs")
 
 
+def test_ranking_rejects_nonfinite_intermediate_without_partial_run(tmp_path):
+    brief = {
+        "mode": "ranking",
+        "topic": "overflow",
+        "entities": ["A", "B"],
+        "evaluation_method": {
+            "name": "overflow-safe",
+            "criteria": [{"name": "quality", "weight": 1e308}],
+        },
+        "evidence": [
+            {"label": "a", "claim": "A score", "source_uri": "https://example.com/a", "entity": "A", "dimension": "quality", "score": 1e308},
+            {"label": "b", "claim": "B score", "source_uri": "https://example.com/b", "entity": "B", "dimension": "quality", "score": 1e308},
+        ],
+    }
+    runs = tmp_path / "runs"
+    with pytest.raises(ValueError, match="ranking.*finite"):
+        content(_write(tmp_path, brief), runs)
+    assert not runs.exists() or list(runs.iterdir()) == []
+
+
+@pytest.mark.parametrize("nonfinite", [math.nan, math.inf, -math.inf])
+def test_artifact_bus_rejects_nested_nonfinite_json(nonfinite, tmp_path):
+    bus = ArtifactBus(tmp_path / "artifacts")
+    with pytest.raises(ValueError, match="non-finite"):
+        bus.write_json("nested.json", {"outer": [{"value": nonfinite}]})
+    assert list(bus.root.rglob("*")) == []
+
+
 def test_evaluation_method_rejects_tie_breaker_in_v01():
     with pytest.raises(ValueError, match="unknown fields"):
         validate_content_brief(
@@ -498,6 +527,14 @@ def test_brief_and_source_reject_fifo_and_brief_symlink(tmp_path):
     with pytest.raises(ValueError, match="unsafe"):
         content(linked_brief, tmp_path / "linked-runs")
 
+    real_parent = tmp_path / "real-parent"
+    real_parent.mkdir()
+    parent_brief = _write(real_parent, {"mode": "title", "topic": "parent link"})
+    linked_parent = tmp_path / "linked-parent"
+    linked_parent.symlink_to(real_parent, target_is_directory=True)
+    with pytest.raises(ValueError, match="unsafe"):
+        content(linked_parent / parent_brief.name, tmp_path / "linked-parent-runs")
+
     fifo_source = tmp_path / "source.fifo"
     os.mkfifo(fifo_source)
     source_brief = _write(
@@ -518,7 +555,7 @@ def test_brief_read_uses_open_descriptor_when_path_is_replaced(tmp_path, monkeyp
     def racing_open(path, flags, mode=0o777, *, dir_fd=None):
         nonlocal replaced
         descriptor = real_open(path, flags, mode, dir_fd=dir_fd)
-        if not replaced and dir_fd is None and Path(path) == brief:
+        if not replaced and dir_fd is not None and path == brief.name:
             os.replace(replacement, brief)
             replaced = True
         return descriptor

@@ -68,10 +68,17 @@ class ArtifactBus:
         target = self._resolve(relative_path)
         target.parent.mkdir(parents=True, exist_ok=True)
         temporary = target.with_suffix(target.suffix + ".tmp")
-        temporary.write_text(
-            json.dumps(artifact, ensure_ascii=False, indent=2, sort_keys=True) + "\n",
-            encoding="utf-8",
-        )
+        try:
+            serialized = json.dumps(
+                artifact,
+                ensure_ascii=False,
+                indent=2,
+                sort_keys=True,
+                allow_nan=False,
+            )
+        except ValueError as exc:
+            raise ValueError(f"Artifact JSON contains a non-finite number: {relative_path}") from exc
+        temporary.write_text(serialized + "\n", encoding="utf-8")
         temporary.replace(target)
         return target
 

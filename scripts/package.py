@@ -99,7 +99,7 @@ def packaged_pyproject(entries: dict[str, bytes]) -> bytes:
     lines = [base.rstrip(), "", "[tool.setuptools.data-files]"]
     for destination, sources in groups.items():
         if sources:
-            lines.append(f'"{destination}" = {json.dumps(sources)}')
+            lines.append(f'"{destination}" = {json.dumps(sources, allow_nan=False)}')
     return ("\n".join(lines) + "\n").encode()
 
 
@@ -149,7 +149,7 @@ def unified_package(files: list[Path]) -> Path:
     for skill_id in SKILLS:
         skill_root = ROOT / "skills" / skill_id
         entries[f"manifests/{skill_id}.json"] = (skill_root / "manifest.json").read_bytes()
-    entries["PACKAGE-METADATA.json"] = json.dumps({"channel": "community", "license": "AGPL-3.0-only", "commercial_license_status": "inquiry_only", "kind": "unified"}, indent=2).encode() + b"\n"
+    entries["PACKAGE-METADATA.json"] = json.dumps({"channel": "community", "license": "AGPL-3.0-only", "commercial_license_status": "inquiry_only", "kind": "unified"}, indent=2, allow_nan=False).encode() + b"\n"
     entries["pyproject.toml"] = packaged_pyproject(entries)
     output = DIST / f"yao-geo-unified-community-{VERSION}.zip"
     zip_write(output, entries)
@@ -168,7 +168,7 @@ def provider_package(files: list[Path], skill_id: str) -> Path:
             entries[raw[len(prefix):]] = (ROOT / path).read_bytes()
     if skill_id == "geo":
         entries["references/RESOLVER.md"] = (ROOT / "skills" / "RESOLVER.md").read_bytes()
-    entries["PACKAGE-METADATA.json"] = json.dumps({"channel": "community", "license": "AGPL-3.0-only", "commercial_license_status": "inquiry_only", "kind": "provider", "skill_id": skill_id}, indent=2).encode() + b"\n"
+    entries["PACKAGE-METADATA.json"] = json.dumps({"channel": "community", "license": "AGPL-3.0-only", "commercial_license_status": "inquiry_only", "kind": "provider", "skill_id": skill_id}, indent=2, allow_nan=False).encode() + b"\n"
     entries["pyproject.toml"] = packaged_pyproject(entries)
     output = DIST / f"{skill_id}-community-{VERSION}.zip"
     zip_write(output, entries)
@@ -183,7 +183,7 @@ def target_package(files: list[Path], target: str) -> Path:
     for skill_id in SKILLS:
         entries[f"manifests/{skill_id}.json"] = (ROOT / "skills" / skill_id / "manifest.json").read_bytes()
     entries["TARGET.md"] = f"# {target.title()} adapter\n\nInstall this directory as one Yao GEO skill. Runtime contracts remain protocol 1.0.0.\n".encode()
-    entries["PACKAGE-METADATA.json"] = json.dumps({"channel": "community", "license": "AGPL-3.0-only", "commercial_license_status": "inquiry_only", "kind": "target", "target": target}, indent=2).encode() + b"\n"
+    entries["PACKAGE-METADATA.json"] = json.dumps({"channel": "community", "license": "AGPL-3.0-only", "commercial_license_status": "inquiry_only", "kind": "target", "target": target}, indent=2, allow_nan=False).encode() + b"\n"
     entries["pyproject.toml"] = packaged_pyproject(entries)
     output = DIST / f"yao-geo-{target}-community-{VERSION}.zip"
     zip_write(output, entries)

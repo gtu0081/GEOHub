@@ -20,6 +20,15 @@ WAIVER_PATH = ROOT / "reports" / "review-waivers.json"
 WAIVER_SCHEMA_PATH = ROOT / "reports" / "review-waivers.schema.json"
 GATE_SCHEMA_PATH = ROOT / "reports" / "yao-meta-gates.schema.json"
 WAIVABLE_REVIEW_GATES = {"operations-loop", "release-notes"}
+SUITE_WAIVER_GATES = {
+    "human-blind-review",
+    "real-platform-benchmark",
+    "commercial-legal-review",
+}
+EXPECTED_WAIVER_PAIRS = {
+    *((skill_id, gate) for skill_id in SKILLS for gate in WAIVABLE_REVIEW_GATES),
+    *(("suite", gate) for gate in SUITE_WAIVER_GATES),
+}
 DETERMINISTIC_EVIDENCE_PATHS = (
     "reports/eval-summary.json",
     "reports/package-verification.json",
@@ -377,6 +386,16 @@ def load_waiver_ledger(path: Path = WAIVER_PATH, *, today: date | None = None) -
         raise ValueError("invalid waiver ledger: " + "; ".join(error.message for error in errors))
     current = today or date.today()
     waivers = ledger["waivers"]
+    pairs = [(item["skill_id"], item["gate"]) for item in waivers]
+    if not waivers:
+        raise ValueError("invalid waiver ledger: waiver inventory must not be empty")
+    if len(pairs) != len(set(pairs)):
+        raise ValueError("invalid waiver ledger: duplicate semantic waiver pair")
+    observed_pairs = set(pairs)
+    if observed_pairs != EXPECTED_WAIVER_PAIRS:
+        unknown = sorted(observed_pairs - EXPECTED_WAIVER_PAIRS)
+        missing = sorted(EXPECTED_WAIVER_PAIRS - observed_pairs)
+        raise ValueError(f"invalid waiver ledger: inventory mismatch; unknown={unknown}, missing={missing}")
     identifiers = [item["id"] for item in waivers]
     if len(identifiers) != len(set(identifiers)):
         raise ValueError("invalid waiver ledger: duplicate waiver id")
@@ -512,26 +531,25 @@ def verify_existing() -> int:
             failures.append("recorded waiver digest is stale")
     else:
         failures.append("review waiver ledger is missing")
-    if waivers:
-        current_reviews = review_classifications(waivers)
-        if current_reviews != report.get("review_classifications"):
-            failures.append("review warning classifications are stale")
-        if any(item["release_blocking"] for item in current_reviews.values()):
-            failures.append("review warnings contain release-blocking items")
-        expected_deterministic = sorted(f"{skill_id}:{gate}" for skill_id, classified in current_reviews.items() for gate in classified["deterministic_pass"])
-        expected_waived = sorted({*(f"{skill_id}:{gate}" for skill_id, classified in current_reviews.items() for gate in classified["waived_missing_evidence"]), *(f"suite:{item['gate']}" for item in waivers if item["skill_id"] == "suite")})
-        if report.get("deterministic_pass") != expected_deterministic:
-            failures.append("deterministic Review Studio dispositions are stale")
-        if report.get("waived_missing_evidence") != expected_waived:
-            failures.append("waived or missing evidence summary is stale")
+    current_reviews = review_classifications(waivers)
+    if current_reviews != report.get("review_classifications"):
+        failures.append("review warning classifications are stale")
+    if any(item["release_blocking"] for item in current_reviews.values()):
+        failures.append("review warnings contain release-blocking items")
+    expected_deterministic = sorted(f"{skill_id}:{gate}" for skill_id, classified in current_reviews.items() for gate in classified["deterministic_pass"])
+    expected_waived = sorted({*(f"{skill_id}:{gate}" for skill_id, classified in current_reviews.items() for gate in classified["waived_missing_evidence"]), *(f"suite:{item['gate']}" for item in waivers if item["skill_id"] == "suite")})
+    if report.get("deterministic_pass") != expected_deterministic:
+        failures.append("deterministic Review Studio dispositions are stale")
+    if report.get("waived_missing_evidence") != expected_waived:
+        failures.append("waived or missing evidence summary is stale")
     machine_markers = ("/" + "Users/", "AI Coding/03-Development/Skills", "C:" + "\\Users\\")
     surfaces = list((ROOT / "reports").rglob("*.json")) + list((ROOT / "reports").rglob("*.md")) + list((ROOT / "reports").rglob("*.html"))
     if any(marker in path.read_text(encoding="utf-8") for path in surfaces for marker in machine_markers):
         failures.append("machine-local path remains in public reports")
     if failures:
-        print(json.dumps({"status": "fail", "failures": sorted(set(failures))}, indent=2), file=sys.stderr)
+        print(json.dumps({"status": "fail", "failures": sorted(set(failures))}, indent=2, allow_nan=False), file=sys.stderr)
         return 2
-    print(json.dumps({"status": report["status"], "commands": len(commands), "source_digest": report["source_digest"], "waived_missing_evidence": len(report["waived_missing_evidence"]), "release_blocking": 0}, indent=2))
+    print(json.dumps({"status": report["status"], "commands": len(commands), "source_digest": report["source_digest"], "waived_missing_evidence": len(report["waived_missing_evidence"]), "release_blocking": 0}, indent=2, allow_nan=False))
     return 0
 
 
@@ -602,12 +620,12 @@ def main() -> int:
         "review_classifications": classifications,
         "note": "Deterministic report failures and unclassified Review Studio warnings block release. External evidence waivers remain explicit and expire.",
     }
-    (ROOT / "reports" / "yao-meta-gates.json").write_text(json.dumps(report, ensure_ascii=False, indent=2) + "\n", encoding="utf-8")
+    (ROOT / "reports" / "yao-meta-gates.json").write_text(json.dumps(report, ensure_ascii=False, indent=2, allow_nan=False) + "\n", encoding="utf-8")
     lines = ["# yao-meta Gates", "", f"Status: **{report['status']}**", "", f"Commands: {len(results)}; deterministic failures: {len(command_failures)}.", "", f"Deterministic Review Studio dispositions: {len(deterministic_pass)}.", f"Waived or missing external evidence: {len(report['waived_missing_evidence'])}.", f"Release-blocking items: {len(release_blocking)}.", "", "| Skill | Command | Exit | Structured status |", "| --- | --- | ---: | --- |"]
     for item in results:
         lines.append(f"| {item['skill_id']} | `{' '.join(item['command'][2:4])}` | {item['exit_code']} | {item['status']} |")
     (ROOT / "reports" / "yao-meta-gates.md").write_text("\n".join(lines) + "\n", encoding="utf-8")
-    print(json.dumps({"status": report["status"], "commands": len(results), "deterministic_failures": len(command_failures), "waived_missing_evidence": len(report["waived_missing_evidence"]), "release_blocking": len(release_blocking)}, indent=2))
+    print(json.dumps({"status": report["status"], "commands": len(results), "deterministic_failures": len(command_failures), "waived_missing_evidence": len(report["waived_missing_evidence"]), "release_blocking": len(release_blocking)}, indent=2, allow_nan=False))
     return 2 if blocked else 0
 
 

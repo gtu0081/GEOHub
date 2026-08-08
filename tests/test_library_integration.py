@@ -244,6 +244,23 @@ def test_yao_meta_structured_status_and_waiver_ledger_fail_closed(tmp_path):
     assert classified["waived_missing_evidence"] == ["operations-loop", "release-notes"]
     assert classified["review_warning_count"] == classified["classified_warning_count"] == 2
 
+    ledger = json.loads((ROOT / "reports" / "review-waivers.json").read_text())
+    attacks = []
+    unknown = json.loads(json.dumps(ledger))
+    unknown["waivers"][0]["gate"] = "unknown-suite-gate"
+    attacks.append(unknown)
+    duplicate_pair = json.loads(json.dumps(ledger))
+    duplicate_pair["waivers"][1]["skill_id"] = duplicate_pair["waivers"][0]["skill_id"]
+    duplicate_pair["waivers"][1]["gate"] = duplicate_pair["waivers"][0]["gate"]
+    attacks.append(duplicate_pair)
+    empty = {"schema_version": "1.0.0", "waivers": []}
+    attacks.append(empty)
+    for index, attack in enumerate(attacks):
+        attack_path = tmp_path / f"waiver-attack-{index}.json"
+        attack_path.write_text(json.dumps(attack))
+        with pytest.raises(ValueError, match="waiver ledger"):
+            gate.load_waiver_ledger(attack_path, today=date(2026, 8, 8))
+
 
 def test_yao_meta_digest_and_command_inventory_are_complete():
     gate = load_script("run_yao_meta_gates")

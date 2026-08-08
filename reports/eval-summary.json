@@ -8,8 +8,8 @@
     "fabricated_citations": 0
   },
   "router": {
-    "case_count": 68,
-    "tp": 68,
+    "case_count": 101,
+    "tp": 101,
     "fp": 0,
     "fn": 0,
     "precision": 1.0,
@@ -964,6 +964,468 @@
         },
         "actual": {
           "skill_id": "geo-content",
+          "workflow_id": null,
+          "runnable": true
+        }
+      },
+      {
+        "id": "r069",
+        "passed": true,
+        "expected": {
+          "skill_id": "geo-diagnose",
+          "workflow_id": null,
+          "runnable": true
+        },
+        "actual": {
+          "skill_id": "geo-diagnose",
+          "workflow_id": null,
+          "runnable": true
+        }
+      },
+      {
+        "id": "r070",
+        "passed": true,
+        "expected": {
+          "skill_id": "geo-content",
+          "workflow_id": null,
+          "runnable": true
+        },
+        "actual": {
+          "skill_id": "geo-content",
+          "workflow_id": null,
+          "runnable": true
+        }
+      },
+      {
+        "id": "r071",
+        "passed": true,
+        "expected": {
+          "skill_id": "geo-diagnose",
+          "workflow_id": null,
+          "runnable": true
+        },
+        "actual": {
+          "skill_id": "geo-diagnose",
+          "workflow_id": null,
+          "runnable": true
+        }
+      },
+      {
+        "id": "r072",
+        "passed": true,
+        "expected": {
+          "skill_id": "geo-discover",
+          "workflow_id": null,
+          "runnable": true
+        },
+        "actual": {
+          "skill_id": "geo-discover",
+          "workflow_id": null,
+          "runnable": true
+        }
+      },
+      {
+        "id": "r073",
+        "passed": true,
+        "expected": {
+          "skill_id": "geo-diagnose",
+          "workflow_id": null,
+          "runnable": true
+        },
+        "actual": {
+          "skill_id": "geo-diagnose",
+          "workflow_id": null,
+          "runnable": true
+        }
+      },
+      {
+        "id": "r074",
+        "passed": true,
+        "expected": {
+          "skill_id": "geo-diagnose",
+          "workflow_id": null,
+          "runnable": true
+        },
+        "actual": {
+          "skill_id": "geo-diagnose",
+          "workflow_id": null,
+          "runnable": true
+        }
+      },
+      {
+        "id": "r075",
+        "passed": true,
+        "expected": {
+          "skill_id": "geo-discover",
+          "workflow_id": null,
+          "runnable": true
+        },
+        "actual": {
+          "skill_id": "geo-discover",
+          "workflow_id": null,
+          "runnable": true
+        }
+      },
+      {
+        "id": "r076",
+        "passed": true,
+        "expected": {
+          "skill_id": "geo-diagnose",
+          "workflow_id": null,
+          "runnable": true
+        },
+        "actual": {
+          "skill_id": "geo-diagnose",
+          "workflow_id": null,
+          "runnable": true
+        }
+      },
+      {
+        "id": "r077",
+        "passed": true,
+        "expected": {
+          "skill_id": "geo",
+          "workflow_id": null,
+          "runnable": true
+        },
+        "actual": {
+          "skill_id": "geo",
+          "workflow_id": null,
+          "runnable": true
+        }
+      },
+      {
+        "id": "r078",
+        "passed": true,
+        "expected": {
+          "skill_id": "geo",
+          "workflow_id": null,
+          "runnable": true
+        },
+        "actual": {
+          "skill_id": "geo",
+          "workflow_id": null,
+          "runnable": true
+        }
+      },
+      {
+        "id": "r079",
+        "passed": true,
+        "expected": {
+          "skill_id": "geo-diagnose",
+          "workflow_id": null,
+          "runnable": true
+        },
+        "actual": {
+          "skill_id": "geo-diagnose",
+          "workflow_id": null,
+          "runnable": true
+        }
+      },
+      {
+        "id": "r080",
+        "passed": true,
+        "expected": {
+          "skill_id": "geo-diagnose",
+          "workflow_id": null,
+          "runnable": true
+        },
+        "actual": {
+          "skill_id": "geo-diagnose",
+          "workflow_id": null,
+          "runnable": true
+        }
+      },
+      {
+        "id": "r081",
+        "passed": true,
+        "expected": {
+          "skill_id": "geo",
+          "workflow_id": null,
+          "runnable": true
+        },
+        "actual": {
+          "skill_id": "geo",
+          "workflow_id": null,
+          "runnable": true
+        }
+      },
+      {
+        "id": "r082",
+        "passed": true,
+        "expected": {
+          "skill_id": "geo",
+          "workflow_id": null,
+          "runnable": true
+        },
+        "actual": {
+          "skill_id": "geo",
+          "workflow_id": null,
+          "runnable": true
+        }
+      },
+      {
+        "id": "r083",
+        "passed": true,
+        "expected": {
+          "skill_id": "geo",
+          "workflow_id": null,
+          "runnable": true
+        },
+        "actual": {
+          "skill_id": "geo",
+          "workflow_id": null,
+          "runnable": true
+        }
+      },
+      {
+        "id": "r084",
+        "passed": true,
+        "expected": {
+          "skill_id": "geo",
+          "workflow_id": null,
+          "runnable": true
+        },
+        "actual": {
+          "skill_id": "geo",
+          "workflow_id": null,
+          "runnable": true
+        }
+      },
+      {
+        "id": "r085",
+        "passed": true,
+        "expected": {
+          "skill_id": "geo",
+          "workflow_id": null,
+          "runnable": true
+        },
+        "actual": {
+          "skill_id": "geo",
+          "workflow_id": null,
+          "runnable": true
+        }
+      },
+      {
+        "id": "r086",
+        "passed": true,
+        "expected": {
+          "skill_id": "geo",
+          "workflow_id": null,
+          "runnable": true
+        },
+        "actual": {
+          "skill_id": "geo",
+          "workflow_id": null,
+          "runnable": true
+        }
+      },
+      {
+        "id": "r087",
+        "passed": true,
+        "expected": {
+          "skill_id": "geo",
+          "workflow_id": null,
+          "runnable": true
+        },
+        "actual": {
+          "skill_id": "geo",
+          "workflow_id": null,
+          "runnable": true
+        }
+      },
+      {
+        "id": "r088",
+        "passed": true,
+        "expected": {
+          "skill_id": "geo",
+          "workflow_id": null,
+          "runnable": true
+        },
+        "actual": {
+          "skill_id": "geo",
+          "workflow_id": null,
+          "runnable": true
+        }
+      },
+      {
+        "id": "r089",
+        "passed": true,
+        "expected": {
+          "skill_id": "geo",
+          "workflow_id": null,
+          "runnable": true
+        },
+        "actual": {
+          "skill_id": "geo",
+          "workflow_id": null,
+          "runnable": true
+        }
+      },
+      {
+        "id": "r090",
+        "passed": true,
+        "expected": {
+          "skill_id": "geo",
+          "workflow_id": null,
+          "runnable": true
+        },
+        "actual": {
+          "skill_id": "geo",
+          "workflow_id": null,
+          "runnable": true
+        }
+      },
+      {
+        "id": "r091",
+        "passed": true,
+        "expected": {
+          "skill_id": "geo",
+          "workflow_id": null,
+          "runnable": true
+        },
+        "actual": {
+          "skill_id": "geo",
+          "workflow_id": null,
+          "runnable": true
+        }
+      },
+      {
+        "id": "r092",
+        "passed": true,
+        "expected": {
+          "skill_id": "geo-diagnose",
+          "workflow_id": null,
+          "runnable": true
+        },
+        "actual": {
+          "skill_id": "geo-diagnose",
+          "workflow_id": null,
+          "runnable": true
+        }
+      },
+      {
+        "id": "r093",
+        "passed": true,
+        "expected": {
+          "skill_id": "geo-discover",
+          "workflow_id": null,
+          "runnable": true
+        },
+        "actual": {
+          "skill_id": "geo-discover",
+          "workflow_id": null,
+          "runnable": true
+        }
+      },
+      {
+        "id": "r094",
+        "passed": true,
+        "expected": {
+          "skill_id": "geo-discover",
+          "workflow_id": "brand-baseline-lite",
+          "runnable": true
+        },
+        "actual": {
+          "skill_id": "geo-discover",
+          "workflow_id": "brand-baseline-lite",
+          "runnable": true
+        }
+      },
+      {
+        "id": "r095",
+        "passed": true,
+        "expected": {
+          "skill_id": "geo-diagnose",
+          "workflow_id": null,
+          "runnable": true
+        },
+        "actual": {
+          "skill_id": "geo-diagnose",
+          "workflow_id": null,
+          "runnable": true
+        }
+      },
+      {
+        "id": "r096",
+        "passed": true,
+        "expected": {
+          "skill_id": "geo-diagnose",
+          "workflow_id": null,
+          "runnable": true
+        },
+        "actual": {
+          "skill_id": "geo-diagnose",
+          "workflow_id": null,
+          "runnable": true
+        }
+      },
+      {
+        "id": "r097",
+        "passed": true,
+        "expected": {
+          "skill_id": "geo",
+          "workflow_id": null,
+          "runnable": true
+        },
+        "actual": {
+          "skill_id": "geo",
+          "workflow_id": null,
+          "runnable": true
+        }
+      },
+      {
+        "id": "r098",
+        "passed": true,
+        "expected": {
+          "skill_id": "geo",
+          "workflow_id": null,
+          "runnable": true
+        },
+        "actual": {
+          "skill_id": "geo",
+          "workflow_id": null,
+          "runnable": true
+        }
+      },
+      {
+        "id": "r099",
+        "passed": true,
+        "expected": {
+          "skill_id": "geo",
+          "workflow_id": null,
+          "runnable": true
+        },
+        "actual": {
+          "skill_id": "geo",
+          "workflow_id": null,
+          "runnable": true
+        }
+      },
+      {
+        "id": "r100",
+        "passed": true,
+        "expected": {
+          "skill_id": "geo-diagnose",
+          "workflow_id": null,
+          "runnable": true
+        },
+        "actual": {
+          "skill_id": "geo-diagnose",
+          "workflow_id": null,
+          "runnable": true
+        }
+      },
+      {
+        "id": "r101",
+        "passed": true,
+        "expected": {
+          "skill_id": "geo-diagnose",
+          "workflow_id": null,
+          "runnable": true
+        },
+        "actual": {
+          "skill_id": "geo-diagnose",
           "workflow_id": null,
           "runnable": true
         }
