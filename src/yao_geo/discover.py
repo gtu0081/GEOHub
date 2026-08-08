@@ -18,9 +18,12 @@ def _stable_id(prefix: str, *parts: str) -> str:
     return f"{prefix}-{hashlib.sha256(canonical).hexdigest()[:12]}"
 
 
-def _ordered(values: list[str] | None, fallback: str) -> list[str]:
+def _ordered(values: list[str] | None, fallback: str | None = None) -> list[str]:
     cleaned = {value.strip() for value in (values or []) if value.strip()}
-    return sorted(cleaned, key=lambda value: (value.casefold(), value)) or [fallback]
+    ordered = sorted(cleaned, key=lambda value: (value.casefold(), value))
+    if ordered or fallback is None:
+        return ordered
+    return [fallback]
 
 
 def _question(
@@ -56,7 +59,9 @@ def _build_query_map(brief: dict[str, Any], run_id: str) -> dict[str, Any]:
     is_chinese = locale.casefold().startswith("zh")
     audiences = _ordered(brief.get("audiences"), "通用用户" if is_chinese else "general user")[:3]
     scenarios = _ordered(brief.get("scenarios"), "调研" if is_chinese else "research")[:3]
-    seeds = _ordered(brief["seed_queries"], "")[:20]
+    seeds = _ordered(brief["seed_queries"])[:20]
+    if not seeds:
+        raise ValueError("GEO brief must contain at least one non-blank seed query")
     evidence_status = "provided" if brief.get("evidence") else "missing"
     queries: list[dict[str, Any]] = []
     for seed in seeds:

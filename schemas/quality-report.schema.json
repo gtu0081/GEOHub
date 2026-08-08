@@ -7,10 +7,10 @@
   "required": ["protocol_version", "run_id", "passed_checks", "warnings", "failed_checks", "status"],
   "properties": {
     "protocol_version": {"const": "1.0.0"},
-    "run_id": {"type": "string", "minLength": 1},
-    "passed_checks": {"type": "array", "uniqueItems": true, "items": {"type": "string"}},
-    "warnings": {"type": "array", "uniqueItems": true, "items": {"type": "string"}},
-    "failed_checks": {"type": "array", "uniqueItems": true, "items": {"type": "string"}},
+    "run_id": {"type": "string", "minLength": 1, "pattern": "\\S"},
+    "passed_checks": {"type": "array", "uniqueItems": true, "items": {"type": "string", "pattern": "\\S"}},
+    "warnings": {"type": "array", "uniqueItems": true, "items": {"type": "string", "pattern": "\\S"}},
+    "failed_checks": {"type": "array", "uniqueItems": true, "items": {"type": "string", "pattern": "\\S"}},
     "status": {"enum": ["passed", "passed-with-warnings", "failed"]}
   }
 }

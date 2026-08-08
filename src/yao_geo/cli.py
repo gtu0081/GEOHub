@@ -10,8 +10,17 @@ from .discover import discover
 from .router import route
 
 
+class JsonArgumentParser(argparse.ArgumentParser):
+    def error(self, message: str) -> None:
+        print(
+            json.dumps({"status": "error", "message": message}, ensure_ascii=False),
+            file=sys.stderr,
+        )
+        raise SystemExit(2)
+
+
 def build_parser() -> argparse.ArgumentParser:
-    parser = argparse.ArgumentParser(prog="yao-geo")
+    parser = JsonArgumentParser(prog="yao-geo")
     subparsers = parser.add_subparsers(dest="command", required=True)
 
     route_parser = subparsers.add_parser("route", help="Route a GEO request")

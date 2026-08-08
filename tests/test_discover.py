@@ -5,8 +5,8 @@ from pathlib import Path
 import pytest
 
 from yao_geo.artifact_bus import ArtifactBus
-from yao_geo.discover import discover
-from yao_geo.validation import validate_artifact
+from yao_geo.discover import _build_query_map, discover
+from yao_geo.validation import ArtifactValidationError, validate_artifact
 
 FIXTURES = Path(__file__).parent / "fixtures"
 
@@ -106,3 +106,26 @@ def test_discover_rejects_duplicate_evidence_ids(tmp_path):
     duplicate_brief.write_text(json.dumps(source), encoding="utf-8")
     with pytest.raises(ValueError, match="duplicate evidence_id"):
         discover(duplicate_brief, tmp_path / "runs", clock=_clock)
+
+
+def test_discover_rejects_blank_seed_before_normalization(tmp_path):
+    source = _load(FIXTURES / "brief.json")
+    source["seed_queries"] = ["   "]
+    blank_brief = tmp_path / "blank.json"
+    blank_brief.write_text(json.dumps(source), encoding="utf-8")
+    with pytest.raises(ArtifactValidationError, match="seed_queries"):
+        discover(blank_brief, tmp_path / "runs", clock=_clock)
+
+
+def test_query_builder_rejects_seed_empty_after_normalization():
+    with pytest.raises(ValueError, match="non-blank seed"):
+        _build_query_map(
+            {
+                "locale": "en",
+                "seed_queries": [" ", "\t"],
+                "audiences": ["buyer"],
+                "scenarios": ["research"],
+                "evidence": [],
+            },
+            "run-test",
+        )

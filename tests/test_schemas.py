@@ -1,12 +1,17 @@
 import json
+import subprocess
+import zipfile
+from copy import deepcopy
 from pathlib import Path
 
 import pytest
+import yaml
 from jsonschema import Draft202012Validator
 
 from yao_geo.paths import repository_root
-from yao_geo.registry import load_registry
+from yao_geo.registry import RegistryError, load_registry
 from yao_geo.validation import ArtifactValidationError, load_schema, validate_artifact
+from scripts.package_repository import build_archive, trusted_files
 
 
 def test_all_eight_protocol_schemas_are_valid():
@@ -92,3 +97,172 @@ def test_skill_manifests_declare_license_governance():
         path = repository_root() / "skills" / skill_id / "manifest.json"
         manifest = json.loads(path.read_text(encoding="utf-8"))
         assert {key: manifest[key] for key in expected} == expected
+
+
+def _write_test_registry(tmp_path, registry):
+    registry_dir = tmp_path / "registry"
+    registry_dir.mkdir()
+    schema_source = repository_root() / "registry" / "skills.schema.json"
+    (registry_dir / "skills.schema.json").write_text(
+        schema_source.read_text(encoding="utf-8"),
+        encoding="utf-8",
+    )
+    for skill in registry["skills"]:
+        if skill["status"] == "active" and skill["entry"]:
+            expected = tmp_path / "skills" / skill["id"] / "SKILL.md"
+            expected.parent.mkdir(parents=True, exist_ok=True)
+            expected.write_text("# test skill\n", encoding="utf-8")
+    path = registry_dir / "skills.yaml"
+    path.write_text(yaml.safe_dump(registry, allow_unicode=True), encoding="utf-8")
+    return path
+
+
+@pytest.mark.parametrize("malicious_entry", ["/tmp/outside/SKILL.md", "../outside/SKILL.md"])
+def test_registry_rejects_unsafe_active_entry(tmp_path, malicious_entry):
+    registry = deepcopy(load_registry())
+    registry["skills"][0]["entry"] = malicious_entry
+    path = _write_test_registry(tmp_path, registry)
+    with pytest.raises(RegistryError, match="must be skills/geo/SKILL.md"):
+        load_registry(path)
+
+
+def test_registry_rejects_entry_symlink_that_resolves_outside_root(tmp_path):
+    registry = deepcopy(load_registry())
+    path = _write_test_registry(tmp_path, registry)
+    entry = tmp_path / "skills" / "geo" / "SKILL.md"
+    entry.unlink()
+    outside = tmp_path.parent / f"{tmp_path.name}-outside-skill.md"
+    outside.write_text("# outside\n", encoding="utf-8")
+    entry.symlink_to(outside)
+    with pytest.raises(RegistryError, match="unsafe or missing entry"):
+        load_registry(path)
+
+
+def test_registry_rejects_missing_core_geo_route(tmp_path):
+    registry = deepcopy(load_registry())
+    registry["skills"] = [skill for skill in registry["skills"] if skill["id"] != "geo"]
+    path = _write_test_registry(tmp_path, registry)
+    with pytest.raises(RegistryError, match="active runnable geo route"):
+        load_registry(path)
+
+
+def test_registry_rejects_unrunnable_discover_suggestion(tmp_path):
+    registry = deepcopy(load_registry())
+    discover_skill = next(skill for skill in registry["skills"] if skill["id"] == "geo-discover")
+    discover_skill["status"] = "planned"
+    discover_skill["entry"] = None
+    path = _write_test_registry(tmp_path, registry)
+    with pytest.raises(RegistryError, match="suggestion must exist and be runnable"):
+        load_registry(path)
+
+
+@pytest.mark.parametrize(
+    ("field", "value"),
+    [
+        ("brief_id", " "),
+        ("subject", "\t"),
+        ("seed_queries", ["   "]),
+    ],
+)
+def test_geo_brief_rejects_blank_required_text(field, value):
+    artifact = {
+        "protocol_version": "1.0.0",
+        "brief_id": "brief",
+        "subject": "subject",
+        "seed_queries": ["query"],
+    }
+    artifact[field] = value
+    with pytest.raises(ArtifactValidationError):
+        validate_artifact("geo-brief", artifact)
+
+
+def test_geo_brief_rejects_invalid_source_uri():
+    artifact = {
+        "protocol_version": "1.0.0",
+        "brief_id": "brief",
+        "subject": "subject",
+        "seed_queries": ["query"],
+        "evidence": [
+            {
+                "evidence_id": "ev-1",
+                "claim": "claim",
+                "source_uri": "not a uri",
+            }
+        ],
+    }
+    with pytest.raises(ArtifactValidationError, match="source_uri"):
+        validate_artifact("geo-brief", artifact)
+
+
+def test_query_map_rejects_blank_question():
+    artifact = {
+        "protocol_version": "1.0.0",
+        "run_id": "run-1",
+        "queries": [
+            {
+                "query_id": "query-1",
+                "question": " ",
+                "intent": "learn",
+                "audience": "buyer",
+                "scenario": "research",
+                "parent_query_id": None,
+                "rewrites": {
+                    "standalone": "question",
+                    "retrieval": "query",
+                    "evidence": "source",
+                },
+                "evidence_status": "provided",
+            }
+        ],
+    }
+    with pytest.raises(ArtifactValidationError, match="question"):
+        validate_artifact("query-map", artifact)
+
+
+def _git(repo, *arguments):
+    return subprocess.run(
+        ["git", *arguments],
+        cwd=repo,
+        check=True,
+        capture_output=True,
+        text=True,
+    )
+
+
+def test_package_uses_exact_tracked_regular_file_allowlist(tmp_path):
+    repo = tmp_path / "repo"
+    repo.mkdir()
+    _git(repo, "init", "-b", "main")
+    (repo / "VERSION").write_text("0.1.0\n", encoding="utf-8")
+    (repo / ".gitignore").write_text("ignored.txt\n", encoding="utf-8")
+    (repo / "tracked.txt").write_text("trusted\n", encoding="utf-8")
+    (repo / "untracked.txt").write_text("untrusted\n", encoding="utf-8")
+    (repo / "ignored.txt").write_text("ignored\n", encoding="utf-8")
+    outside = tmp_path / "outside.txt"
+    outside.write_text("outside\n", encoding="utf-8")
+    (repo / "external-link").symlink_to(outside)
+    _git(repo, "add", "VERSION", ".gitignore", "tracked.txt")
+
+    archive = tmp_path / "package.zip"
+    allowlist = build_archive(repo, archive)
+    assert allowlist == [Path(".gitignore"), Path("VERSION"), Path("tracked.txt")]
+    with zipfile.ZipFile(archive) as package:
+        names = package.namelist()
+    assert names == [
+        "yao-geo-0.1.0/.gitignore",
+        "yao-geo-0.1.0/VERSION",
+        "yao-geo-0.1.0/tracked.txt",
+    ]
+    assert all(name not in "\n".join(names) for name in ("untracked.txt", "ignored.txt", "external-link"))
+
+
+def test_package_rejects_tracked_symlink(tmp_path):
+    repo = tmp_path / "repo"
+    repo.mkdir()
+    _git(repo, "init", "-b", "main")
+    outside = tmp_path / "outside.txt"
+    outside.write_text("outside\n", encoding="utf-8")
+    (repo / "external-link").symlink_to(outside)
+    _git(repo, "add", "external-link")
+    with pytest.raises(ValueError, match="regular file"):
+        trusted_files(repo)
