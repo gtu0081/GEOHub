@@ -1,0 +1,15 @@
+{
+  "mode": "explainer",
+  "topic": "GEO 内容证据血缘",
+  "locale": "zh-CN",
+  "audience": "内容团队",
+  "query_ids": ["qry-example"],
+  "evidence": [
+    {
+      "label": "source-1",
+      "claim": "每条事实性 claim 都应关联可解析证据。",
+      "source_uri": "https://example.com/evidence-policy"
+    }
+  ],
+  "desired_formats": ["markdown", "json", "html"]
+}

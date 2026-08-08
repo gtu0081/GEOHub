@@ -48,3 +48,22 @@ def test_unknown_request_falls_back_to_geo():
     result = route("help me choose the next step")
     assert result["skill_id"] == "geo"
     assert result["runnable"] is True
+
+
+def test_routes_chinese_and_english_content_modes():
+    requests = (
+        "生成标题候选",
+        "写一篇科普解释",
+        "做一个中立对比",
+        "制作证据榜单",
+        "输出页面蓝图",
+        "帮我做内容优化",
+        "Create an article-friendly draft",
+        "Build an explainer and comparison",
+    )
+    for text in requests:
+        result = route(text)
+        assert result["skill_id"] == "geo-content"
+        assert result["status"] == "active"
+        assert result["runnable"] is True
+        assert result["entry"] == "skills/geo-content/SKILL.md"

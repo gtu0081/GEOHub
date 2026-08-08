@@ -17,6 +17,11 @@ dependencies = [
 
 [project.optional-dependencies]
 dev = ["pytest>=8,<9"]
+render = [
+  "python-docx>=1.1,<2",
+  "weasyprint>=62,<70",
+  "reportlab>=4,<5",
+]
 
 [project.scripts]
 yao-geo = "yao_geo.cli:main"
@@ -65,6 +70,19 @@ where = ["src"]
   "skills/geo-diagnose/references/input-example.json",
 ]
 "share/yao-geo/skills/geo-diagnose/scripts" = ["skills/geo-diagnose/scripts/run_diagnose.py"]
+"share/yao-geo/skills/geo-content" = [
+  "skills/geo-content/SKILL.md",
+  "skills/geo-content/manifest.json",
+]
+"share/yao-geo/skills/geo-content/agents" = ["skills/geo-content/agents/interface.yaml"]
+"share/yao-geo/skills/geo-content/references" = [
+  "skills/geo-content/references/content-method.md",
+  "skills/geo-content/references/modes.md",
+  "skills/geo-content/references/evidence-policy.md",
+  "skills/geo-content/references/output-contract.md",
+  "skills/geo-content/references/input-example.json",
+]
+"share/yao-geo/skills/geo-content/scripts" = ["skills/geo-content/scripts/run_content.py"]
 
 [tool.pytest.ini_options]
 addopts = "-q"

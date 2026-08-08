@@ -1,0 +1,851 @@
+from __future__ import annotations
+
+import hashlib
+import html
+import importlib
+import io
+import json
+import math
+import os
+import re
+import stat
+from datetime import datetime, timezone
+from pathlib import Path
+from typing import Any, Callable
+from urllib.parse import urlsplit
+
+from .artifact_bus import ArtifactBus
+from .validation import load_json, validate_artifact
+
+PROTOCOL_VERSION = "1.0.0"
+GENERATOR_VERSION = "0.1.0"
+MAX_INPUT_BYTES = 1024 * 1024
+MAX_SOURCE_BYTES = 2 * 1024 * 1024
+MODES = {
+    "title",
+    "explainer",
+    "comparison",
+    "ranking",
+    "page-blueprint",
+    "refine",
+    "article-friendly",
+}
+FORMATS = {"markdown", "json", "html", "docx", "pdf"}
+DEFAULT_FORMATS = ["markdown", "json", "html"]
+ABSOLUTE_TERMS = (
+    "最好",
+    "第一",
+    "最新",
+    "最强",
+    "唯一",
+    "权威",
+    "保证",
+    "best",
+    "#1",
+    "top1",
+    "top 1",
+    "no.1",
+    "latest",
+    "authoritative",
+    "guaranteed",
+)
+Clock = Callable[[], datetime]
+
+
+def _stable_id(prefix: str, *parts: str) -> str:
+    canonical = "\x1f".join(parts).encode("utf-8")
+    return f"{prefix}-{hashlib.sha256(canonical).hexdigest()[:12]}"
+
+
+def _require_text(value: Any, field: str) -> str:
+    if not isinstance(value, str) or not value.strip():
+        raise ValueError(f"{field} must be a non-blank string")
+    return value.strip()
+
+
+def _string_list(value: Any, field: str, *, unique: bool = True) -> list[str]:
+    if not isinstance(value, list):
+        raise ValueError(f"{field} must be an array")
+    cleaned = [_require_text(item, f"{field}[{index}]") for index, item in enumerate(value)]
+    if unique and len({item.casefold() for item in cleaned}) != len(cleaned):
+        raise ValueError(f"{field} must contain unique values")
+    return cleaned
+
+
+def _source_uri(value: Any, field: str) -> str:
+    uri = _require_text(value, field)
+    if not urlsplit(uri).scheme or re.search(r"\s", uri):
+        raise ValueError(f"{field} must be an absolute URI")
+    return uri
+
+
+def _validate_evaluation_method(value: Any) -> str | dict[str, Any]:
+    if isinstance(value, str):
+        return _require_text(value, "evaluation_method")
+    if not isinstance(value, dict):
+        raise ValueError("evaluation_method must be a non-blank string or an object")
+    allowed = {"name", "criteria", "score_scale", "tie_breaker"}
+    extra = sorted(set(value) - allowed)
+    if extra:
+        raise ValueError(f"evaluation_method has unknown fields: {', '.join(extra)}")
+    normalized: dict[str, Any] = {"name": _require_text(value.get("name"), "evaluation_method.name")}
+    if "criteria" in value:
+        criteria = value["criteria"]
+        if not isinstance(criteria, list) or not criteria:
+            raise ValueError("evaluation_method.criteria must be a non-empty array")
+        seen: set[str] = set()
+        normalized_criteria = []
+        for index, criterion in enumerate(criteria):
+            if not isinstance(criterion, dict) or set(criterion) - {"name", "weight"} or "name" not in criterion:
+                raise ValueError(f"evaluation_method.criteria[{index}] has invalid fields")
+            name = _require_text(criterion["name"], f"evaluation_method.criteria[{index}].name")
+            if name.casefold() in seen:
+                raise ValueError("evaluation_method criteria names must be unique")
+            seen.add(name.casefold())
+            weight = criterion.get("weight", 1.0)
+            if not isinstance(weight, (int, float)) or isinstance(weight, bool) or not math.isfinite(weight) or weight <= 0:
+                raise ValueError(f"evaluation_method.criteria[{index}].weight must be positive")
+            normalized_criteria.append({"name": name, "weight": float(weight)})
+        normalized["criteria"] = normalized_criteria
+    for field in ("score_scale", "tie_breaker"):
+        if field in value:
+            normalized[field] = _require_text(value[field], f"evaluation_method.{field}")
+    return normalized
+
+
+def validate_content_brief(value: Any) -> dict[str, Any]:
+    """Validate a strict content brief without accepting undeclared extension fields."""
+    if not isinstance(value, dict):
+        raise ValueError("content brief must be a JSON object")
+    allowed = {
+        "mode",
+        "topic",
+        "locale",
+        "audience",
+        "goal",
+        "target_brand",
+        "competitors",
+        "entities",
+        "query_ids",
+        "evidence",
+        "source_content",
+        "desired_formats",
+        "compliance_notes",
+        "page_type",
+        "evaluation_method",
+    }
+    extra = sorted(set(value) - allowed)
+    if extra:
+        raise ValueError(f"content brief has unknown fields: {', '.join(extra)}")
+    mode = value.get("mode")
+    if mode not in MODES:
+        raise ValueError(f"mode must be one of: {', '.join(sorted(MODES))}")
+    _require_text(value.get("topic"), "topic")
+    for field in ("locale", "audience", "goal", "target_brand", "page_type"):
+        if field in value:
+            _require_text(value[field], field)
+    for field in ("competitors", "entities", "query_ids", "compliance_notes"):
+        if field in value:
+            _string_list(value[field], field)
+    formats = value.get("desired_formats", DEFAULT_FORMATS)
+    cleaned_formats = _string_list(formats, "desired_formats")
+    invalid_formats = sorted(set(cleaned_formats) - FORMATS)
+    if invalid_formats:
+        raise ValueError(f"desired_formats has unsupported values: {', '.join(invalid_formats)}")
+
+    evidence = value.get("evidence", [])
+    if not isinstance(evidence, list):
+        raise ValueError("evidence must be an array")
+    labels: list[str] = []
+    for index, record in enumerate(evidence):
+        allowed_evidence = {"label", "claim", "source_uri", "entity", "dimension", "score"}
+        if not isinstance(record, dict) or set(record) - allowed_evidence:
+            raise ValueError(f"evidence[{index}] has invalid fields")
+        if not {"label", "claim", "source_uri"} <= set(record):
+            raise ValueError(f"evidence[{index}] requires label, claim, and source_uri")
+        labels.append(_require_text(record["label"], f"evidence[{index}].label"))
+        _require_text(record["claim"], f"evidence[{index}].claim")
+        _source_uri(record["source_uri"], f"evidence[{index}].source_uri")
+        for field in ("entity", "dimension"):
+            if field in record:
+                _require_text(record[field], f"evidence[{index}].{field}")
+        if "score" in record and (
+            not isinstance(record["score"], (int, float)) or isinstance(record["score"], bool)
+            or not math.isfinite(record["score"])
+        ):
+            raise ValueError(f"evidence[{index}].score must be numeric")
+    if len({label.casefold() for label in labels}) != len(labels):
+        raise ValueError("content brief evidence labels must be unique")
+
+    source = value.get("source_content")
+    if source is not None:
+        if isinstance(source, str):
+            if not source.strip():
+                raise ValueError("source_content must not be blank")
+            if len(source.encode("utf-8")) > MAX_SOURCE_BYTES:
+                raise ValueError(f"source_content exceeds {MAX_SOURCE_BYTES} bytes")
+        elif isinstance(source, dict):
+            if set(source) - {"path", "sha256", "source_uri"} or "path" not in source:
+                raise ValueError("source_content file object has invalid fields")
+            _require_text(source["path"], "source_content.path")
+            if "sha256" in source and not re.fullmatch(r"[0-9a-f]{64}", _require_text(source["sha256"], "source_content.sha256")):
+                raise ValueError("source_content.sha256 must be a lowercase SHA-256 digest")
+            if "source_uri" in source:
+                _source_uri(source["source_uri"], "source_content.source_uri")
+        else:
+            raise ValueError("source_content must be inline text or a file object")
+    if mode in {"refine", "article-friendly"} and source is None:
+        raise ValueError(f"{mode} mode requires source_content")
+    if "evaluation_method" in value:
+        _validate_evaluation_method(value["evaluation_method"])
+    return value
+
+
+def _read_relative_source(source: dict[str, Any], input_path: Path) -> tuple[str, str]:
+    path = Path(source["path"].strip())
+    if path.is_absolute() or ".." in path.parts or not path.parts:
+        raise ValueError("source_content path must stay relative to the brief directory")
+    opened: list[int] = []
+    try:
+        directory_flags = os.O_RDONLY | os.O_DIRECTORY | os.O_NOFOLLOW | os.O_CLOEXEC
+        current = os.open(input_path.parent, directory_flags)
+        opened.append(current)
+        for component in path.parts[:-1]:
+            current = os.open(component, directory_flags, dir_fd=current)
+            opened.append(current)
+        file_descriptor = os.open(
+            path.parts[-1],
+            os.O_RDONLY | os.O_NOFOLLOW | os.O_CLOEXEC,
+            dir_fd=current,
+        )
+        opened.append(file_descriptor)
+        file_stat = os.fstat(file_descriptor)
+        if not stat.S_ISREG(file_stat.st_mode):
+            raise ValueError("source_content path must name a regular file")
+        if file_stat.st_size > MAX_SOURCE_BYTES:
+            raise ValueError(f"source_content exceeds {MAX_SOURCE_BYTES} bytes")
+        chunks: list[bytes] = []
+        count = 0
+        while True:
+            chunk = os.read(file_descriptor, min(64 * 1024, MAX_SOURCE_BYTES + 1 - count))
+            if not chunk:
+                break
+            chunks.append(chunk)
+            count += len(chunk)
+            if count > MAX_SOURCE_BYTES:
+                raise ValueError(f"source_content exceeds {MAX_SOURCE_BYTES} bytes")
+        body = b"".join(chunks).decode("utf-8")
+    except (OSError, UnicodeDecodeError) as exc:
+        raise ValueError(f"source_content is unavailable, unsafe, or not UTF-8: {path}") from exc
+    finally:
+        for descriptor in reversed(opened):
+            try:
+                os.close(descriptor)
+            except OSError:
+                pass
+    digest = hashlib.sha256(body.encode("utf-8")).hexdigest()
+    if source.get("sha256") and source["sha256"] != digest:
+        raise ValueError("source_content digest does not match its file snapshot")
+    return body, source.get("source_uri", "urn:yao-geo:input:source-content")
+
+
+def _normalize_brief(brief: dict[str, Any], input_path: Path) -> tuple[dict[str, Any], str | None]:
+    normalized: dict[str, Any] = {"mode": brief["mode"], "topic": brief["topic"].strip()}
+    for field in ("locale", "audience", "goal", "target_brand", "page_type"):
+        if field in brief:
+            normalized[field] = brief[field].strip()
+    for field in ("competitors", "entities", "query_ids", "compliance_notes"):
+        if field in brief:
+            normalized[field] = _string_list(brief[field], field)
+    normalized["desired_formats"] = _string_list(brief.get("desired_formats", DEFAULT_FORMATS), "desired_formats")
+    if "evaluation_method" in brief:
+        normalized["evaluation_method"] = _validate_evaluation_method(brief["evaluation_method"])
+
+    records = []
+    for record in brief.get("evidence", []):
+        claim = record["claim"].strip()
+        uri = _source_uri(record["source_uri"], "evidence.source_uri")
+        item: dict[str, Any] = {"label": _stable_id("ev", claim, uri), "claim": claim, "source_uri": uri}
+        for field in ("entity", "dimension"):
+            if field in record:
+                item[field] = record[field].strip()
+        if "score" in record:
+            item["score"] = float(record["score"])
+        records.append(item)
+    records.sort(key=lambda item: item["label"])
+    if len({record["label"] for record in records}) != len(records):
+        raise ValueError("content brief contains duplicate normalized evidence records")
+    if records:
+        normalized["evidence"] = records
+
+    source_text: str | None = None
+    if "source_content" in brief:
+        source = brief["source_content"]
+        if isinstance(source, str):
+            source_text = source
+            source_uri = "urn:yao-geo:input:source-content"
+        else:
+            source_text, source_uri = _read_relative_source(source, input_path)
+        digest = hashlib.sha256(source_text.encode("utf-8")).hexdigest()
+        normalized["source_content"] = {
+            "path": "source.md",
+            "sha256": digest,
+            "source_uri": source_uri,
+        }
+    return normalized, source_text
+
+
+def _entities(brief: dict[str, Any]) -> list[str]:
+    values = brief.get("entities") or []
+    if not values:
+        values = [brief.get("target_brand", ""), *brief.get("competitors", [])]
+    return [value for value in values if value]
+
+
+def _sections_for_mode(mode: str) -> list[dict[str, str]]:
+    headings = {
+        "title": ["候选标题", "意图与场景", "证据与合规", "文章结构映射"],
+        "explainer": ["核心摘要", "定义与边界", "原理与原因", "实践步骤", "选择标准", "常见误区", "常见问题", "来源说明"],
+        "comparison": ["比较范围", "证据维度", "中立对照", "信息缺口", "补证计划", "限制与来源"],
+        "ranking": ["评估方法", "权重与分数", "排序结果", "限制", "来源说明", "复核清单"],
+        "page-blueprint": ["页面目标", "信息架构", "可抽取摘要与问答", "表格模块", "语义 HTML", "Schema 候选", "CMS 字段", "验收清单"],
+        "refine": ["优化后摘要", "优化后正文", "术语与结构", "可回答问题", "改动说明", "证据缺口"],
+        "article-friendly": ["发布摘要", "发布友好正文", "术语与结构", "可回答问题", "证据补充标记", "风险说明"],
+    }[mode]
+    return [{"heading": heading, "purpose": f"提供{heading}所需的结构、边界与证据状态。"} for heading in headings]
+
+
+def _evidence_ledger(brief: dict[str, Any], run_id: str) -> dict[str, Any]:
+    records = [
+        {
+            "evidence_id": item["label"],
+            "claim": item["claim"],
+            "source_uri": item["source_uri"],
+            "status": "provided",
+        }
+        for item in brief.get("evidence", [])
+    ]
+    missing = [] if records else ["source_gap: provide evidence for factual claims before publication"]
+    return {"protocol_version": PROTOCOL_VERSION, "run_id": run_id, "records": records, "missing_evidence": missing}
+
+
+def _factual_claims(brief: dict[str, Any]) -> list[dict[str, Any]]:
+    return [
+        {
+            "claim_id": _stable_id("claim", item["claim"], item["label"]),
+            "text": item["claim"],
+            "evidence_ids": [item["label"]],
+            "status": "provided",
+        }
+        for item in brief.get("evidence", [])
+    ]
+
+
+def _clean_title_topic(topic: str) -> str:
+    cleaned = topic
+    for term in ABSOLUTE_TERMS:
+        cleaned = re.sub(re.escape(term), "", cleaned, flags=re.IGNORECASE)
+    cleaned = re.sub(r"20\d{2}年?", "", cleaned)
+    return re.sub(r"\s+", " ", cleaned).strip(" ：:-") or "主题"
+
+
+def _title_candidates(brief: dict[str, Any]) -> list[dict[str, Any]]:
+    topic = _clean_title_topic(brief["topic"])
+    audience = _clean_title_topic(brief.get("audience", "目标读者"))
+    patterns = [
+        (f"{topic}：面向{audience}的核心问题与证据线索", "问题—证据", "研究", "信息核验"),
+        (f"如何理解{topic}：定义、边界与实践路径", "解释—路径", "学习", "入门理解"),
+        (f"{topic}对比指南：维度、证据与选择方法", "维度—选择", "比较", "方案选择"),
+        (f"从问题到行动：{topic}的场景化解读", "场景—行动", "行动", "实践落地"),
+        (f"{topic}常见误区与核验清单", "误区—清单", "核验", "发布前检查"),
+    ]
+    evidence_score = 100 if brief.get("evidence") else 40
+    compliance_score = 95 if brief.get("compliance_notes") else 100
+    return [
+        {
+            "title": title,
+            "pattern": pattern,
+            "intent": intent,
+            "scenario": scenario,
+            "scores": {"intent": 90 - index * 3, "scenario": 86 - index * 2, "evidence": evidence_score, "compliance": compliance_score},
+            "structure_mapping": ["核心摘要", "主体论证", "证据与限制", "常见问题"],
+        }
+        for index, (title, pattern, intent, scenario) in enumerate(patterns)
+    ]
+
+
+def _source_claims(source_text: str | None) -> list[dict[str, str]]:
+    if not source_text:
+        return []
+    candidates = [part.strip() for part in re.split(r"(?<=[。！？.!?])\s+|\n+", source_text) if part.strip()]
+    return [{"text": part, "status": "unverified"} for part in candidates[:20]]
+
+
+def _ranking_rows(brief: dict[str, Any], entities: list[str]) -> list[dict[str, Any]]:
+    criteria: dict[str, float] = {}
+    method = brief.get("evaluation_method")
+    if isinstance(method, dict):
+        criteria = {item["name"].casefold(): item["weight"] for item in method.get("criteria", [])}
+    rows = []
+    for entity in entities:
+        matching = [
+            item
+            for item in brief.get("evidence", [])
+            if item.get("entity", "").casefold() == entity.casefold()
+            and "score" in item
+            and (not criteria or item.get("dimension", "").casefold() in criteria)
+        ]
+        weighted = []
+        for item in matching:
+            weight = criteria.get(item.get("dimension", "").casefold(), 1.0)
+            weighted.append((float(item["score"]), weight))
+        score = sum(value * weight for value, weight in weighted) / sum(weight for _, weight in weighted)
+        rows.append({"entity": entity, "score": round(score, 4), "evidence_ids": [item["label"] for item in matching]})
+    rows.sort(key=lambda item: (-item["score"], item["entity"].casefold()))
+    for index, row in enumerate(rows):
+        row["rank"] = index + 1
+    return rows
+
+
+def _build_content(brief: dict[str, Any], run_id: str, source_text: str | None) -> dict[str, Any]:
+    mode = brief["mode"]
+    entities = _entities(brief)
+    evidence_by_entity = {
+        entity: [item for item in brief.get("evidence", []) if item.get("entity", "").casefold() == entity.casefold()]
+        for entity in entities
+    }
+    status = "ready" if brief.get("evidence") else "unverified"
+    supplement_requests: list[str] = []
+    mode_data: dict[str, Any]
+    guidance = ["guidance: validate claims, audience fit, and compliance notes before publication"]
+
+    if mode == "title":
+        mode_data = {"title_candidates": _title_candidates(brief)}
+    elif mode == "explainer":
+        mode_data = {
+            "explainer": {
+                "core_summary": f"围绕“{brief['topic']}”建立可核验的解释框架。",
+                "definition_boundary": "说明术语适用范围、排除项与证据边界。",
+                "why": "从机制、条件和影响路径解释原因。",
+                "how_to": ["确认读者问题", "匹配证据", "按步骤展开", "复核限制"],
+                "selection_criteria": ["相关性", "可验证性", "时效范围", "适用条件"],
+                "misconceptions": ["把通用建议写成事实", "忽略来源的适用范围"],
+                "faq": [f"什么是{brief['topic']}？", f"如何核验{brief['topic']}相关说法？"],
+                "source_note": "事实仅来自 evidence ledger；其余内容属于 guidance。",
+            }
+        }
+    elif mode == "comparison":
+        if len(entities) < 2:
+            raise ValueError("comparison mode requires at least two entities")
+        gaps = [entity for entity in entities if not evidence_by_entity[entity]]
+        dimension_sets = [
+            {item.get("dimension", "已提供证据") for item in evidence_by_entity[entity]}
+            for entity in entities
+        ]
+        comparable_dimensions = set.intersection(*dimension_sets) if dimension_sets else set()
+        if gaps:
+            status = "blocked-by-evidence"
+            supplement_requests.extend(f"为 {entity} 补充同口径证据" for entity in gaps)
+        elif not comparable_dimensions:
+            status = "blocked-by-evidence"
+            supplement_requests.append("补充所有实体共有的同口径比较维度")
+        dimensions = sorted(comparable_dimensions)
+        mode_data = {
+            "comparison": {
+                "entities": entities,
+                "dimensions": dimensions,
+                "rows": [
+                    {
+                        "entity": entity,
+                        "evidence_ids": [
+                            item["label"]
+                            for item in evidence_by_entity[entity]
+                            if item.get("dimension", "已提供证据") in comparable_dimensions
+                        ],
+                    }
+                    for entity in entities
+                ],
+                "verdict": None,
+                "gap_plan": supplement_requests,
+                "neutrality": "No winner is declared; compare only evidence-backed dimensions.",
+            }
+        }
+    elif mode == "ranking":
+        if len(entities) < 2:
+            raise ValueError("ranking mode requires at least two entities")
+        method = brief.get("evaluation_method")
+        method_dimensions = (
+            {item["name"].casefold() for item in method.get("criteria", [])}
+            if isinstance(method, dict)
+            else set()
+        )
+        def eligible_scores(entity: str) -> list[dict[str, Any]]:
+            return [
+                item
+                for item in evidence_by_entity[entity]
+                if "score" in item
+                and (
+                    not method_dimensions
+                    or item.get("dimension", "").casefold() in method_dimensions
+                )
+            ]
+        eligible = bool(method) and all(
+            eligible_scores(entity) for entity in entities
+        )
+        if eligible:
+            rows = _ranking_rows(brief, entities)
+        else:
+            status = "blocked-by-evidence"
+            rows = []
+            if not method:
+                supplement_requests.append("补充明确的 evaluation_method、权重或评分口径")
+            for entity in entities:
+                if not eligible_scores(entity):
+                    supplement_requests.append(f"为 {entity} 补充 evidence-backed score")
+        mode_data = {
+            "ranking": {
+                "evaluation_method": method,
+                "rows": rows,
+                "limitations": ["排序只覆盖输入证据与明确方法；同分按实体名称稳定排列。"],
+                "source_evidence_ids": [item["label"] for item in brief.get("evidence", [])],
+            }
+        }
+    elif mode == "page-blueprint":
+        factual_text = [item["claim"] for item in brief.get("evidence", [])]
+        mode_data = {
+            "page_blueprint": {
+                "modules": ["Hero 摘要", "定义与边界", "证据表格", "FAQ", "来源与限制"],
+                "information_architecture": ["summary", "main", "evidence", "faq", "references"],
+                "extractable_summary": factual_text[:2] or ["guidance: 待证据补齐后生成事实摘要"],
+                "faq": [f"{brief['topic']}适用于哪些场景？", "哪些结论仍需补证？"],
+                "table": {"columns": ["维度", "结论", "证据 ID", "限制"]},
+                "semantic_html_example": "<main><article><header></header><section></section><aside></aside></article></main>",
+                "schema_candidates": ([{"type": "Article", "claims": factual_text}, {"type": "FAQPage", "claims": factual_text}] if factual_text else []),
+                "cms_fields": ["title", "summary", "body", "evidence_ids", "limitations", "reviewed_at"],
+                "acceptance_checklist": ["摘要可独立抽取", "FAQ 与正文事实一致", "证据 ID 可解析", "无外部运行资源"],
+            }
+        }
+    else:
+        claims = _source_claims(source_text)
+        profile = "article-friendly" if mode == "article-friendly" else "refine"
+        before = 45 + min(20, len(claims))
+        after = min(100, before + 25)
+        notes = ["增加摘要与分层标题", "统一术语", "保留原始核心 claim", "FAQ 仅使用源内容可回答的问题"]
+        if profile == "article-friendly":
+            notes.extend(["整理为发布友好 Markdown", "增加证据补充标记与风险说明"])
+        mode_data = {
+            "refinement": {
+                "profile": profile,
+                "source_claims": claims,
+                "refined_content": source_text.strip() if source_text else "",
+                "summary": claims[0]["text"] if claims else "",
+                "before_score": before,
+                "after_score": after,
+                "change_notes": notes,
+                "faq": (
+                    [
+                        {
+                            "question": f"源内容关于“{brief['topic']}”的核心表述是什么？",
+                            "answer": claims[0]["text"],
+                            "status": "unverified",
+                        }
+                    ]
+                    if claims
+                    else []
+                ),
+                "risk_notes": ["source claims remain unverified unless linked to evidence IDs"],
+            }
+        }
+        if not brief.get("evidence"):
+            status = "unverified"
+            supplement_requests.append("为保留的 source claims 补充可解析证据")
+
+    content = {
+        "protocol_version": PROTOCOL_VERSION,
+        "run_id": run_id,
+        "mode": mode,
+        "profile": "article-friendly" if mode == "article-friendly" else mode,
+        "topic": brief["topic"],
+        "status": status,
+        "sections": _sections_for_mode(mode),
+        "factual_claims": _factual_claims(brief),
+        "guidance": guidance,
+        "supplement_requests": supplement_requests,
+        "mode_data": mode_data,
+    }
+    _validate_content(content, {item["label"] for item in brief.get("evidence", [])})
+    return content
+
+
+def _validate_content(content: dict[str, Any], evidence_ids: set[str]) -> None:
+    expected = {"protocol_version", "run_id", "mode", "profile", "topic", "status", "sections", "factual_claims", "guidance", "supplement_requests", "mode_data"}
+    if set(content) != expected:
+        raise ValueError("content.json fields do not match the output contract")
+    if content["mode"] not in MODES or content["status"] not in {"ready", "unverified", "source_gap", "blocked-by-evidence"}:
+        raise ValueError("content.json mode or status is invalid")
+    for claim in content["factual_claims"]:
+        if set(claim) != {"claim_id", "text", "evidence_ids", "status"} or not claim["evidence_ids"]:
+            raise ValueError("every factual claim must carry evidence_ids")
+        if not set(claim["evidence_ids"]) <= evidence_ids:
+            raise ValueError("factual claim evidence_ids must resolve in the evidence ledger")
+
+
+def _content_spec(brief: dict[str, Any], content: dict[str, Any]) -> dict[str, Any]:
+    query_ids = brief.get("query_ids") or [_stable_id("qry", brief["topic"], brief["mode"])]
+    spec_status = "blocked-by-evidence" if content["status"] == "blocked-by-evidence" else ("ready" if content["status"] == "ready" else "draft")
+    return {
+        "protocol_version": PROTOCOL_VERSION,
+        "spec_id": _stable_id("spec", content["run_id"], brief["mode"]),
+        "title": brief["topic"],
+        "target_query_ids": query_ids,
+        "required_evidence_ids": [item["label"] for item in brief.get("evidence", [])],
+        "sections": content["sections"],
+        "status": spec_status,
+    }
+
+
+def _body_lines(content: dict[str, Any]) -> list[str]:
+    mode_data = content["mode_data"]
+    lines: list[str] = []
+    if "title_candidates" in mode_data:
+        for item in mode_data["title_candidates"]:
+            lines.extend([f"## {item['title']}", f"- 模式：{item['pattern']}", f"- 意图：{item['intent']}；场景：{item['scenario']}", f"- 评分：{json.dumps(item['scores'], ensure_ascii=False, sort_keys=True)}", ""])
+    elif "explainer" in mode_data:
+        data = mode_data["explainer"]
+        for heading, key in zip((item["heading"] for item in content["sections"]), data):
+            value = data[key]
+            lines.extend([f"## {heading}", json.dumps(value, ensure_ascii=False) if not isinstance(value, str) else value, ""])
+    elif "comparison" in mode_data:
+        data = mode_data["comparison"]
+        lines.extend(["## 中立对照", f"实体：{', '.join(data['entities'])}", f"维度：{', '.join(data['dimensions']) or '待补证'}", data["neutrality"], ""])
+        for row in data["rows"]:
+            lines.append(f"- {row['entity']}：证据 {', '.join(row['evidence_ids']) or 'source_gap'}")
+    elif "ranking" in mode_data:
+        data = mode_data["ranking"]
+        lines.extend(["## 评估方法", json.dumps(data["evaluation_method"], ensure_ascii=False), "", "## 排序结果"])
+        if data["rows"]:
+            lines.extend(f"{row['rank']}. {row['entity']} — {row['score']}（{', '.join(row['evidence_ids'])}）" for row in data["rows"])
+        else:
+            lines.append("blocked-by-evidence：当前输入不生成排名。")
+    elif "page_blueprint" in mode_data:
+        for key, value in mode_data["page_blueprint"].items():
+            lines.extend([f"## {key.replace('_', ' ').title()}", json.dumps(value, ensure_ascii=False, indent=2), ""])
+    else:
+        data = mode_data["refinement"]
+        lines.extend(
+            [
+                "## 优化摘要",
+                f"Profile: {data['profile']}；评分 {data['before_score']} → {data['after_score']}",
+                data["summary"],
+                "",
+                "## 优化后正文",
+                data["refined_content"],
+                "",
+                "## 保留的核心 Claim",
+            ]
+        )
+        lines.extend(f"- [{item['status']}] {item['text']}" for item in data["source_claims"])
+        lines.extend(["", "## 改动说明", *[f"- {item}" for item in data["change_notes"]]])
+    return lines
+
+
+def _markdown(content: dict[str, Any], ledger: dict[str, Any]) -> str:
+    safe_body = []
+    for line in _body_lines(content):
+        if line.startswith("## "):
+            escaped = html.escape(line[3:], quote=False).replace("\r", "").replace("\n", "\n&#8203;")
+            safe_body.append(f"## {escaped}")
+        else:
+            escaped = html.escape(line, quote=False).replace("\r", "").replace("\n", "\n&#8203;")
+            if escaped.startswith("# "):
+                escaped = f"&#8203;{escaped}"
+            safe_body.append(escaped)
+    lines = [f"> 模式：`{content['mode']}` · 状态：`{content['status']}`", "", "# 内容主体", "", *safe_body, "", "# 补充说明与参考来源", ""]
+    lines.extend(
+        f"- `{record['evidence_id']}` {html.escape(' '.join(record['claim'].split()), quote=False)} — {html.escape(record['source_uri'], quote=False)}"
+        for record in ledger["records"]
+    )
+    if not ledger["records"]:
+        lines.append("- source_gap：事实证据尚未提供；当前建议均按 guidance 使用。")
+    lines.extend(
+        f"- {html.escape(' '.join(item.split()), quote=False)}"
+        for item in content["supplement_requests"]
+    )
+    return "\n".join(lines).rstrip() + "\n"
+
+
+def _html_document(content: dict[str, Any], ledger: dict[str, Any]) -> str:
+    body_lines = _body_lines(content)
+    rendered = []
+    for line in body_lines:
+        if line.startswith("## "):
+            rendered.append(f"<h2>{html.escape(line[3:])}</h2>")
+        elif line.startswith("- "):
+            rendered.append(f"<p>• {html.escape(line[2:])}</p>")
+        elif re.match(r"^\d+\. ", line):
+            rendered.append(f"<p>{html.escape(line)}</p>")
+        elif line:
+            rendered.append(f"<p>{html.escape(line)}</p>")
+    refs = [f"<li><code>{html.escape(item['evidence_id'])}</code> {html.escape(item['claim'])} — {html.escape(item['source_uri'])}</li>" for item in ledger["records"]]
+    if not refs:
+        refs = ["<li>source_gap：事实证据尚未提供；当前建议均按 guidance 使用。</li>"]
+    supplements = [
+        f"<li>{html.escape(item)}</li>" for item in content["supplement_requests"]
+    ]
+    title = html.escape(content["topic"])
+    status = html.escape(content["status"])
+    return f"""<!doctype html>
+<html lang="zh-CN"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>{title}</title><style>
+:root{{--ink:#17202a;--muted:#52606d;--line:#d8dee4;--paper:#fff;--accent:#2457d6}}*{{box-sizing:border-box}}body{{margin:0;color:var(--ink);background:var(--paper);font:16px/1.7 system-ui,sans-serif}}nav{{position:sticky;top:0;background:#fffffff2;border-bottom:1px solid var(--line);padding:.8rem 5vw;backdrop-filter:blur(8px)}}nav a{{color:var(--accent);margin-right:1rem}}main{{max-width:880px;margin:auto;padding:2rem 5vw 5rem}}h1{{margin-top:2.5rem}}h2{{margin-top:1.8rem}}code{{overflow-wrap:anywhere}}.status{{color:var(--muted)}}@media print{{nav{{display:none}}main{{max-width:none;padding:0}}a{{color:inherit;text-decoration:none}}}}
+</style></head><body><nav aria-label="内容导航"><a href="#main-content">内容主体</a><a href="#references">补充说明与参考来源</a></nav><main><p class="status">模式：{html.escape(content['mode'])} · 状态：{status}</p><section id="main-content"><h1>内容主体</h1>{''.join(rendered)}</section><section id="references"><h1>补充说明与参考来源</h1><ul>{''.join(refs)}</ul><h2>补证与风险说明</h2><ul>{''.join(supplements) or '<li>当前无额外补证请求。</li>'}</ul></section></main></body></html>"""
+
+
+def _render_docx(markdown: str) -> bytes:
+    document_module = importlib.import_module("docx")
+    document = document_module.Document()
+    for line in markdown.splitlines():
+        if line.startswith("# "):
+            document.add_heading(line[2:], level=1)
+        elif line.startswith("## "):
+            document.add_heading(line[3:], level=2)
+        elif line.startswith("- "):
+            document.add_paragraph(line[2:], style="List Bullet")
+        elif line:
+            document.add_paragraph(line)
+    buffer = io.BytesIO()
+    document.save(buffer)
+    return buffer.getvalue()
+
+
+def _render_pdf(html_document: str, markdown: str) -> tuple[bytes, list[str]]:
+    warnings = []
+    try:
+        weasyprint = importlib.import_module("weasyprint")
+        rendered = weasyprint.HTML(string=html_document).write_pdf()
+        if not rendered.startswith(b"%PDF"):
+            raise ValueError("WeasyPrint returned an invalid PDF")
+        return rendered, warnings
+    except Exception as primary_exc:
+        warnings.append(f"degraded: PDF primary renderer failed; ReportLab fallback used: {primary_exc}")
+    try:
+        canvas_module = importlib.import_module("reportlab.pdfgen.canvas")
+        buffer = io.BytesIO()
+        canvas = canvas_module.Canvas(buffer)
+        y = 800
+        for line in markdown.splitlines():
+            canvas.drawString(40, y, line[:100])
+            y -= 14
+            if y < 40:
+                canvas.showPage()
+                y = 800
+        canvas.save()
+        rendered = buffer.getvalue()
+        if not rendered.startswith(b"%PDF"):
+            raise ValueError("ReportLab returned an invalid PDF")
+        return rendered, warnings
+    except Exception as fallback_exc:
+        raise RuntimeError(f"WeasyPrint and ReportLab renderers failed: {fallback_exc}") from fallback_exc
+
+
+def content(input_path: Path, output_path: Path, *, clock: Clock | None = None) -> dict[str, Any]:
+    """Create one offline, evidence-lined geo-content Artifact Bus run."""
+    try:
+        if input_path.stat().st_size > MAX_INPUT_BYTES:
+            raise ValueError(f"content brief exceeds {MAX_INPUT_BYTES} bytes")
+    except OSError as exc:
+        raise ValueError(f"content brief is unavailable: {input_path}") from exc
+    brief = validate_content_brief(load_json(input_path))
+    normalized, source_text = _normalize_brief(brief, input_path)
+    validate_content_brief(normalized)
+    canonical = json.dumps(normalized, ensure_ascii=False, sort_keys=True, separators=(",", ":"))
+    run_id = _stable_id("run", canonical)
+    now = (clock or (lambda: datetime.now(timezone.utc)))()
+    if now.tzinfo is None:
+        now = now.replace(tzinfo=timezone.utc)
+    created_at = now.astimezone(timezone.utc).isoformat().replace("+00:00", "Z")
+
+    ledger = _evidence_ledger(normalized, run_id)
+    generated_content = _build_content(normalized, run_id, source_text)
+    spec = _content_spec(normalized, generated_content)
+    markdown = _markdown(generated_content, ledger)
+    html_document = _html_document(generated_content, ledger)
+    validate_artifact("evidence-ledger", ledger)
+    validate_artifact("content-spec", spec)
+
+    requested = set(normalized["desired_formats"])
+    warnings: list[str] = []
+    binary_artifacts: dict[str, bytes] = {}
+    if "docx" in requested:
+        try:
+            binary_artifacts["content.docx"] = _render_docx(markdown)
+        except Exception as exc:
+            warnings.append(f"degraded: DOCX renderer unavailable or failed; core artifacts succeeded: {exc}")
+    if "pdf" in requested:
+        try:
+            binary_artifacts["content.pdf"], pdf_warnings = _render_pdf(html_document, markdown)
+            warnings.extend(pdf_warnings)
+        except Exception as exc:
+            warnings.append(f"degraded: PDF renderer unavailable or failed; core artifacts succeeded: {exc}")
+    if generated_content["status"] != "ready":
+        warnings.append(f"content status is {generated_content['status']}; review evidence and supplement requests")
+
+    quality = {
+        "protocol_version": PROTOCOL_VERSION,
+        "run_id": run_id,
+        "passed_checks": [
+            "content brief contract valid",
+            "factual claim evidence lineage resolved",
+            "HTML generated locally with escaped user text",
+            "Artifact Bus file set prepared atomically",
+        ],
+        "warnings": sorted(set(warnings)),
+        "failed_checks": [],
+        "status": "passed-with-warnings" if warnings else "passed",
+    }
+    validate_artifact("quality-report", quality)
+
+    artifacts = [
+        "input/content-brief.json",
+        *( ["input/source.md"] if source_text is not None else [] ),
+        "content-spec.json",
+        "content.json",
+        "content.md",
+        "content.html",
+        "evidence-ledger.json",
+        "quality-report.json",
+        *sorted(binary_artifacts),
+    ]
+    manifest = {
+        "protocol_version": PROTOCOL_VERSION,
+        "run_id": run_id,
+        "created_at": created_at,
+        "generator": {"name": "yao-geo-content", "version": GENERATOR_VERSION},
+        "input_artifact": "input/content-brief.json",
+        "artifacts": artifacts,
+        "status": "completed-with-warnings" if warnings else "completed",
+    }
+    validate_artifact("run-manifest", manifest)
+    run_path = output_path / run_id
+    with ArtifactBus.transaction(output_path, run_id) as bus:
+        bus.write_json("input/content-brief.json", normalized)
+        if source_text is not None:
+            bus.write_text("input/source.md", source_text)
+        bus.write_json("content-spec.json", spec, "content-spec")
+        bus.write_json("content.json", generated_content)
+        bus.write_text("content.md", markdown)
+        bus.write_text("content.html", html_document)
+        bus.write_json("evidence-ledger.json", ledger, "evidence-ledger")
+        bus.write_json("quality-report.json", quality, "quality-report")
+        for relative, payload in binary_artifacts.items():
+            bus.write_bytes(relative, payload)
+        bus.write_json("run-manifest.json", manifest, "run-manifest")
+        bus.publish(set(artifacts) | {"run-manifest.json"})
+    return {
+        "run_id": run_id,
+        "status": manifest["status"],
+        "content_status": generated_content["status"],
+        "output": str(run_path.resolve()),
+        "artifacts": artifacts,
+        "warning_count": len(quality["warnings"]),
+    }

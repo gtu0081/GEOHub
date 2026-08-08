@@ -8,6 +8,7 @@ from typing import Sequence
 
 from .diagnose import diagnose
 from .discover import discover
+from .content import content
 from .router import route
 
 
@@ -34,6 +35,10 @@ def build_parser() -> argparse.ArgumentParser:
     diagnose_parser = subparsers.add_parser("diagnose", help="Generate diagnosis artifacts")
     diagnose_parser.add_argument("--input", required=True, type=Path, help="Diagnosis brief JSON")
     diagnose_parser.add_argument("--output", required=True, type=Path, help="Runs root directory")
+
+    content_parser = subparsers.add_parser("content", help="Generate evidence-lined content artifacts")
+    content_parser.add_argument("--input", required=True, type=Path, help="Content brief JSON")
+    content_parser.add_argument("--output", required=True, type=Path, help="Runs root directory")
     return parser
 
 
@@ -45,8 +50,10 @@ def main(argv: Sequence[str] | None = None) -> int:
             result = route(args.text)
         elif args.command == "discover":
             result = discover(args.input, args.output)
-        else:
+        elif args.command == "diagnose":
             result = diagnose(args.input, args.output)
+        else:
+            result = content(args.input, args.output)
     except (OSError, ValueError) as exc:
         print(json.dumps({"status": "error", "message": str(exc)}, ensure_ascii=False), file=sys.stderr)
         return 2

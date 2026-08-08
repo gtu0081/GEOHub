@@ -1,0 +1,50 @@
+interface:
+  display_name: "Yao GEO Content"
+  short_description: "Create offline evidence-lined GEO content artifacts"
+  default_prompt: "Use $geo-content to create the requested content mode, preserve evidence lineage, and surface source gaps."
+  input_contract:
+    required:
+      mode: "title | explainer | comparison | ranking | page-blueprint | refine | article-friendly"
+      topic: "non-blank string"
+    optional:
+      locale: "non-blank string"
+      audience: "non-blank string"
+      goal: "non-blank string"
+      target_brand: "non-blank string"
+      competitors: "unique non-blank strings"
+      entities: "unique non-blank strings"
+      query_ids: "unique non-blank strings"
+      evidence: "unique labels; claim and absolute source_uri required; entity, dimension, and numeric score optional"
+      source_content: "inline text or safe relative UTF-8 file object up to 2 MiB"
+      desired_formats: "markdown, json, html, docx, pdf"
+      compliance_notes: "unique non-blank strings"
+      page_type: "non-blank string"
+      evaluation_method: "non-blank string or strict method object"
+  output_contract:
+    - "input/content-brief.json"
+    - "input/source.md when supplied"
+    - "content-spec.json"
+    - "content.json"
+    - "content.md"
+    - "content.html"
+    - "evidence-ledger.json"
+    - "quality-report.json"
+    - "run-manifest.json"
+    - "content.docx/content.pdf when requested and rendered"
+compatibility:
+  canonical_format: "agent-skills"
+  adapter_targets: [openai, claude, generic]
+  activation:
+    mode: "auto"
+    paths: []
+  execution:
+    context: "inline"
+    shell: "python"
+  trust:
+    source_tier: "local"
+    remote_inline_execution: "forbid"
+    remote_metadata_policy: "allow-metadata-only"
+  degradation:
+    openai: "metadata-adapter"
+    claude: "neutral-source-plus-adapter"
+    generic: "neutral-source"

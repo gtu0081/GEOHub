@@ -23,12 +23,12 @@ skills:
     intents: [diagnose, audit, brand diagnosis, brand audit, site diagnosis, site audit, website diagnosis, website audit, page diagnosis, page audit, 诊断, 审计, 差距分析, 品牌诊断, 网站诊断, 页面诊断]
     outputs: [report, diagnosis, evidence-ledger, query-map, opportunity-map, quality-report, run-manifest]
   - id: geo-content
-    status: pending-implementation
+    status: active
     active_placeholder: false
-    entry: null
-    summary: Reserved for evidence-grounded content specifications.
-    intents: [content, draft, 内容生产, 内容优化, 写文章]
-    outputs: [content-spec]
+    entry: skills/geo-content/SKILL.md
+    summary: Offline evidence-lined content generation across seven bounded modes.
+    intents: [content, draft, title, headline, explainer, explanation, comparison, ranking, page blueprint, content refine, article-friendly, 内容生产, 内容优化, 写文章, 标题, 科普, 解释, 对比, 榜单, 排名, 页面蓝图, 文章友好]
+    outputs: [content-spec, content, markdown, json, html, docx, pdf, evidence-ledger, quality-report, run-manifest]
   - id: geo-strategy
     status: planned
     active_placeholder: false

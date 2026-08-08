@@ -96,6 +96,8 @@ def test_offline_wheel_install_runs_diagnose_outside_repository(tmp_path):
                 "assert Path(yao_geo.__file__).resolve().is_relative_to(prefix); "
                 "assert (prefix/'share/yao-geo/registry/skills.yaml').is_file(); "
                 "assert (prefix/'share/yao-geo/skills/geo-diagnose/SKILL.md').is_file(); "
+                "assert (prefix/'share/yao-geo/skills/geo-content/SKILL.md').is_file(); "
+                "assert (prefix/'share/yao-geo/skills/geo-content/references/modes.md').is_file(); "
                 "print(prefix)"
             ),
         ],
@@ -138,3 +140,23 @@ def test_offline_wheel_install_runs_diagnose_outside_repository(tmp_path):
     assert actual == expected
     manifest = json.loads((run / "run-manifest.json").read_text(encoding="utf-8"))
     assert set(manifest["artifacts"]) == expected - {"run-manifest.json"}
+
+    content_brief = outside / "content.json"
+    content_brief.write_text(
+        json.dumps({"mode": "explainer", "topic": "Installed content"}),
+        encoding="utf-8",
+    )
+    content_completed = _run(
+        [str(console), "content", "--input", str(content_brief), "--output", str(tmp_path / "content-runs")],
+        cwd=outside,
+        env=environment,
+    )
+    content_payload = json.loads(content_completed.stdout)
+    content_run = Path(content_payload["output"])
+    assert (content_run / "content.json").is_file()
+    assert (content_run / "content.md").is_file()
+    assert (content_run / "content.html").is_file()
+    routed = json.loads(
+        _run([str(console), "route", "--text", "Create an article-friendly draft"], cwd=outside, env=environment).stdout
+    )
+    assert routed["skill_id"] == "geo-content"

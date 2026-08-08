@@ -36,12 +36,9 @@ def main() -> int:
 
     registry = load_registry(ROOT / "registry" / "skills.yaml")
     registered = {item["id"]: item for item in registry["skills"]}
-    for skill_id in ("geo", "geo-discover", "geo-diagnose"):
+    for skill_id in ("geo", "geo-discover", "geo-diagnose", "geo-content"):
         if registered[skill_id]["status"] != "active":
             fail(f"{skill_id} must be active")
-    for skill_id in ("geo-content",):
-        if registered[skill_id]["status"] != "pending-implementation":
-            fail(f"{skill_id} must be pending-implementation")
 
     required_files = {
         "geo": ("SKILL.md", "manifest.json", "agents/interface.yaml", "references/routing-contract.md"),
@@ -60,6 +57,17 @@ def main() -> int:
             "references/diagnosis-method.md",
             "references/input-example.json",
             "scripts/run_diagnose.py",
+        ),
+        "geo-content": (
+            "SKILL.md",
+            "manifest.json",
+            "agents/interface.yaml",
+            "references/content-method.md",
+            "references/modes.md",
+            "references/evidence-policy.md",
+            "references/output-contract.md",
+            "references/input-example.json",
+            "scripts/run_content.py",
         ),
     }
     for skill_id, relative_paths in required_files.items():
@@ -111,6 +119,29 @@ def main() -> int:
     }
     if set(diagnose_manifest.get("output_contract", [])) != expected_outputs:
         fail("geo-diagnose manifest output contract is incomplete")
+
+    content_manifest = json.loads(
+        (ROOT / "skills" / "geo-content" / "manifest.json").read_text(encoding="utf-8")
+    )
+    if content_manifest.get("status") != "experimental" or content_manifest.get("maturity") != "experimental":
+        fail("geo-content manifest status and maturity must be experimental")
+    if content_manifest.get("version") != "0.1.0":
+        fail("geo-content manifest version must be 0.1.0")
+    expected_content_outputs = {
+        "input/content-brief.json",
+        "input/source.md",
+        "content-spec.json",
+        "content.json",
+        "content.md",
+        "content.html",
+        "content.docx",
+        "content.pdf",
+        "evidence-ledger.json",
+        "quality-report.json",
+        "run-manifest.json",
+    }
+    if set(content_manifest.get("output_contract", [])) != expected_content_outputs:
+        fail("geo-content manifest output contract is incomplete")
 
     print("repository verification passed")
     return 0

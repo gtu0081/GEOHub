@@ -83,6 +83,15 @@ class ArtifactBus:
         temporary.replace(target)
         return target
 
+    def write_bytes(self, relative_path: str, content: bytes) -> Path:
+        """Atomically stage a binary artifact inside the bounded run directory."""
+        target = self._resolve(relative_path)
+        target.parent.mkdir(parents=True, exist_ok=True)
+        temporary = target.with_suffix(target.suffix + ".tmp")
+        temporary.write_bytes(content)
+        temporary.replace(target)
+        return target
+
     def publish(self, expected_files: set[str]) -> Path:
         if self.final_root is None:
             raise ValueError("Direct ArtifactBus instances cannot be published")
