@@ -482,6 +482,86 @@ def test_internal_zhi_after_buzai_remains_in_the_negative_lead_in(text, skill_id
     assert "workflow" not in result
 
 
+def test_budandu_enters_bare_negation_before_a_planned_action():
+    result = route("不单独发布只写文章")
+    assert result["skill_id"] == "geo-content"
+    assert result["runnable"] is True
+    assert "workflow" not in result
+
+
+def test_internal_jin_enters_buzai_negation_before_a_planned_action():
+    result = route("不再仅发布，改为写文章")
+    assert result["skill_id"] == "geo-content"
+    assert result["runnable"] is True
+    assert "workflow" not in result
+
+
+def test_internal_guang_enters_buzai_negation_before_a_planned_action():
+    result = route("不再光发布，改为写文章")
+    assert result["skill_id"] == "geo-content"
+    assert result["runnable"] is True
+    assert "workflow" not in result
+
+
+@pytest.mark.parametrize(
+    "text,skill_id",
+    (
+        ("不 单独 发布只写文章", "geo-content"),
+        ("不单独监测只诊断网站", "geo-diagnose"),
+        ("不再单独制定策略只诊断网站", "geo-diagnose"),
+        ("不要单独发布只写文章", "geo-content"),
+        ("不再单独诊断只写文章", "geo-content"),
+    ),
+)
+def test_dandu_is_a_negative_lead_in_for_active_and_planned_actions(text, skill_id):
+    result = route(text)
+    assert result["skill_id"] == skill_id
+    assert result["runnable"] is True
+    assert "workflow" not in result
+
+
+@pytest.mark.parametrize(
+    "text,skill_id,workflow_id,runnable",
+    (
+        ("不单发布还要写文章", "geo-publish", None, False),
+        ("不单是拓词还要诊断网站", "geo-discover", "brand-baseline-lite", True),
+        ("不 单 是拓词还要诊断网站", "geo-discover", "brand-baseline-lite", True),
+        ("不仅发布还要写文章", "geo-publish", None, False),
+        ("不仅仅监测还要诊断网站", "geo-measure", None, False),
+        ("不光发布还要写文章", "geo-publish", None, False),
+    ),
+)
+def test_not_only_lexemes_keep_registered_actions_positive(
+    text,
+    skill_id,
+    workflow_id,
+    runnable,
+):
+    result = route(text)
+    assert result["skill_id"] == skill_id
+    assert result.get("workflow", {}).get("id") == workflow_id
+    assert result["runnable"] is runnable
+    if not runnable:
+        assert result["required_inputs"]
+        assert result["closest_v0_artifact"]
+
+
+@pytest.mark.parametrize(
+    "text,skill_id",
+    (
+        ("不再仅仅发布，改为写文章", "geo-content"),
+        ("不再仅监测，改为诊断网站", "geo-diagnose"),
+        ("不再只发布，改为写文章", "geo-content"),
+        ("不再光发布，改为写文章", "geo-content"),
+    ),
+)
+def test_internal_not_only_tokens_remain_in_buzai_negation(text, skill_id):
+    result = route(text)
+    assert result["skill_id"] == skill_id
+    assert result["runnable"] is True
+    assert "workflow" not in result
+
+
 def test_bujin_with_action_lead_in_remains_positive():
     result = route("不仅想发布还要诊断网站")
     assert result["skill_id"] == "geo-publish"

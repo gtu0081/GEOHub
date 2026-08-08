@@ -16,7 +16,9 @@ _NEGATION_RE = re.compile(
     r"(?:请勿|不需要|不要|无需|无须|不能|不可|别|禁止|拒绝|不想|不必|不准|切勿|"
     r"不做|不进行|不创建|不生成|不开展|跳过|避免|勿))"
 )
-_BARE_ZH_NEGATION_RE = re.compile(r"不(?!\s*(?:只|仅|单|光))\s*(?:再\s*)?")
+_BARE_ZH_NEGATION_RE = re.compile(
+    r"不(?!\s*(?:只|仅|光|单(?!\s*独)))\s*(?:再\s*)?"
+)
 _HARD_CLAUSE_RE = re.compile(r"[;；。.!?！？]")
 _CLAUSE_BOUNDARY_RE = re.compile(
     r"(?:[;；。.!?！？]|(?:,\s*)?\b(?:but|instead|however)(?:\s+please)?\b|"
@@ -61,7 +63,8 @@ _SEQUENCE_SCOPE_TOKENS = frozenset(
     {"then", "and then", "only", "and only", "just", "然后", "再", "只", "仅", "请"}
 )
 _ACTION_LEAD_IN_RE = re.compile(
-    r"(?:(?:please|need|want)\s+|(?:(?:请|需要|继续|想|去|要|打算|准备|再|只)\s*){1,4})"
+    r"(?:(?:please|need|want)\s+|"
+    r"(?:(?:请|需要|继续|想|去|要|打算|准备|单\s*独|仅仅|仅|再|只|光)\s*){1,4})"
 )
 
 
