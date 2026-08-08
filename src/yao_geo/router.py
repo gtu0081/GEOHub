@@ -20,10 +20,9 @@ _NEGATION_RE = re.compile(
 _HARD_CLAUSE_RE = re.compile(r"[;；。.!?！？]")
 _CLAUSE_BOUNDARY_RE = re.compile(
     r"(?:[;；。.!?！？]|(?:,\s*)?\b(?:but|instead|however)(?:\s+please)?\b|"
-    r"(?:,\s*)?(?:and\s+)?(?:then|only)(?=\s+(?:write|create|generate|draft|audit|diagnose|discover|research|expand|rank|explain)\b)|"
+    r"(?:,\s*)?(?:and\s+)?(?:then|only)\b|"
     r",\s*(?:only|just)\b|(?:，\s*)?(?:但是|但|改为|转而)(?:请)?|"
-    r"(?:，\s*)?(?:然后|再|只)\s*(?=(?:诊断|审计|拓词|挖掘|研究|写|创建|生成|做|进行|开展|发布|测量|抓取))|"
-    r"，\s*(?:只|仅|请)|请\s*(?=(?:诊断|审计|拓词|挖掘|研究|写|创建|生成|做|进行|开展|发布|测量|抓取)))"
+    r"(?:，\s*)?(?:然后|再|只)|，\s*(?:只|仅|请)|请)"
 )
 _WORKFLOW_CONNECTOR_RE = re.compile(
     r"(?:\b(?:and|then|plus|followed by|but|instead|however)\b|"
@@ -35,6 +34,27 @@ _NEGATION_FILLER_RE = re.compile(
 )
 MAX_ROUTE_CHARACTERS = 8_000
 MAX_ROUTE_UTF8_BYTES = 16_384
+_ACTION_VERB_PREFIXES = frozenset(
+    {
+        "build",
+        "create",
+        "generate",
+        "make",
+        "produce",
+        "refine",
+        "write",
+        "产出",
+        "创建",
+        "制作",
+        "写",
+        "生成",
+        "输出",
+    }
+)
+_SEQUENCE_SCOPE_TOKENS = frozenset(
+    {"then", "and then", "only", "and only", "just", "然后", "再", "只", "仅", "请"}
+)
+_ACTION_LEAD_IN_RE = re.compile(r"(?:(?:please|need|want)\s+|(?:请|要|需要)\s*)")
 
 
 @dataclass(frozen=True)
@@ -44,8 +64,40 @@ class ClauseScope:
     negation_starts: tuple[int, ...]
 
 
+@dataclass(frozen=True)
+class ActionPhraseIndex:
+    phrases: frozenset[str]
+    start_pattern: re.Pattern[str]
+
+
 def _normalize(text: str) -> str:
     return re.sub(r"\s+", " ", text.casefold().strip())
+
+
+def build_action_phrase_index(registry: dict[str, Any]) -> ActionPhraseIndex:
+    """Compile every active registry intent plus narrow request verb prefixes."""
+    phrases = {
+        phrase
+        for skill in registry["skills"]
+        if skill["status"] == "active"
+        for intent in skill["intents"]
+        if (phrase := _normalize(intent))
+    }
+    phrases.update(_ACTION_VERB_PREFIXES)
+    alternatives = []
+    for phrase in sorted(phrases, key=lambda item: (-len(item), item)):
+        suffix = r"(?![\w-])" if phrase[-1].isascii() else ""
+        alternatives.append(f"(?:{re.escape(phrase)}){suffix}")
+    return ActionPhraseIndex(
+        phrases=frozenset(phrases),
+        start_pattern=re.compile("(?:" + "|".join(alternatives) + ")"),
+    )
+
+
+def _starts_registered_action(text: str, action_index: ActionPhraseIndex) -> bool:
+    lead_in = _ACTION_LEAD_IN_RE.match(text)
+    start = lead_in.end() if lead_in else 0
+    return action_index.start_pattern.match(text, start) is not None
 
 
 def _connector_starts_scope(
@@ -55,9 +107,15 @@ def _connector_starts_scope(
     negation_spans: tuple[tuple[int, int], ...],
     negation_starts: tuple[int, ...],
     object_prefix: tuple[int, ...],
+    action_index: ActionPhraseIndex,
 ) -> bool:
-    token = boundary.group().strip(" ,，").casefold()
+    token = _normalize(boundary.group().strip(" ,，"))
     right = text[boundary.end() :].lstrip()
+    if token in _SEQUENCE_SCOPE_TOKENS:
+        if token in {"only", "and only"} and text[max(0, boundary.start() - 4) : boundary.start()].endswith("not "):
+            return False
+        if not _starts_registered_action(right, action_index):
+            return False
     if (
         token.startswith(("however", "instead"))
         and boundary.group().lstrip().startswith((",", "，"))
@@ -71,7 +129,10 @@ def _connector_starts_scope(
     return object_prefix[boundary.start()] > object_prefix[after_negation]
 
 
-def _parse_clause_scopes(text: str) -> tuple[ClauseScope, ...]:
+def _parse_clause_scopes(
+    text: str,
+    action_index: ActionPhraseIndex,
+) -> tuple[ClauseScope, ...]:
     negation_matches = tuple(_NEGATION_RE.finditer(text))
     negation_spans = tuple(match.span() for match in negation_matches)
     negation_starts = tuple(span[0] for span in negation_spans)
@@ -92,6 +153,7 @@ def _parse_clause_scopes(text: str) -> tuple[ClauseScope, ...]:
             negation_spans,
             negation_starts,
             object_prefix,
+            action_index,
         ):
             scope_start = boundary.end()
             boundaries.append(scope_start)
@@ -164,7 +226,8 @@ def route(text: str, registry_path: Path | None = None) -> dict[str, Any]:
         raise ValueError("Route text must not be empty")
 
     registry = load_registry(registry_path)
-    scopes = _parse_clause_scopes(normalized)
+    action_index = build_action_phrase_index(registry)
+    scopes = _parse_clause_scopes(normalized, action_index)
     analyses = {
         skill["id"]: _analyze_skill_intents(normalized, skill["intents"], scopes)
         for skill in registry["skills"]

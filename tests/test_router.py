@@ -1,7 +1,8 @@
 import pytest
 
 import yao_geo.router as router_module
-from yao_geo.router import route
+from yao_geo.registry import load_registry
+from yao_geo.router import build_action_phrase_index, route
 
 
 def test_routes_chinese_discovery_request():
@@ -390,6 +391,73 @@ def test_chinese_scope_connectors_allow_normalized_spacing_before_action():
         result = route(text)
         assert result["skill_id"] == skill_id
         assert "workflow" not in result
+
+
+@pytest.mark.parametrize(
+    "text",
+    (
+        "No keyword research, then title",
+        "Skip keyword research, then explainer",
+        "Avoid keyword research and only comparison",
+        "No keyword research, then ranking",
+        "Skip keyword research, then page blueprint",
+        "Avoid keyword research, then refine content",
+        "No keyword research, then article-friendly",
+        "跳过拓词，然后标题",
+        "跳过拓词，然后解释",
+        "跳过拓词，然后对比",
+        "跳过拓词，然后排名",
+        "跳过拓词，然后页面蓝图",
+        "跳过拓词，然后内容优化",
+        "跳过拓词，然后文章友好",
+    ),
+)
+def test_all_registered_content_modes_start_positive_sequence_scope(text):
+    result = route(text)
+    assert result["skill_id"] == "geo-content"
+    assert "workflow" not in result
+
+
+def test_action_index_contains_every_active_registry_intent():
+    registry = load_registry()
+    index = build_action_phrase_index(registry)
+    expected = {
+        " ".join(intent.casefold().split())
+        for skill in registry["skills"]
+        if skill["status"] == "active"
+        for intent in skill["intents"]
+    }
+    assert expected <= index.phrases
+
+
+def test_registry_action_index_is_compiled_once_and_checked_once_per_sequence(monkeypatch):
+    original_builder = router_module.build_action_phrase_index
+    build_calls = 0
+    match_calls = 0
+
+    class CountingStartPattern:
+        def __init__(self, wrapped):
+            self.wrapped = wrapped
+
+        def match(self, text, *args):
+            nonlocal match_calls
+            match_calls += 1
+            return self.wrapped.match(text, *args)
+
+    def counting_builder(registry):
+        nonlocal build_calls
+        build_calls += 1
+        index = original_builder(registry)
+        return router_module.ActionPhraseIndex(
+            phrases=index.phrases,
+            start_pattern=CountingStartPattern(index.start_pattern),
+        )
+
+    monkeypatch.setattr(router_module, "build_action_phrase_index", counting_builder)
+    text = ("No keyword research, then title; " * 100)[:3_000]
+    route(text)
+    assert build_calls == 1
+    assert match_calls <= text.count("then")
 
 
 def test_bare_chinese_request_marker_starts_positive_clause():

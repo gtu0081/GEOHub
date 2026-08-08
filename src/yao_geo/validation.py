@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import json
+import math
 import os
 import stat
 from pathlib import Path
@@ -19,7 +20,17 @@ def strict_json_loads(value: str | bytes | bytearray) -> Any:
     def reject_constant(constant: str) -> Any:
         raise ValueError(f"non-standard JSON constant is not allowed: {constant}")
 
-    return json.loads(value, parse_constant=reject_constant)
+    parsed = json.loads(value, parse_constant=reject_constant)
+    pending = [parsed]
+    while pending:
+        item = pending.pop()
+        if isinstance(item, float) and not math.isfinite(item):
+            raise ValueError("non-finite JSON number is not allowed")
+        if isinstance(item, dict):
+            pending.extend(item.values())
+        elif isinstance(item, list):
+            pending.extend(item)
+    return parsed
 
 
 def _trusted_absolute_components(candidate: Path) -> tuple[str, ...]:

@@ -33,13 +33,15 @@ def test_json_ld_rejects_nested_nonstandard_constants_across_multiple_scripts():
     <script type="application/ld+json">{"@type":"Article","nested":{"score":NaN}}</script>
     <script type="application/ld+json">{"@type":"Article","items":[Infinity]}</script>
     <script type="application/ld+json">{"@type":"Article","score":-Infinity}</script>
+    <script type="application/ld+json">{"@type":"Article","nested":{"score":1e9999}}</script>
+    <script type="application/ld+json">{"@type":"Article","items":[-1e9999]}</script>
     """
     metrics = analyze_html(html, "https://example.com/page")
-    assert metrics["json_ld_count"] == 4
+    assert metrics["json_ld_count"] == 6
     assert metrics["valid_json_ld_count"] == 1
 
     invalid_only = analyze_html(
-        '<script type="application/ld+json">{"nested":[{"score":NaN}]}</script>',
+        '<script type="application/ld+json">{"nested":[{"score":1e9999}]}</script>',
         "https://example.com/page",
     )
     assert invalid_only["valid_json_ld_count"] == 0

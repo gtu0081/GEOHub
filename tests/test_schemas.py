@@ -11,7 +11,12 @@ from jsonschema import Draft202012Validator
 
 from yao_geo.paths import repository_root
 from yao_geo.registry import RegistryError, load_registry
-from yao_geo.validation import ArtifactValidationError, load_schema, validate_artifact
+from yao_geo.validation import (
+    ArtifactValidationError,
+    load_schema,
+    strict_json_loads,
+    validate_artifact,
+)
 from scripts.package_repository import build_archive, trusted_files
 
 
@@ -63,6 +68,12 @@ def test_runtime_json_loads_are_centralized_in_strict_helper():
                 observed.append((source.name, node.lineno))
     assert len(observed) == 1
     assert observed[0][0] == "validation.py"
+
+
+@pytest.mark.parametrize("literal", ("1e9999", "-1e9999"))
+def test_strict_json_rejects_nested_numeric_overflow(literal):
+    with pytest.raises(ValueError, match="non-finite JSON number"):
+        strict_json_loads(f'{{"outer":[{{"value":{literal}}}]}}')
 
 
 def test_reserved_schemas_accept_protocol_examples():

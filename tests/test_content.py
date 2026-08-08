@@ -344,6 +344,20 @@ def test_artifact_bus_rejects_nested_nonfinite_json(nonfinite, tmp_path):
     assert list(bus.root.rglob("*")) == []
 
 
+@pytest.mark.parametrize("literal", ("1e9999", "-1e9999"))
+def test_artifact_bus_rejects_numeric_overflow_in_staged_manifest(literal, tmp_path):
+    runs = tmp_path / "runs"
+    with ArtifactBus.transaction(runs, "run-overflow") as bus:
+        bus.write_text("payload.txt", "payload")
+        bus.write_text(
+            "run-manifest.json",
+            f'{{"artifacts":["payload.txt"],"nested":{{"value":{literal}}}}}',
+        )
+        with pytest.raises(ValueError, match="non-finite JSON number"):
+            bus.publish({"payload.txt", "run-manifest.json"})
+    assert list(runs.iterdir()) == []
+
+
 def test_evaluation_method_rejects_tie_breaker_in_v01():
     with pytest.raises(ValueError, match="unknown fields"):
         validate_content_brief(

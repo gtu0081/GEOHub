@@ -102,6 +102,35 @@ def test_all_brief_entrypoints_reject_nonstandard_json_constants(runner, raw, tm
         runner(brief, tmp_path / "runs")
 
 
+@pytest.mark.parametrize("literal", ("1e9999", "-1e9999"))
+@pytest.mark.parametrize(
+    "runner,raw_template",
+    [
+        (
+            discover,
+            '{{"protocol_version":"1.0.0","brief_id":"strict","subject":{{"nested":{literal}}},"seed_queries":["query"]}}',
+        ),
+        (
+            diagnose,
+            '{{"subject":"Strict","scope":"brand","evidence":[{{"evidence_id":"ev","claim":{{"nested":{literal}}},"source_uri":"urn:test"}}]}}',
+        ),
+        (content, '{{"mode":"title","topic":{{"nested":[{literal}]}}}}'),
+    ],
+)
+def test_all_brief_entrypoints_reject_nested_numeric_overflow(
+    runner,
+    raw_template,
+    literal,
+    tmp_path,
+):
+    brief = tmp_path / "brief.json"
+    brief.write_text(raw_template.format(literal=literal), encoding="utf-8")
+    runs = tmp_path / "runs"
+    with pytest.raises(ValueError, match="non-finite JSON number"):
+        runner(brief, runs)
+    assert not runs.exists()
+
+
 def test_bounded_reader_rejects_fifo_without_blocking(tmp_path):
     fifo = tmp_path / "brief.fifo"
     os.mkfifo(fifo)

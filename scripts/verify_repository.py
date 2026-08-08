@@ -14,6 +14,7 @@ ROOT = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(ROOT / "src"))
 
 from yao_geo.registry import load_registry  # noqa: E402
+from yao_geo.router import build_action_phrase_index  # noqa: E402
 from yao_geo.validation import load_schema  # noqa: E402
 
 
@@ -38,6 +39,19 @@ def main() -> int:
 
     registry = load_registry(ROOT / "registry" / "skills.yaml")
     registered = {item["id"]: item for item in registry["skills"]}
+    action_index = build_action_phrase_index(registry)
+    active_intents = {
+        " ".join(intent.casefold().split())
+        for skill in registry["skills"]
+        if skill["status"] == "active"
+        for intent in skill["intents"]
+    }
+    missing_action_intents = active_intents - action_index.phrases
+    if missing_action_intents:
+        fail(
+            "active registry intents missing from router action index: "
+            + ", ".join(sorted(missing_action_intents))
+        )
     for skill_id in ("geo", "geo-discover", "geo-diagnose", "geo-content"):
         if registered[skill_id]["status"] != "active":
             fail(f"{skill_id} must be active")
