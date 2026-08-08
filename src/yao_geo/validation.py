@@ -15,6 +15,13 @@ class ArtifactValidationError(ValueError):
     """Raised when an artifact does not satisfy its protocol schema."""
 
 
+def strict_json_loads(value: str | bytes | bytearray) -> Any:
+    def reject_constant(constant: str) -> Any:
+        raise ValueError(f"non-standard JSON constant is not allowed: {constant}")
+
+    return json.loads(value, parse_constant=reject_constant)
+
+
 def _trusted_absolute_components(candidate: Path) -> tuple[str, ...]:
     components = candidate.parts[1:]
     if not components or components[0] != "var":
@@ -91,17 +98,17 @@ def load_json(
     path: Path,
 ) -> dict[str, Any]:
     try:
-        return json.loads(path.read_text(encoding="utf-8"))
-    except (OSError, json.JSONDecodeError) as exc:
+        return strict_json_loads(path.read_text(encoding="utf-8"))
+    except (OSError, ValueError) as exc:
         raise ArtifactValidationError(f"Unable to load JSON from {path}: {exc}") from exc
 
 
 def load_bounded_json(path: Path, *, max_bytes: int, field: str) -> dict[str, Any]:
     try:
-        return json.loads(
+        return strict_json_loads(
             read_bounded_regular_file(path, max_bytes=max_bytes, field=field).decode("utf-8")
         )
-    except (ValueError, UnicodeDecodeError, json.JSONDecodeError) as exc:
+    except (ValueError, UnicodeDecodeError) as exc:
         raise ArtifactValidationError(f"Unable to load JSON from {path}: {exc}") from exc
 
 

@@ -16,7 +16,7 @@ from typing import Any, Callable
 from urllib.parse import urlsplit
 
 from .artifact_bus import ArtifactBus
-from .validation import read_bounded_regular_file, validate_artifact
+from .validation import read_bounded_regular_file, strict_json_loads, validate_artifact
 
 PROTOCOL_VERSION = "1.0.0"
 GENERATOR_VERSION = "0.1.0"
@@ -123,8 +123,8 @@ def _load_content_brief(path: Path) -> dict[str, Any]:
             max_bytes=MAX_INPUT_BYTES,
             field="content brief",
         ).decode("utf-8")
-        value = json.loads(raw)
-    except (UnicodeDecodeError, json.JSONDecodeError) as exc:
+        value = strict_json_loads(raw)
+    except (UnicodeDecodeError, ValueError) as exc:
         raise ValueError(f"content brief is not valid UTF-8 JSON: {path}: {exc}") from exc
     if not isinstance(value, dict):
         raise ValueError("content brief must be a JSON object")

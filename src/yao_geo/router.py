@@ -20,8 +20,10 @@ _NEGATION_RE = re.compile(
 _HARD_CLAUSE_RE = re.compile(r"[;；。.!?！？]")
 _CLAUSE_BOUNDARY_RE = re.compile(
     r"(?:[;；。.!?！？]|(?:,\s*)?\b(?:but|instead|however)(?:\s+please)?\b|"
+    r"(?:,\s*)?(?:and\s+)?(?:then|only)(?=\s+(?:write|create|generate|draft|audit|diagnose|discover|research|expand|rank|explain)\b)|"
     r",\s*(?:only|just)\b|(?:，\s*)?(?:但是|但|改为|转而)(?:请)?|"
-    r"，\s*(?:只|仅|请)|(?:请|只)(?=(?:诊断|审计|拓词|挖掘|研究|写|创建|生成|做|进行|开展|发布|测量|抓取)))"
+    r"(?:，\s*)?(?:然后|再|只)\s*(?=(?:诊断|审计|拓词|挖掘|研究|写|创建|生成|做|进行|开展|发布|测量|抓取))|"
+    r"，\s*(?:只|仅|请)|请\s*(?=(?:诊断|审计|拓词|挖掘|研究|写|创建|生成|做|进行|开展|发布|测量|抓取)))"
 )
 _WORKFLOW_CONNECTOR_RE = re.compile(
     r"(?:\b(?:and|then|plus|followed by|but|instead|however)\b|"

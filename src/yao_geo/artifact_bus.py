@@ -9,7 +9,7 @@ import tempfile
 from pathlib import Path
 from typing import Any
 
-from .validation import validate_artifact
+from .validation import strict_json_loads, validate_artifact
 
 
 class ArtifactBus:
@@ -118,8 +118,8 @@ class ArtifactBus:
             )
         manifest_path = self.root / "run-manifest.json"
         try:
-            manifest = json.loads(manifest_path.read_text(encoding="utf-8"))
-        except (OSError, json.JSONDecodeError) as exc:
+            manifest = strict_json_loads(manifest_path.read_text(encoding="utf-8"))
+        except (OSError, ValueError) as exc:
             raise ValueError(f"Unable to validate staged run manifest: {exc}") from exc
         declared = set(manifest.get("artifacts", []))
         expected_declared = expected_files - {"run-manifest.json"}

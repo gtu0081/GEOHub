@@ -4,12 +4,10 @@ import hashlib
 import http.client
 import ipaddress
 import json
-import os
 import queue
 import re
 import socket
 import ssl
-import stat
 import threading
 import time
 from dataclasses import dataclass
@@ -20,7 +18,7 @@ from typing import Any, Callable, Iterable
 from urllib.parse import urljoin, urlsplit, urlunsplit
 
 from .artifact_bus import ArtifactBus
-from .validation import load_bounded_json, validate_artifact
+from .validation import load_bounded_json, read_bounded_regular_file, strict_json_loads, validate_artifact
 
 PROTOCOL_VERSION = "1.0.0"
 MAX_FETCH_BYTES = 2 * 1024 * 1024
@@ -463,8 +461,8 @@ class PageAnalyzer(HTMLParser):
             self._capture_parts = []
         if tag == "script" and self._json_ld_depth:
             try:
-                json.loads("".join(self._json_ld_parts))
-            except (json.JSONDecodeError, TypeError):
+                strict_json_loads("".join(self._json_ld_parts))
+            except (ValueError, TypeError):
                 pass
             else:
                 self.valid_json_ld_count += 1
@@ -736,51 +734,14 @@ def _load_source_html(
         parts = path.parts
         if not parts:
             raise ValueError("source_html fixture path must name a file")
-        opened_fds: list[int] = []
         try:
-            directory_flags = os.O_RDONLY | os.O_DIRECTORY | os.O_NOFOLLOW | os.O_CLOEXEC
-            current_fd = os.open(input_path.parent, directory_flags)
-            opened_fds.append(current_fd)
-            for component in parts[:-1]:
-                current_fd = os.open(
-                    component,
-                    directory_flags,
-                    dir_fd=current_fd,
-                )
-                opened_fds.append(current_fd)
-            file_fd = os.open(
-                parts[-1],
-                os.O_RDONLY | os.O_NOFOLLOW | os.O_CLOEXEC,
-                dir_fd=current_fd,
-            )
-            opened_fds.append(file_fd)
-            file_stat = os.fstat(file_fd)
-            if not stat.S_ISREG(file_stat.st_mode):
-                raise ValueError(f"source_html fixture must be a regular file: {path}")
-            if file_stat.st_size > MAX_FETCH_BYTES:
-                raise ValueError(f"source_html fixture exceeds {MAX_FETCH_BYTES} bytes")
-            chunks: list[bytes] = []
-            byte_count = 0
-            while True:
-                chunk = os.read(
-                    file_fd,
-                    min(64 * 1024, MAX_FETCH_BYTES + 1 - byte_count),
-                )
-                if not chunk:
-                    break
-                chunks.append(chunk)
-                byte_count += len(chunk)
-                if byte_count > MAX_FETCH_BYTES:
-                    raise ValueError(f"source_html fixture exceeds {MAX_FETCH_BYTES} bytes")
-            html = b"".join(chunks).decode("utf-8")
-        except OSError as exc:
-            raise ValueError(f"source_html fixture is unavailable or unsafe: {path}") from exc
-        finally:
-            for descriptor in reversed(opened_fds):
-                try:
-                    os.close(descriptor)
-                except OSError:
-                    pass
+            html = read_bounded_regular_file(
+                input_path.parent / path,
+                max_bytes=MAX_FETCH_BYTES,
+                field="source_html fixture",
+            ).decode("utf-8")
+        except UnicodeDecodeError as exc:
+            raise ValueError(f"source_html fixture must be UTF-8: {path}") from exc
         digest = hashlib.sha256(html.encode("utf-8")).hexdigest()
         declared_digest = value.get("sha256", "").strip()
         if declared_digest and declared_digest != digest:

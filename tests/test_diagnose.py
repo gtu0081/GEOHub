@@ -1,4 +1,5 @@
 import json
+import inspect
 import os
 import socket
 from datetime import datetime, timezone
@@ -6,6 +7,7 @@ from pathlib import Path
 
 import pytest
 
+import yao_geo.validation as validation_module
 from yao_geo.diagnose import (
     FetchResult,
     SourceUnavailable,
@@ -14,6 +16,7 @@ from yao_geo.diagnose import (
     _default_fetch,
     _load_source_html,
     _validate_public_url,
+    analyze_html,
     diagnose,
     validate_diagnosis,
     validate_diagnosis_brief,
@@ -22,6 +25,24 @@ from yao_geo.diagnose import (
 from yao_geo.validation import validate_artifact
 
 FIXTURES = Path(__file__).parent / "fixtures"
+
+
+def test_json_ld_rejects_nested_nonstandard_constants_across_multiple_scripts():
+    html = """
+    <script type="application/ld+json">{"@type":"Article","score":1}</script>
+    <script type="application/ld+json">{"@type":"Article","nested":{"score":NaN}}</script>
+    <script type="application/ld+json">{"@type":"Article","items":[Infinity]}</script>
+    <script type="application/ld+json">{"@type":"Article","score":-Infinity}</script>
+    """
+    metrics = analyze_html(html, "https://example.com/page")
+    assert metrics["json_ld_count"] == 4
+    assert metrics["valid_json_ld_count"] == 1
+
+    invalid_only = analyze_html(
+        '<script type="application/ld+json">{"nested":[{"score":NaN}]}</script>',
+        "https://example.com/page",
+    )
+    assert invalid_only["valid_json_ld_count"] == 0
 
 
 def _clock():
@@ -418,6 +439,34 @@ def test_file_fixture_rejects_symlink_component(tmp_path):
         diagnose(brief, tmp_path / "runs", clock=_clock)
 
 
+def test_source_html_uses_shared_bounded_reader_and_rejects_final_symlink_fifo(tmp_path, monkeypatch):
+    source = inspect.getsource(_load_source_html)
+    assert "read_bounded_regular_file" in source
+    assert "os.open" not in source
+
+    brief = tmp_path / "brief.json"
+    brief.write_text("{}", encoding="utf-8")
+    page = tmp_path / "page.html"
+    page.write_text("<title>page</title>", encoding="utf-8")
+    linked = tmp_path / "linked.html"
+    linked.symlink_to(page)
+    with pytest.raises(ValueError, match="unsafe"):
+        _load_source_html({"path": linked.name}, brief, index=0)
+
+    fifo = tmp_path / "page.fifo"
+    os.mkfifo(fifo)
+    real_open = os.open
+
+    def require_nonblock(path, flags, mode=0o777, *, dir_fd=None):
+        if path == fifo.name and not flags & os.O_NONBLOCK:
+            raise AssertionError("source_html file open must use O_NONBLOCK")
+        return real_open(path, flags, mode, dir_fd=dir_fd)
+
+    monkeypatch.setattr(validation_module.os, "open", require_nonblock)
+    with pytest.raises(ValueError, match="regular"):
+        _load_source_html({"path": fifo.name}, brief, index=0)
+
+
 def test_fd_reader_uses_opened_file_when_path_is_replaced(tmp_path, monkeypatch):
     brief = tmp_path / "brief.json"
     brief.write_text("{}", encoding="utf-8")
@@ -436,7 +485,7 @@ def test_fd_reader_uses_opened_file_when_path_is_replaced(tmp_path, monkeypatch)
             replaced = True
         return descriptor
 
-    monkeypatch.setattr("yao_geo.diagnose.os.open", racing_open)
+    monkeypatch.setattr(validation_module.os, "open", racing_open)
     html, _uri, _source_id, _source_type = _load_source_html(
         {"path": "page.html"}, brief, index=0
     )
@@ -476,9 +525,9 @@ def test_fd_reader_detects_growth_after_fstat_and_closes_all_fds(tmp_path, monke
         return real_close(descriptor)
 
     monkeypatch.setattr("yao_geo.diagnose.MAX_FETCH_BYTES", 8)
-    monkeypatch.setattr("yao_geo.diagnose.os.open", tracked_open)
-    monkeypatch.setattr("yao_geo.diagnose.os.fstat", growing_fstat)
-    monkeypatch.setattr("yao_geo.diagnose.os.close", tracked_close)
+    monkeypatch.setattr(validation_module.os, "open", tracked_open)
+    monkeypatch.setattr(validation_module.os, "fstat", growing_fstat)
+    monkeypatch.setattr(validation_module.os, "close", tracked_close)
     with pytest.raises(ValueError, match="exceeds 8 bytes"):
         _load_source_html({"path": "page.html"}, brief, index=0)
     assert grew is True

@@ -360,6 +360,38 @@ def test_workflow_connector_scan_is_single_pass_for_dense_in_limit_input(monkeyp
     assert "workflow" not in result
 
 
+def test_sequencing_connectors_end_only_the_prior_negated_stage():
+    cases = (
+        ("No keyword research, then write explainer", "geo-content"),
+        ("Skip keyword research; then write explainer", "geo-content"),
+        ("Avoid content, then audit the website", "geo-diagnose"),
+        ("跳过拓词，然后写文章", "geo-content"),
+        ("避免写文章，然后诊断网站", "geo-diagnose"),
+        ("Avoid keyword research and only write content", "geo-content"),
+    )
+    for text, skill_id in cases:
+        result = route(text)
+        assert result["skill_id"] == skill_id
+        assert "workflow" not in result
+
+    ordinary = route("Explain what happens then in a ranking article")
+    assert ordinary["skill_id"] == "geo-content"
+
+
+def test_chinese_scope_connectors_allow_normalized_spacing_before_action():
+    cases = (
+        ("跳过拓词，然后 写文章", "geo-content"),
+        ("避免写文章，然后 诊断网站", "geo-diagnose"),
+        ("跳过拓词再 写文章", "geo-content"),
+        ("不拓词只 诊断网站", "geo-diagnose"),
+        ("不要写文章请 诊断网站", "geo-diagnose"),
+    )
+    for text, skill_id in cases:
+        result = route(text)
+        assert result["skill_id"] == skill_id
+        assert "workflow" not in result
+
+
 def test_bare_chinese_request_marker_starts_positive_clause():
     result = route("不要写文章请诊断网站")
     assert result["skill_id"] == "geo-diagnose"

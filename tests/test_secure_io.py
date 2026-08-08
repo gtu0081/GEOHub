@@ -81,6 +81,27 @@ def test_macos_lexical_var_alias_accepts_three_entry_briefs(runner, payload):
         assert result["status"].startswith("completed")
 
 
+@pytest.mark.parametrize(
+    "runner,raw",
+    [
+        (
+            discover,
+            '{"protocol_version":"1.0.0","brief_id":"strict","subject":"Strict","seed_queries":[NaN]}',
+        ),
+        (
+            diagnose,
+            '{"subject":"Strict","scope":"brand","evidence":[{"evidence_id":"ev","claim":Infinity,"source_uri":"urn:test"}]}',
+        ),
+        (content, '{"mode":"title","topic":{"nested":-Infinity}}'),
+    ],
+)
+def test_all_brief_entrypoints_reject_nonstandard_json_constants(runner, raw, tmp_path):
+    brief = tmp_path / "brief.json"
+    brief.write_text(raw, encoding="utf-8")
+    with pytest.raises(ValueError, match="non-standard JSON constant"):
+        runner(brief, tmp_path / "runs")
+
+
 def test_bounded_reader_rejects_fifo_without_blocking(tmp_path):
     fifo = tmp_path / "brief.fifo"
     os.mkfifo(fifo)

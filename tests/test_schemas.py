@@ -47,6 +47,24 @@ def test_all_runtime_and_gate_json_writers_emit_standard_json():
             assert isinstance(allow_nan, ast.Constant) and allow_nan.value is False, f"{source}:{node.lineno}"
 
 
+def test_runtime_json_loads_are_centralized_in_strict_helper():
+    runtime = repository_root() / "src" / "yao_geo"
+    observed = []
+    for source in runtime.glob("*.py"):
+        tree = ast.parse(source.read_text(encoding="utf-8"))
+        for node in ast.walk(tree):
+            if (
+                isinstance(node, ast.Call)
+                and isinstance(node.func, ast.Attribute)
+                and isinstance(node.func.value, ast.Name)
+                and node.func.value.id == "json"
+                and node.func.attr == "loads"
+            ):
+                observed.append((source.name, node.lineno))
+    assert len(observed) == 1
+    assert observed[0][0] == "validation.py"
+
+
 def test_reserved_schemas_accept_protocol_examples():
     validate_artifact(
         "brand-fact-card",
