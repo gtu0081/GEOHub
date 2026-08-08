@@ -364,6 +364,101 @@ def test_bare_bu_absorbs_spacing_and_internal_zai_before_registered_action(
 @pytest.mark.parametrize(
     "text,skill_id",
     (
+        ("不再需要发布只写文章", "geo-content"),
+        ("不再继续监测只诊断网站", "geo-diagnose"),
+        ("不再想制定策略只诊断网站", "geo-diagnose"),
+        ("不再去构建知识库只写文章", "geo-content"),
+        ("不 再 要 分发只写文章", "geo-content"),
+        ("不再打算衡量只诊断网站", "geo-diagnose"),
+        ("不再准备发布只写文章", "geo-content"),
+        ("不再需要诊断只写文章", "geo-content"),
+        ("不 想 发布只写文章", "geo-content"),
+    ),
+)
+def test_bare_bu_reuses_action_lead_in_before_registered_action(text, skill_id):
+    result = route(text)
+    assert result["skill_id"] == skill_id
+    assert result["runnable"] is True
+    assert "workflow" not in result
+
+
+@pytest.mark.parametrize(
+    "text,skill_id",
+    (
+        ("不再想要拓词只诊断网站", "geo-diagnose"),
+        ("不再想要发布只写文章", "geo-content"),
+        ("不再打算继续监测只诊断网站", "geo-diagnose"),
+        ("不再需要继续制定策略只诊断网站", "geo-diagnose"),
+        ("不再发布，再想要写文章", "geo-content"),
+        ("不再监测，再准备去诊断网站", "geo-diagnose"),
+    ),
+)
+def test_action_lead_in_chains_share_negation_and_sequence_scope(text, skill_id):
+    result = route(text)
+    assert result["skill_id"] == skill_id
+    assert result["runnable"] is True
+    assert "workflow" not in result
+
+
+def test_action_lead_in_chain_is_bounded_to_four_tokens():
+    match = router_module._ACTION_LEAD_IN_RE.match("想要打算准备继续发布")
+    assert match is not None
+    assert match.group() == "想要打算准备"
+
+
+@pytest.mark.parametrize(
+    "text,skill_id",
+    (
+        ("不再打算请拓词只诊断网站", "geo-diagnose"),
+        ("不再想请发布只写文章", "geo-content"),
+        ("不再需要请监测只诊断网站", "geo-diagnose"),
+        ("不要想请发布只写文章", "geo-content"),
+        ("不要 想请发布只写文章", "geo-content"),
+        ("不要请发布只写文章", "geo-content"),
+        ("避免继续监测只诊断网站", "geo-diagnose"),
+        ("不再准备去发布只写文章", "geo-content"),
+        ("不要打算再发布只写文章", "geo-content"),
+        ("不再想只发布只写文章", "geo-content"),
+        ("不再想请发布，再写文章", "geo-content"),
+    ),
+)
+def test_negation_span_absorbs_the_recognized_action_lead_in(text, skill_id):
+    result = route(text)
+    assert result["skill_id"] == skill_id
+    assert result["runnable"] is True
+    assert "workflow" not in result
+
+
+def test_positive_action_lead_in_chain_keeps_planned_precedence():
+    result = route("想请发布只诊断网站")
+    assert result["skill_id"] == "geo-publish"
+    assert result["runnable"] is False
+
+
+def test_bujin_with_action_lead_in_remains_positive():
+    result = route("不仅想发布还要诊断网站")
+    assert result["skill_id"] == "geo-publish"
+    assert result["status"] == "planned"
+    assert result["runnable"] is False
+
+
+@pytest.mark.parametrize(
+    "text,skill_id",
+    (
+        ("不再准备发布，再写文章", "geo-content"),
+        ("不再继续监测，再诊断网站", "geo-diagnose"),
+    ),
+)
+def test_later_zai_after_lead_in_negation_starts_positive_scope(text, skill_id):
+    result = route(text)
+    assert result["skill_id"] == skill_id
+    assert result["runnable"] is True
+    assert "workflow" not in result
+
+
+@pytest.mark.parametrize(
+    "text,skill_id",
+    (
         ("不发布，再写文章", "geo-content"),
         ("不制定策略，再诊断网站", "geo-diagnose"),
     ),
@@ -626,7 +721,7 @@ def test_registry_action_index_is_compiled_once_and_checked_once_per_sequence(mo
     text = ("No keyword research, then title; " * 100)[:3_000]
     route(text)
     assert build_calls == 1
-    assert match_calls <= text.count("then")
+    assert match_calls <= text.count("then") + text.count("No")
 
 
 def test_bare_chinese_request_marker_starts_positive_clause():

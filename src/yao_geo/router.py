@@ -60,7 +60,9 @@ _ACTION_VERB_PREFIXES = frozenset(
 _SEQUENCE_SCOPE_TOKENS = frozenset(
     {"then", "and then", "only", "and only", "just", "然后", "再", "只", "仅", "请"}
 )
-_ACTION_LEAD_IN_RE = re.compile(r"(?:(?:please|need|want)\s+|(?:请|要|需要)\s*)")
+_ACTION_LEAD_IN_RE = re.compile(
+    r"(?:(?:please|need|want)\s+|(?:(?:请|需要|继续|想|去|要|打算|准备|再|只)\s*){1,4})"
+)
 
 
 @dataclass(frozen=True)
@@ -99,10 +101,26 @@ def build_action_phrase_index(registry: dict[str, Any]) -> ActionPhraseIndex:
     )
 
 
-def _starts_registered_action(text: str, action_index: ActionPhraseIndex) -> bool:
-    lead_in = _ACTION_LEAD_IN_RE.match(text)
-    start = lead_in.end() if lead_in else 0
-    return action_index.start_pattern.match(text, start) is not None
+def _registered_action_start(
+    text: str,
+    action_index: ActionPhraseIndex,
+    start: int = 0,
+) -> int | None:
+    if start < len(text) and text[start] == " ":
+        start += 1
+    lead_in = _ACTION_LEAD_IN_RE.match(text, start)
+    action_start = lead_in.end() if lead_in else start
+    if action_index.start_pattern.match(text, action_start) is None:
+        return None
+    return action_start
+
+
+def _starts_registered_action(
+    text: str,
+    action_index: ActionPhraseIndex,
+    start: int = 0,
+) -> bool:
+    return _registered_action_start(text, action_index, start) is not None
 
 
 def _connector_starts_scope(
@@ -138,7 +156,13 @@ def _parse_clause_scopes(
     text: str,
     action_index: ActionPhraseIndex,
 ) -> tuple[ClauseScope, ...]:
-    static_negation_spans = tuple(match.span() for match in _NEGATION_RE.finditer(text))
+    static_negation_spans = tuple(
+        (
+            match.start(),
+            _registered_action_start(text, action_index, match.end()) or match.end(),
+        )
+        for match in _NEGATION_RE.finditer(text)
+    )
     bare_negation_spans: list[tuple[int, int]] = []
     static_index = 0
     for match in _BARE_ZH_NEGATION_RE.finditer(text):
@@ -153,8 +177,9 @@ def _parse_clause_scopes(
             < static_negation_spans[static_index][1]
         ):
             continue
-        if action_index.start_pattern.match(text, match.end()) is not None:
-            bare_negation_spans.append(match.span())
+        action_start = _registered_action_start(text, action_index, match.end())
+        if action_start is not None:
+            bare_negation_spans.append((match.start(), action_start))
     negation_spans = tuple(sorted((*static_negation_spans, *bare_negation_spans)))
     negation_starts = tuple(span[0] for span in negation_spans)
     ignored = bytearray(len(text))

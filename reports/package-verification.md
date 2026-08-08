@@ -6,11 +6,11 @@ Packages: 8; repeated build hashes: identical.
 
 | Package | SHA-256 | Members | SKILL.md |
 | --- | --- | ---: | ---: |
-| geo-community-0.1.0.zip | `1446731ac8844d6621b440f7d35cc9e69d91c0f202b361f1c0dad4806493b5b8` | 52 | 1 |
-| geo-content-community-0.1.0.zip | `b034529a44488e578e30374a148d64fc452588a7592f28a4bfa84816dfd9700d` | 55 | 1 |
-| geo-diagnose-community-0.1.0.zip | `cc43738757b18f0e75e3619b0fa8bc62be54e939b1c854d28619f6dc043e10f4` | 52 | 1 |
-| geo-discover-community-0.1.0.zip | `5a92e611822232f1bf6b9699c0961fa1de663ba327c257e33f61a87b24e279f7` | 52 | 1 |
-| yao-geo-claude-community-0.1.0.zip | `77047f37662e7ca064d71e4b505bd2e95d47c7ec657955e97194e3ddf019a13c` | 56 | 1 |
-| yao-geo-codex-community-0.1.0.zip | `f2cb71305e0ccf2d331a0772b3c705232fa4a93e55af66f6893c68eaf2824e4e` | 56 | 1 |
-| yao-geo-source-0.1.0.zip | `a4475dbcd84fa4f192955c9b648c8bf47ceb0e5ff9d1563e785122983dab6165` | 74 | 4 |
-| yao-geo-unified-community-0.1.0.zip | `9dd3b02409b518f62aff6eb38c308f0ae2bbfd759e57056b9bd48279578e2684` | 55 | 1 |
+| geo-community-0.1.0.zip | `e8e914ef3a501ed087320729170937b048ba3a7575d587bef2033681102469be` | 52 | 1 |
+| geo-content-community-0.1.0.zip | `ff70b892ea5f9d9812003ece388f88383698d2577ad602c3d0f4350b08ac105a` | 55 | 1 |
+| geo-diagnose-community-0.1.0.zip | `3b3c87a7ee5ce5ce90a5438ad0f2999632b101b6603bb1a05a3b99de63481fb5` | 52 | 1 |
+| geo-discover-community-0.1.0.zip | `9a1118f2414ab74eb49adfa9f33020e39f15ae55c8b3b95f4cc932310e48264a` | 52 | 1 |
+| yao-geo-claude-community-0.1.0.zip | `b53a29bb4722b3bafdc1f15976ce4e543a155af9e3edcd54367edea18333948a` | 56 | 1 |
+| yao-geo-codex-community-0.1.0.zip | `967e7834748e3a0edec13f8bfa965a1e7e6b5aae5756b9f419970ee0802d7dcf` | 56 | 1 |
+| yao-geo-source-0.1.0.zip | `0a58efe56413587f960a59e4f37f0fee239ccc3159e7d2aea590a969802af3f6` | 74 | 4 |
+| yao-geo-unified-community-0.1.0.zip | `240c5fdd1d9ecf173dd819853c56c8a7196a78088b5a72950f565273507d63f7` | 55 | 1 |
