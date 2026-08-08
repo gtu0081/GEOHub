@@ -15,12 +15,25 @@ sys.path.insert(0, str(ROOT / "src"))
 
 from yao_geo.registry import load_registry  # noqa: E402
 from yao_geo.router import (  # noqa: E402
+    GOVERNED_ACTION_OBJECT_ARTICLES,
     GOVERNED_ADDITIVE_CONNECTORS,
+    GOVERNED_EN_ACTION_LEAD_INS,
+    GOVERNED_SEQUENCE_CONNECTORS,
+    GOVERNED_ZH_ACTION_LEAD_INS,
+    _ACTION_LEAD_IN_RE,
+    _ACTION_OBJECT_ARTICLE_RE,
     _ADDITIVE_CONNECTOR_RE,
     _CLAUSE_BOUNDARY_RE,
     _GOVERNED_ADDITIVE_PATTERN,
+    _GOVERNED_EN_ACTION_LEAD_IN_PATTERN,
+    _GOVERNED_SEQUENCE_PATTERN,
+    _GOVERNED_SEQUENCE_EXCLUSIVITY_TOKENS,
+    _GOVERNED_ZH_ACTION_LEAD_IN_PATTERN,
+    _EN_ACTION_LEAD_IN_RE,
+    _SEQUENCE_CONNECTOR_RE,
     _SEQUENCE_SCOPE_TOKENS,
     _WORKFLOW_CONNECTOR_RE,
+    _ZH_ACTION_LEAD_IN_TOKEN_RE,
     build_action_phrase_index,
 )
 from yao_geo.validation import load_schema  # noqa: E402
@@ -47,6 +60,40 @@ EXPECTED_GOVERNED_ADDITIVE_CONNECTORS = (
     ("加", r"加", False),
     ("及", r"及", False),
 )
+EXPECTED_GOVERNED_SEQUENCE_CONNECTORS = (
+    ("and then", r"\band\s+then\b", True),
+    ("then", r"\bthen\b", True),
+    ("followed by", r"\bfollowed\s+by\b", True),
+    ("然后", r"然后", True),
+    ("再", r"再", True),
+)
+EXPECTED_GOVERNED_EN_ACTION_LEAD_INS = ("need", "want", "plan", "intend", "prepare")
+EXPECTED_GOVERNED_ZH_ACTION_LEAD_INS = (
+    "单独",
+    "仅仅",
+    "需要",
+    "继续",
+    "打算",
+    "准备",
+    "页面",
+    "请",
+    "想",
+    "去",
+    "要",
+    "做",
+    "仅",
+    "再",
+    "只",
+    "光",
+)
+EXPECTED_GOVERNED_ACTION_OBJECT_ARTICLES = ("a", "an", "the", "一个", "个")
+EXPECTED_EN_ACTION_LEAD_IN_PATTERN = (
+    r"(?:need|want|plan|intend|prepare)\b\s+(?:to\b\s+)?"
+)
+EXPECTED_ZH_ACTION_LEAD_IN_PATTERN = (
+    r"(?:单\s*独|仅仅|需要|继续|打算|准备|页面|请|想|去|要|做|仅|再|只|光)\s*"
+)
+EXPECTED_ACTION_OBJECT_ARTICLE_PATTERN = r"(?:(?:a|an|the)\b|一个|个)\s*"
 
 
 def verify_additive_connector_parity() -> None:
@@ -65,8 +112,50 @@ def verify_additive_connector_parity() -> None:
         fail("governed additive connector parity is broken")
 
 
+def verify_sequence_connector_parity() -> None:
+    if tuple(GOVERNED_SEQUENCE_CONNECTORS) != EXPECTED_GOVERNED_SEQUENCE_CONNECTORS:
+        fail("governed sequence connector inventory is invalid")
+    patterns = [pattern for _, pattern, _ in GOVERNED_SEQUENCE_CONNECTORS]
+    tokens = {token for token, _, _ in GOVERNED_SEQUENCE_CONNECTORS}
+    exclusivity_tokens = frozenset(
+        token
+        for token, _, preserves_exclusivity in GOVERNED_SEQUENCE_CONNECTORS
+        if preserves_exclusivity
+    )
+    compiled = "(?:" + "|".join(patterns) + ")"
+    if (
+        compiled != _GOVERNED_SEQUENCE_PATTERN
+        or _SEQUENCE_CONNECTOR_RE.pattern != compiled
+        or compiled not in _CLAUSE_BOUNDARY_RE.pattern
+        or compiled not in _WORKFLOW_CONNECTOR_RE.pattern
+        or tokens & _SEQUENCE_SCOPE_TOKENS
+        or _GOVERNED_SEQUENCE_EXCLUSIVITY_TOKENS != exclusivity_tokens
+    ):
+        fail("governed sequence connector parity is broken")
+
+
+def verify_action_language_parity() -> None:
+    if (
+        tuple(GOVERNED_EN_ACTION_LEAD_INS) != EXPECTED_GOVERNED_EN_ACTION_LEAD_INS
+        or tuple(GOVERNED_ZH_ACTION_LEAD_INS) != EXPECTED_GOVERNED_ZH_ACTION_LEAD_INS
+        or tuple(GOVERNED_ACTION_OBJECT_ARTICLES)
+        != EXPECTED_GOVERNED_ACTION_OBJECT_ARTICLES
+        or _GOVERNED_EN_ACTION_LEAD_IN_PATTERN != EXPECTED_EN_ACTION_LEAD_IN_PATTERN
+        or _GOVERNED_ZH_ACTION_LEAD_IN_PATTERN != EXPECTED_ZH_ACTION_LEAD_IN_PATTERN
+        or _ZH_ACTION_LEAD_IN_TOKEN_RE.pattern != EXPECTED_ZH_ACTION_LEAD_IN_PATTERN
+        or EXPECTED_EN_ACTION_LEAD_IN_PATTERN not in _ACTION_LEAD_IN_RE.pattern
+        or EXPECTED_ZH_ACTION_LEAD_IN_PATTERN not in _ACTION_LEAD_IN_RE.pattern
+        or _EN_ACTION_LEAD_IN_RE.pattern
+        != rf"(?:please\s+|{EXPECTED_EN_ACTION_LEAD_IN_PATTERN})"
+        or _ACTION_OBJECT_ARTICLE_RE.pattern != EXPECTED_ACTION_OBJECT_ARTICLE_PATTERN
+    ):
+        fail("governed action language inventory is invalid")
+
+
 def main() -> int:
     verify_additive_connector_parity()
+    verify_sequence_connector_parity()
+    verify_action_language_parity()
     if (ROOT / "VERSION").read_text(encoding="utf-8").strip() != "0.1.0":
         fail("VERSION must be 0.1.0")
     if "GNU AFFERO GENERAL PUBLIC LICENSE" not in (ROOT / "LICENSE").read_text(encoding="utf-8"):

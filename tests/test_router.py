@@ -582,6 +582,150 @@ def test_buzai_exclusivity_with_additive_planned_stage_keeps_planned_precedence(
 @pytest.mark.parametrize(
     "text,skill_id,workflow_id,runnable",
     (
+        (
+            "No longer only keyword research, then audit the website",
+            "geo-discover",
+            "brand-baseline-lite",
+            True,
+        ),
+        (
+            "No longer only keyword research followed by write an explainer",
+            "geo-discover",
+            "content-campaign",
+            True,
+        ),
+        (
+            "不再仅拓词，然后诊断网站",
+            "geo-discover",
+            "brand-baseline-lite",
+            True,
+        ),
+        ("不再仅发布，再写文章", "geo-publish", None, False),
+    ),
+)
+def test_exclusivity_sequence_connectors_keep_both_stages_positive(
+    text,
+    skill_id,
+    workflow_id,
+    runnable,
+):
+    result = route(text)
+    assert result["skill_id"] == skill_id
+    assert result.get("workflow", {}).get("id") == workflow_id
+    assert result["runnable"] is runnable
+    if not runnable:
+        assert result["entry"] is None
+        assert result["required_inputs"]
+        assert result["closest_v0_artifact"]
+
+
+@pytest.mark.parametrize(
+    "text",
+    (
+        "No keyword research, then audit the website",
+        "不要拓词，然后诊断网站",
+        "No keyword research followed by audit the website",
+    ),
+)
+def test_ordinary_negation_keeps_first_stage_negative_across_sequence(text):
+    result = route(text)
+    assert result["skill_id"] == "geo-diagnose"
+    assert "workflow" not in result
+
+
+def test_followed_by_requires_an_immediately_registered_action():
+    result = route(
+        "No longer only keyword research followed by prepare notes quoting website audit"
+    )
+    assert result["skill_id"] == "geo"
+    assert "workflow" not in result
+
+
+@pytest.mark.parametrize(
+    "text",
+    (
+        "No longer only keyword research followed by produce notes quoting website audit",
+        "No longer only keyword research then build a dictionary quoting website audit",
+        "不再仅拓词然后写一段说明，其中引用诊断一词",
+        "No keyword research followed by produce notes quoting website audit",
+        "不要拓词然后写一段说明，其中引用诊断一词",
+    ),
+)
+def test_sequence_scope_rejects_unresolved_action_prefixes(text):
+    result = route(text)
+    assert result["skill_id"] == "geo"
+    assert "workflow" not in result
+
+
+@pytest.mark.parametrize(
+    "text",
+    (
+        "No keyword research but produce notes quoting website audit",
+        "No keyword research instead produce notes quoting website audit",
+        "No keyword research however produce notes quoting website audit",
+        "不要拓词但写一段说明，其中引用诊断一词",
+        "不要拓词改为写一段说明，其中引用诊断一词",
+        "不要拓词转而写一段说明，其中引用诊断一词",
+    ),
+)
+def test_soft_boundaries_reject_unresolved_action_prefixes(text):
+    result = route(text)
+    assert result["skill_id"] == "geo"
+    assert "workflow" not in result
+
+
+@pytest.mark.parametrize(
+    "text,skill_id",
+    (
+        ("No keyword research but produce website audit", "geo-diagnose"),
+        ("不要拓词但写文章", "geo-content"),
+    ),
+)
+def test_soft_boundaries_accept_resolved_actions(text, skill_id):
+    result = route(text)
+    assert result["skill_id"] == skill_id
+    assert "workflow" not in result
+
+
+@pytest.mark.parametrize(
+    "text,workflow_id",
+    (
+        (
+            "No longer only keyword research followed by produce website audit",
+            "brand-baseline-lite",
+        ),
+        (
+            "No longer only keyword research then build a website diagnosis",
+            "brand-baseline-lite",
+        ),
+        ("不再仅拓词然后写文章", "content-campaign"),
+    ),
+)
+def test_sequence_scope_accepts_resolved_action_prefixes(text, workflow_id):
+    result = route(text)
+    assert result["skill_id"] == "geo-discover"
+    assert result["workflow"]["id"] == workflow_id
+
+
+@pytest.mark.parametrize(
+    "text",
+    (
+        "不要拓词和一再诊断网站",
+        "不要拓词一再诊断网站",
+        "不要拓词再三诊断网站",
+        "不要拓词反复诊断网站",
+        "不再仅拓词一再诊断网站",
+    ),
+)
+def test_sequence_connector_inside_yizai_does_not_open_scope(text):
+    result = route(text)
+    assert result["skill_id"] == "geo"
+    assert "workflow" not in result
+
+
+@pytest.mark.parametrize(
+    "text,skill_id,workflow_id,runnable",
+    (
         ("不再只拓词，也要写文章", "geo-discover", "content-campaign", True),
         ("不再仅拓词，还需诊断网站", "geo-discover", "brand-baseline-lite", True),
         ("不再只拓词，同时写文章", "geo-discover", "content-campaign", True),
@@ -667,6 +811,41 @@ def test_lexical_positive_qualifier_with_shi_protects_internal_zhi(text):
     assert result["skill_id"] == "geo-discover"
     assert result["workflow"]["id"] == "brand-baseline-lite+content-campaign"
     assert result["runnable"] is True
+
+
+@pytest.mark.parametrize(
+    "text,skill_id,workflow_id",
+    (
+        ("不 只 写文章还要诊断网站", "geo-content", None),
+        ("不 光 是 只 写文章还要诊断网站", "geo-content", None),
+        ("不 单 是 只 写文章还要诊断网站", "geo-content", None),
+        ("不 仅 是 只 写文章还要诊断网站", "geo-content", None),
+        (
+            "不 单 是 只 拓词并诊断网站还要写文章",
+            "geo-discover",
+            "brand-baseline-lite+content-campaign",
+        ),
+        (
+            "不　仅　是　只　拓词并诊断网站还要写文章",
+            "geo-discover",
+            "brand-baseline-lite+content-campaign",
+        ),
+    ),
+)
+def test_lexical_positive_internal_zhi_allows_unicode_space_before_action(
+    text,
+    skill_id,
+    workflow_id,
+):
+    result = route(text)
+    assert result["skill_id"] == skill_id
+    assert result.get("workflow", {}).get("id") == workflow_id
+
+
+def test_budandu_with_internal_zhi_remains_negative_with_space():
+    result = route("不 单独 只 写文章，还要诊断网站")
+    assert result["skill_id"] == "geo-diagnose"
+    assert "workflow" not in result
 
 
 @pytest.mark.parametrize(
@@ -876,6 +1055,27 @@ def test_incremental_chinese_lead_in_stops_at_registered_full_action():
 
 
 @pytest.mark.parametrize(
+    "text,skill_id,workflow_id",
+    (
+        ("跳过拓词，然后做一个页面蓝图", "geo-content", None),
+        ("拓词并做个页面蓝图", "geo-discover", "content-campaign"),
+        ("拓词并制作一个页面蓝图", "geo-discover", "content-campaign"),
+        ("不再仅拓词并做 一个 页面蓝图", "geo-discover", "content-campaign"),
+        ("不要做一个页面蓝图，然后诊断网站", "geo-diagnose", None),
+        ("拓词并做个性化页面蓝图", "geo-content", None),
+    ),
+)
+def test_governed_chinese_object_articles_share_action_adjacency(
+    text,
+    skill_id,
+    workflow_id,
+):
+    result = route(text)
+    assert result["skill_id"] == skill_id
+    assert result.get("workflow", {}).get("id") == workflow_id
+
+
+@pytest.mark.parametrize(
     "text,skill_id,runnable",
     (
         ("no longer only publish, also write article", "geo-publish", False),
@@ -933,10 +1133,12 @@ def test_additive_connectors_without_buzai_preserve_their_normal_scope(
 
 def test_additive_and_replacement_connector_scans_are_single_pass(monkeypatch):
     original_additive = router_module._ADDITIVE_CONNECTOR_RE
+    original_sequence = router_module._SEQUENCE_CONNECTOR_RE
     original_replacement = router_module._REPLACEMENT_CONNECTOR_RE
     original_english = router_module._ENGLISH_ADDITIVE_EXCLUSIVITY_RE
     original_lexical_positive = router_module._LEXICAL_POSITIVE_ZHI_RE
     additive_calls = 0
+    sequence_calls = 0
     replacement_calls = 0
     english_calls = 0
     lexical_positive_calls = 0
@@ -946,6 +1148,12 @@ def test_additive_and_replacement_connector_scans_are_single_pass(monkeypatch):
             nonlocal additive_calls
             additive_calls += 1
             return original_additive.finditer(text)
+
+    class CountingSequencePattern:
+        def finditer(self, text):
+            nonlocal sequence_calls
+            sequence_calls += 1
+            return original_sequence.finditer(text)
 
     class CountingReplacementPattern:
         def finditer(self, text):
@@ -969,6 +1177,7 @@ def test_additive_and_replacement_connector_scans_are_single_pass(monkeypatch):
             return original_lexical_positive.finditer(text)
 
     monkeypatch.setattr(router_module, "_ADDITIVE_CONNECTOR_RE", CountingAdditivePattern())
+    monkeypatch.setattr(router_module, "_SEQUENCE_CONNECTOR_RE", CountingSequencePattern())
     monkeypatch.setattr(router_module, "_REPLACEMENT_CONNECTOR_RE", CountingReplacementPattern())
     monkeypatch.setattr(
         router_module,
@@ -984,15 +1193,17 @@ def test_additive_and_replacement_connector_scans_are_single_pass(monkeypatch):
         text = ("不再仅拓词，还要诊断网站；" * 200)[:target_length]
         before = (
             additive_calls,
+            sequence_calls,
             replacement_calls,
             english_calls,
             lexical_positive_calls,
         )
         route(text)
         assert additive_calls - before[0] == 1
-        assert replacement_calls - before[1] == 1
-        assert english_calls - before[2] == 1
-        assert lexical_positive_calls - before[3] == 1
+        assert sequence_calls - before[1] == 1
+        assert replacement_calls - before[2] == 1
+        assert english_calls - before[3] == 1
+        assert lexical_positive_calls - before[4] == 1
 
 
 def test_bujin_with_action_lead_in_remains_positive():
@@ -1274,6 +1485,7 @@ def test_registry_action_index_is_compiled_once_and_checked_once_per_sequence(mo
         index = original_builder(registry)
         return router_module.ActionPhraseIndex(
             phrases=index.phrases,
+            intent_phrases=index.intent_phrases,
             start_pattern=CountingStartPattern(index.start_pattern),
         )
 

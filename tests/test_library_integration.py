@@ -72,6 +72,72 @@ def test_repository_verifier_rejects_additive_flag_and_order_drift(monkeypatch):
             verifier.verify_additive_connector_parity()
 
 
+def test_repository_verifier_rejects_sequence_connector_metadata_drift(monkeypatch):
+    verifier = load_script("verify_repository")
+    verifier.verify_sequence_connector_parity()
+    original = verifier.GOVERNED_SEQUENCE_CONNECTORS
+    attacks = (
+        tuple(
+            (token, pattern, not preserves if token == "then" else preserves)
+            for token, pattern, preserves in original
+        ),
+        (original[1], original[0], *original[2:]),
+        (original[0], original[0], *original[2:]),
+        (
+            (original[0][0], original[1][1], original[0][2]),
+            *original[1:],
+        ),
+    )
+    for attack in attacks:
+        monkeypatch.setattr(verifier, "GOVERNED_SEQUENCE_CONNECTORS", attack)
+        with pytest.raises(SystemExit, match="sequence connector inventory"):
+            verifier.verify_sequence_connector_parity()
+    monkeypatch.setattr(verifier, "GOVERNED_SEQUENCE_CONNECTORS", original)
+    monkeypatch.setattr(verifier, "_GOVERNED_SEQUENCE_EXCLUSIVITY_TOKENS", frozenset())
+    with pytest.raises(SystemExit, match="sequence connector parity"):
+        verifier.verify_sequence_connector_parity()
+
+
+def test_repository_verifier_rejects_action_lead_in_or_article_drift(monkeypatch):
+    verifier = load_script("verify_repository")
+    verifier.verify_action_language_parity()
+    monkeypatch.setattr(
+        verifier,
+        "GOVERNED_ZH_ACTION_LEAD_INS",
+        (*verifier.GOVERNED_ZH_ACTION_LEAD_INS, "随便"),
+    )
+    with pytest.raises(SystemExit, match="action language inventory"):
+        verifier.verify_action_language_parity()
+    monkeypatch.setattr(
+        verifier,
+        "GOVERNED_ZH_ACTION_LEAD_INS",
+        verifier.EXPECTED_GOVERNED_ZH_ACTION_LEAD_INS,
+    )
+    monkeypatch.setattr(
+        verifier,
+        "GOVERNED_ACTION_OBJECT_ARTICLES",
+        (*verifier.GOVERNED_ACTION_OBJECT_ARTICLES, "some"),
+    )
+    with pytest.raises(SystemExit, match="action language inventory"):
+        verifier.verify_action_language_parity()
+    monkeypatch.setattr(
+        verifier,
+        "GOVERNED_ACTION_OBJECT_ARTICLES",
+        verifier.EXPECTED_GOVERNED_ACTION_OBJECT_ARTICLES,
+    )
+    monkeypatch.setattr(verifier, "_EN_ACTION_LEAD_IN_RE", re.compile(r"wanted\s+"))
+    with pytest.raises(SystemExit, match="action language inventory"):
+        verifier.verify_action_language_parity()
+
+
+def test_router_source_has_no_prefix_only_action_boolean():
+    from yao_geo import router
+
+    source = inspect.getsource(router)
+    assert "def _starts_registered_action" not in source
+    assert "_starts_registered_action(" not in source
+
+
 @pytest.mark.parametrize("skill_id", SKILLS)
 def test_library_manifests_and_interfaces_are_consistent(skill_id):
     skill_root = ROOT / "skills" / skill_id

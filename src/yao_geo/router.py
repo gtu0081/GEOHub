@@ -37,11 +37,29 @@ GOVERNED_ADDITIVE_CONNECTORS = (
     ("加", r"加", False),
     ("及", r"及", False),
 )
+GOVERNED_SEQUENCE_CONNECTORS = (
+    ("and then", r"\band\s+then\b", True),
+    ("then", r"\bthen\b", True),
+    ("followed by", r"\bfollowed\s+by\b", True),
+    ("然后", r"然后", True),
+    ("再", r"再", True),
+)
 _GOVERNED_ADDITIVE_PATTERN = "(?:" + "|".join(
     pattern for _, pattern, _ in GOVERNED_ADDITIVE_CONNECTORS
 ) + ")"
+_GOVERNED_SEQUENCE_PATTERN = "(?:" + "|".join(
+    pattern for _, pattern, _ in GOVERNED_SEQUENCE_CONNECTORS
+) + ")"
 _GOVERNED_ADDITIVE_TOKENS = frozenset(
     token for token, _, _ in GOVERNED_ADDITIVE_CONNECTORS
+)
+_GOVERNED_SEQUENCE_TOKENS = frozenset(
+    token for token, _, _ in GOVERNED_SEQUENCE_CONNECTORS
+)
+_GOVERNED_SEQUENCE_EXCLUSIVITY_TOKENS = frozenset(
+    token
+    for token, _, preserves_exclusivity in GOVERNED_SEQUENCE_CONNECTORS
+    if preserves_exclusivity
 )
 _GOVERNED_ADDITIVE_SCOPE_BREAKS = frozenset(
     token for token, _, breaks_negation in GOVERNED_ADDITIVE_CONNECTORS if breaks_negation
@@ -51,22 +69,30 @@ _GOVERNED_SINGLE_ZH_ADDITIVE_TOKENS = frozenset(
     for token, _, _ in GOVERNED_ADDITIVE_CONNECTORS
     if len(token) == 1 and not token.isascii()
 )
+_GOVERNED_SINGLE_ZH_CONNECTOR_TOKENS = frozenset(
+    token
+    for token in (*_GOVERNED_ADDITIVE_TOKENS, *_GOVERNED_SEQUENCE_TOKENS)
+    if len(token) == 1 and not token.isascii()
+)
 _CLAUSE_BOUNDARY_RE = re.compile(
     r"(?:[;；。.!?！？]|(?:,\s*)?\b(?:but|instead(?:\s+of)?|however|"
     r"rather\s+than|switch(?:ing)?\s+to)(?:\s+please)?\b|"
-    r"(?:,\s*)?(?:and\s+)?(?:then|only)\b|"
+    rf"(?:[,，]\s*)?{_GOVERNED_SEQUENCE_PATTERN}|"
+    r"(?:,\s*)?(?:and\s+)?only\b|"
     rf"(?:[,，]\s*)?{_GOVERNED_ADDITIVE_PATTERN}|,\s*(?:only|just)\b|"
     r"(?:，\s*)?(?:但是|但|改为|转而)(?:请)?|"
-    r"(?:，\s*)?(?:然后|再|只)|，\s*(?:只|仅|请)|请)"
+    r"(?:，\s*)?只|，\s*(?:只|仅|请)|请)"
 )
 _WORKFLOW_CONNECTOR_RE = re.compile(
-    r"(?:\b(?:then|followed by|but|instead(?:\s+of)?|however|"
+    r"(?:\b(?:but|instead(?:\s+of)?|however|"
     r"rather\s+than|switch(?:ing)?\s+to)\b|"
+    rf"{_GOVERNED_SEQUENCE_PATTERN}|"
     rf"{_GOVERNED_ADDITIVE_PATTERN}|"
-    r"[,&+;，；、]|再|然后|但是|但|改为|转而)"
+    r"[,&+;，；、]|但是|但|改为|转而)"
 )
 _WORKFLOW_CONNECTOR_GAP_CHARACTERS = frozenset(",，、&+;；")
 _ADDITIVE_CONNECTOR_RE = re.compile(_GOVERNED_ADDITIVE_PATTERN)
+_SEQUENCE_CONNECTOR_RE = re.compile(_GOVERNED_SEQUENCE_PATTERN)
 _REPLACEMENT_CONNECTOR_RE = re.compile(
     r"(?:改为|转而|只|\binstead(?:\s+of)?\b|"
     r"\brather\s+than\b|\bswitch(?:ing)?\s+to\b)"
@@ -75,7 +101,7 @@ _EXCLUSIVITY_LEAD_IN_RE = re.compile(r"(?:仅仅|仅|光|只)\s*")
 _ENGLISH_ADDITIVE_EXCLUSIVITY_RE = re.compile(r"\bno\s+longer\s+only\s+")
 _LEXICAL_POSITIVE_ZHI_RE = re.compile(
     r"不\s*(?:(?:仅(?:\s*仅)?|单(?!\s*独)|光|只)\s*(?:是\s*)?)?"
-    r"只(?:\s*是)?"
+    r"只(?:\s*是)?\s*"
 )
 _NEGATION_FILLER_RE = re.compile(
     r"\b(?:under|any|circumstances|at|all|ever|in|way|please|just|only|really|want|"
@@ -108,19 +134,16 @@ _ACTION_VERB_PREFIXES = frozenset(
 )
 _SEQUENCE_SCOPE_TOKENS = frozenset(
     {
-        "then",
-        "and then",
         "only",
         "and only",
         "just",
-        "然后",
-        "再",
         "只",
         "仅",
         "请",
     }
 )
 GOVERNED_EN_ACTION_LEAD_INS = ("need", "want", "plan", "intend", "prepare")
+GOVERNED_ACTION_OBJECT_ARTICLES = ("a", "an", "the", "一个", "个")
 _GOVERNED_EN_ACTION_LEAD_IN_PATTERN = (
     r"(?:" + "|".join(re.escape(token) for token in GOVERNED_EN_ACTION_LEAD_INS) + r")"
     r"\b\s+(?:to\b\s+)?"
@@ -155,7 +178,9 @@ _ZH_ACTION_LEAD_IN_TOKEN_RE = re.compile(_GOVERNED_ZH_ACTION_LEAD_IN_PATTERN)
 _EN_ACTION_LEAD_IN_RE = re.compile(
     rf"(?:please\s+|{_GOVERNED_EN_ACTION_LEAD_IN_PATTERN})"
 )
-_WORKFLOW_OBJECT_LEAD_IN_RE = re.compile(r"\s*(?:(?:a|an|the)\b\s+)?")
+_ACTION_OBJECT_ARTICLE_RE = re.compile(
+    r"(?:(?:a|an|the)\b|一个|个)\s*"
+)
 
 
 @dataclass(frozen=True)
@@ -168,6 +193,7 @@ class ClauseScope:
 @dataclass(frozen=True)
 class ActionPhraseIndex:
     phrases: frozenset[str]
+    intent_phrases: frozenset[str]
     start_pattern: re.Pattern[str]
     span_cache: dict[int, tuple[int, int] | None] = field(
         default_factory=dict,
@@ -182,12 +208,13 @@ def _normalize(text: str) -> str:
 
 def build_action_phrase_index(registry: dict[str, Any]) -> ActionPhraseIndex:
     """Compile every registered intent plus narrow request verb prefixes."""
-    phrases = {
+    intent_phrases = {
         phrase
         for skill in registry["skills"]
         for intent in skill["intents"]
         if (phrase := _normalize(intent))
     }
+    phrases = set(intent_phrases)
     phrases.update(_ACTION_VERB_PREFIXES)
     alternatives = []
     for phrase in sorted(phrases, key=lambda item: (-len(item), item)):
@@ -195,8 +222,47 @@ def build_action_phrase_index(registry: dict[str, Any]) -> ActionPhraseIndex:
         alternatives.append(f"(?:{re.escape(phrase)}){suffix}")
     return ActionPhraseIndex(
         phrases=frozenset(phrases),
+        intent_phrases=frozenset(intent_phrases),
         start_pattern=re.compile("(?:" + "|".join(alternatives) + ")"),
     )
+
+
+def _direct_action_after_optional_article(
+    text: str,
+    action_index: ActionPhraseIndex,
+    start: int,
+) -> re.Match[str] | None:
+    if start < len(text) and text[start] == " ":
+        start += 1
+    action_match = action_index.start_pattern.match(text, start)
+    if action_match is not None:
+        return action_match
+    article = _ACTION_OBJECT_ARTICLE_RE.match(text, start)
+    if article is None:
+        return None
+    return action_index.start_pattern.match(text, article.end())
+
+
+def _resolve_action_match(
+    text: str,
+    action_index: ActionPhraseIndex,
+    action_match: re.Match[str] | None,
+) -> re.Match[str] | None:
+    for _ in range(4):
+        if action_match is None:
+            return None
+        action_phrase = text[action_match.start() : action_match.end()]
+        if (
+            action_phrase in action_index.intent_phrases
+            or action_phrase not in _ACTION_VERB_PREFIXES
+        ):
+            return action_match
+        action_match = _direct_action_after_optional_article(
+            text,
+            action_index,
+            action_match.end(),
+        )
+    return None
 
 
 def _registered_action_span(
@@ -210,14 +276,26 @@ def _registered_action_span(
         return action_index.span_cache[start]
     lexical_positive = _LEXICAL_POSITIVE_ZHI_RE.match(text, start)
     prefix_end = lexical_positive.end() if lexical_positive else start
-    action_match = action_index.start_pattern.match(text, prefix_end)
+    action_match = _resolve_action_match(
+        text,
+        action_index,
+        action_index.start_pattern.match(text, prefix_end),
+    )
     if action_match is not None:
         result = action_match.span()
         action_index.span_cache[start] = result
         return result
     english_lead_in = _EN_ACTION_LEAD_IN_RE.match(text, prefix_end)
     if english_lead_in is not None:
-        action_match = action_index.start_pattern.match(text, english_lead_in.end())
+        action_match = _resolve_action_match(
+            text,
+            action_index,
+            _direct_action_after_optional_article(
+                text,
+                action_index,
+                english_lead_in.end(),
+            ),
+        )
         if action_match is not None:
             result = action_match.span()
             action_index.span_cache[start] = result
@@ -228,30 +306,17 @@ def _registered_action_span(
         if token is None:
             break
         cursor = token.end()
-        action_match = action_index.start_pattern.match(text, cursor)
+        action_match = _resolve_action_match(
+            text,
+            action_index,
+            _direct_action_after_optional_article(text, action_index, cursor),
+        )
         if action_match is not None:
             result = action_match.span()
             action_index.span_cache[start] = result
             return result
     action_index.span_cache[start] = None
     return None
-
-
-def _registered_action_start(
-    text: str,
-    action_index: ActionPhraseIndex,
-    start: int = 0,
-) -> int | None:
-    span = _registered_action_span(text, action_index, start)
-    return span[0] if span is not None else None
-
-
-def _starts_registered_action(
-    text: str,
-    action_index: ActionPhraseIndex,
-    start: int = 0,
-) -> bool:
-    return _registered_action_start(text, action_index, start) is not None
 
 
 def _raw_replacement_spans(
@@ -277,23 +342,23 @@ def _raw_replacement_spans(
                 < lexical_positive_spans[lexical_positive_index][1]
             ):
                 continue
-            if not _starts_registered_action(text, action_index, match.end()):
+            if _registered_action_span(text, action_index, match.end()) is None:
                 continue
         spans.append(match.span())
     return tuple(spans)
 
 
-def _additive_exception_starts(
+def _exclusivity_exception_starts(
     text: str,
     action_index: ActionPhraseIndex,
     candidates: tuple[tuple[int, int], ...],
-    additive_spans: tuple[tuple[int, int], ...],
+    connector_spans: tuple[tuple[int, int], ...],
     replacement_spans: tuple[tuple[int, int], ...],
     hard_clause_spans: tuple[tuple[int, int], ...],
     gap_prefix: tuple[int, ...],
 ) -> frozenset[int]:
     exceptions: set[int] = set()
-    additive_index = 0
+    connector_index = 0
     replacement_index = 0
     hard_clause_index = 0
     for negation_start, action_search_start in candidates:
@@ -301,8 +366,11 @@ def _additive_exception_starts(
         if action_span is None:
             continue
         action_end = action_span[1]
-        while additive_index < len(additive_spans) and additive_spans[additive_index][0] < action_end:
-            additive_index += 1
+        while (
+            connector_index < len(connector_spans)
+            and connector_spans[connector_index][0] < action_end
+        ):
+            connector_index += 1
         while (
             replacement_index < len(replacement_spans)
             and replacement_spans[replacement_index][0] < action_end
@@ -313,20 +381,23 @@ def _additive_exception_starts(
             and hard_clause_spans[hard_clause_index][0] < action_end
         ):
             hard_clause_index += 1
-        additive_start = (
-            additive_spans[additive_index][0]
-            if additive_index < len(additive_spans)
+        connector_start = (
+            connector_spans[connector_index][0]
+            if connector_index < len(connector_spans)
             else len(text) + 1
         )
-        if additive_index < len(additive_spans):
-            additive_token = _normalize(
-                text[additive_spans[additive_index][0] : additive_spans[additive_index][1]]
+        if connector_index < len(connector_spans):
+            connector_token = _normalize(
+                text[
+                    connector_spans[connector_index][0]
+                    : connector_spans[connector_index][1]
+                ]
             )
             if (
-                additive_token in _GOVERNED_SINGLE_ZH_ADDITIVE_TOKENS
-                and gap_prefix[action_end] != gap_prefix[additive_start]
+                connector_token in _GOVERNED_SINGLE_ZH_CONNECTOR_TOKENS
+                and gap_prefix[action_end] != gap_prefix[connector_start]
             ):
-                additive_start = len(text) + 1
+                connector_start = len(text) + 1
         replacement_start = (
             replacement_spans[replacement_index][0]
             if replacement_index < len(replacement_spans)
@@ -337,7 +408,7 @@ def _additive_exception_starts(
             if hard_clause_index < len(hard_clause_spans)
             else len(text) + 1
         )
-        if additive_start < replacement_start and additive_start < hard_clause_start:
+        if connector_start < replacement_start and connector_start < hard_clause_start:
             exceptions.add(negation_start)
     return frozenset(exceptions)
 
@@ -349,18 +420,21 @@ def _connector_starts_scope(
     negation_spans: tuple[tuple[int, int], ...],
     negation_starts: tuple[int, ...],
     object_prefix: tuple[int, ...],
+    negation_action_ends: dict[int, int],
+    gap_prefix: tuple[int, ...],
     action_index: ActionPhraseIndex,
 ) -> bool:
     token = _normalize(boundary.group().strip(" ,，"))
     right = text[boundary.end() :].lstrip()
+    if _registered_action_span(text, action_index, boundary.end()) is None:
+        return False
     is_additive = token in _GOVERNED_ADDITIVE_TOKENS
-    if token in _SEQUENCE_SCOPE_TOKENS or is_additive:
+    is_sequence = token in _GOVERNED_SEQUENCE_TOKENS
+    if token in _SEQUENCE_SCOPE_TOKENS or is_additive or is_sequence:
         if token in {"only", "and only"}:
             left = text[max(0, boundary.start() - 12) : boundary.start()]
             if re.search(r"(?:not|no\s+longer)\s+$", left):
                 return False
-        if not _starts_registered_action(text, action_index, boundary.end()):
-            return False
     if (
         token.startswith(("however", "instead"))
         and boundary.group().lstrip().startswith((",", "，"))
@@ -370,6 +444,14 @@ def _connector_starts_scope(
     negation_index = bisect_right(negation_starts, boundary.start() - 1) - 1
     if negation_index < 0 or negation_spans[negation_index][0] < scope_start:
         return True
+    if token in _GOVERNED_SINGLE_ZH_CONNECTOR_TOKENS:
+        negation_start = negation_spans[negation_index][0]
+        action_end = negation_action_ends.get(negation_start)
+        if (
+            action_end is not None
+            and gap_prefix[action_end] != gap_prefix[boundary.start()]
+        ):
+            return False
     if is_additive and token not in _GOVERNED_ADDITIVE_SCOPE_BREAKS:
         return False
     after_negation = negation_spans[negation_index][1]
@@ -384,8 +466,15 @@ def _parse_clause_scopes(
     additive_spans = tuple(
         match.span()
         for match in _ADDITIVE_CONNECTOR_RE.finditer(text)
-        if _starts_registered_action(text, action_index, match.end())
+        if _registered_action_span(text, action_index, match.end()) is not None
     )
+    sequence_spans = tuple(
+        match.span()
+        for match in _SEQUENCE_CONNECTOR_RE.finditer(text)
+        if _normalize(match.group()) in _GOVERNED_SEQUENCE_EXCLUSIVITY_TOKENS
+        and _registered_action_span(text, action_index, match.end()) is not None
+    )
+    exclusivity_connector_spans = tuple(sorted((*additive_spans, *sequence_spans)))
     replacement_spans = _raw_replacement_spans(text, action_index)
     hard_clause_spans = tuple(match.span() for match in _HARD_CLAUSE_RE.finditer(text))
     bare_negation_matches = tuple(_BARE_ZH_NEGATION_RE.finditer(text))
@@ -398,27 +487,31 @@ def _parse_clause_scopes(
     english_candidates = tuple(
         match.span() for match in _ENGLISH_ADDITIVE_EXCLUSIVITY_RE.finditer(text)
     )
-    additive_exception_starts = _additive_exception_starts(
+    exclusivity_exception_starts = _exclusivity_exception_starts(
         text,
         action_index,
         tuple(sorted((*chinese_candidates, *english_candidates))),
-        additive_spans,
+        exclusivity_connector_spans,
         replacement_spans,
         hard_clause_spans,
         gap_prefix,
     )
-    static_negation_spans = tuple(
-        (
-            match.start(),
-            _registered_action_start(text, action_index, match.end()) or match.end(),
+    negation_action_ends: dict[int, int] = {}
+    static_negation_spans_list: list[tuple[int, int]] = []
+    for match in _NEGATION_RE.finditer(text):
+        if match.start() in exclusivity_exception_starts:
+            continue
+        action_span = _registered_action_span(text, action_index, match.end())
+        static_negation_spans_list.append(
+            (match.start(), action_span[0] if action_span is not None else match.end())
         )
-        for match in _NEGATION_RE.finditer(text)
-        if match.start() not in additive_exception_starts
-    )
+        if action_span is not None:
+            negation_action_ends[match.start()] = action_span[1]
+    static_negation_spans = tuple(static_negation_spans_list)
     bare_negation_spans: list[tuple[int, int]] = []
     static_index = 0
     for match in bare_negation_matches:
-        if match.start() in additive_exception_starts:
+        if match.start() in exclusivity_exception_starts:
             continue
         while (
             static_index < len(static_negation_spans)
@@ -435,6 +528,7 @@ def _parse_clause_scopes(
         if action_span is None:
             continue
         bare_negation_spans.append((match.start(), action_span[0]))
+        negation_action_ends[match.start()] = action_span[1]
     negation_spans = tuple(sorted((*static_negation_spans, *bare_negation_spans)))
     negation_starts = tuple(span[0] for span in negation_spans)
     ignored = bytearray(len(text))
@@ -455,6 +549,8 @@ def _parse_clause_scopes(
             negation_spans,
             negation_starts,
             object_prefix,
+            negation_action_ends,
+            gap_prefix,
             action_index,
         ):
             scope_start = boundary.end()
@@ -503,7 +599,7 @@ def _analyze_skill_intents(
 def _workflow_matches(
     recipe: dict[str, Any],
     spans_by_skill: dict[str, list[tuple[int, int]]],
-    connector_spans: tuple[tuple[int, int, int, int, int | None, str], ...],
+    connector_spans: tuple[tuple[int, int, int, int, str], ...],
     gap_prefix: tuple[int, ...],
 ) -> bool:
     first_id, second_id = recipe["required_skills"]
@@ -517,19 +613,14 @@ def _workflow_matches(
         _,
         action_start,
         _,
-        later_intent_start,
         token,
     ) in connector_spans:
         first_index = bisect_right(first_ends, connector_start) - 1
-        second_is_adjacent = action_start in second_start_set or (
-            later_intent_start is not None
-            and later_intent_start in second_start_set
-        )
         if (
             first_index >= 0
-            and second_is_adjacent
+            and action_start in second_start_set
             and (
-                token not in _GOVERNED_SINGLE_ZH_ADDITIVE_TOKENS
+                token not in _GOVERNED_SINGLE_ZH_CONNECTOR_TOKENS
                 or gap_prefix[first_ends[first_index]] == gap_prefix[connector_start]
             )
         ):
@@ -540,25 +631,18 @@ def _workflow_matches(
 def _workflow_connector_spans(
     text: str,
     action_index: ActionPhraseIndex,
-) -> tuple[tuple[int, int, int, int, int | None, str], ...]:
+) -> tuple[tuple[int, int, int, int, str], ...]:
     spans = []
     for match in _WORKFLOW_CONNECTOR_RE.finditer(text):
         action_span = _registered_action_span(text, action_index, match.end())
         if action_span is not None:
             token = _normalize(match.group().strip(" ,，"))
-            action_phrase = text[action_span[0] : action_span[1]]
-            later_intent_start = None
-            if action_phrase in _ACTION_VERB_PREFIXES:
-                object_lead_in = _WORKFLOW_OBJECT_LEAD_IN_RE.match(text, action_span[1])
-                if object_lead_in is not None:
-                    later_intent_start = object_lead_in.end()
             spans.append(
                 (
                     match.start(),
                     match.end(),
                     action_span[0],
                     action_span[1],
-                    later_intent_start,
                     token,
                 )
             )
