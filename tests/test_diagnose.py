@@ -171,7 +171,7 @@ def test_injected_fetcher_happy_path_observes_only_explicit_url(tmp_path):
 
     def fetch(url):
         calls.append(url)
-        return FetchResult(url, b"<title>Public</title><main><h1>Public</h1><h2>Facts</h2><p>Source method by expert, updated 2026. Evidence text long enough.</p></main>")
+        return FetchResult(url, b"<title>Public</title><main><h1>Public</h1><h2>Facts</h2><p>Source method by expert, updated 2026. Evidence text long enough.</p></main>", "text/html")
 
     result = diagnose(brief, tmp_path / "runs", clock=_clock, fetcher=fetch, resolver=_public_resolver)
     assert calls == ["https://example.com/page"]
@@ -214,6 +214,46 @@ def test_non_html_response_degrades_without_observed_findings(tmp_path):
     assert "unsupported Content-Type" in diagnosis_artifact["source_status"][0]["message"]
     assert {finding["source_kind"] for finding in diagnosis_artifact["findings"]} == {"input_gap"}
     assert _load(output / "evidence-ledger.json")["records"] == []
+
+
+def test_missing_content_type_binary_degrades_without_parsing(tmp_path):
+    brief = tmp_path / "brief.json"
+    brief.write_text(json.dumps({"subject": "Unknown media", "scope": "page", "target_urls": ["https://example.com/blob"]}), encoding="utf-8")
+
+    def missing_type_fetch(url):
+        return FetchResult(url, b"\x00\x01binary-with-html-like-<title>trap</title>")
+
+    result = diagnose(brief, tmp_path / "runs", clock=_clock, fetcher=missing_type_fetch, resolver=_public_resolver)
+    diagnosis_artifact = _load(Path(result["output"]) / "diagnosis.json")
+    assert diagnosis_artifact["status"] == "degraded"
+    assert diagnosis_artifact["source_status"][0]["status"] == "source_gap"
+    assert "missing" in diagnosis_artifact["source_status"][0]["message"]
+    assert diagnosis_artifact["source_status"][0]["observations"] is None
+
+
+def test_dns_time_reduces_per_source_fetch_budget(tmp_path, monkeypatch):
+    brief = tmp_path / "brief.json"
+    brief.write_text(json.dumps({"subject": "Timed", "scope": "page", "target_urls": ["https://example.com/page"]}), encoding="utf-8")
+    now = [0.0]
+
+    def monotonic():
+        return now[0]
+
+    def slow_resolver(*args, **kwargs):
+        now[0] += 3.0
+        return _public_resolver(*args, **kwargs)
+
+    captured = {}
+
+    def fake_default_fetch(url, **kwargs):
+        captured.update(kwargs)
+        return FetchResult(url, b"<title>Timed</title><h1>Timed</h1><h2>Facts</h2>", "text/html")
+
+    monkeypatch.setattr("yao_geo.diagnose.time.monotonic", monotonic)
+    monkeypatch.setattr("yao_geo.diagnose._default_fetch", fake_default_fetch)
+    diagnose(brief, tmp_path / "runs", clock=_clock, resolver=slow_resolver)
+    assert captured["deadline"] == 8.0
+    assert captured["timeout"] == 5.0
 
 
 def test_dns_rebinding_attempt_degrades_without_connecting(tmp_path):
@@ -355,6 +395,48 @@ def test_exhausted_total_budget_skips_dns_for_all_remaining_urls(tmp_path, monke
     diagnosis_artifact = _load(Path(result["output"]) / "diagnosis.json")
     assert dns_calls == []
     assert [source["status"] for source in diagnosis_artifact["source_status"]] == ["source_gap", "source_gap"]
+
+
+def test_normalized_brief_trims_human_text_and_preserves_list_order(tmp_path):
+    html = "  <!doctype html><title> Stable snapshot </title>\n"
+    (tmp_path / "page.html").write_text(html, encoding="utf-8")
+    brief = tmp_path / "brief.json"
+    brief.write_text(
+        json.dumps(
+            {
+                "subject": "  Acme  ",
+                "scope": "page",
+                "source_html": {
+                    "path": "  page.html  ",
+                    "source_uri": "  https://example.com/page#section  ",
+                    "source_id": "  snapshot-1  ",
+                },
+                "evidence": [
+                    {
+                        "evidence_id": "  input-label  ",
+                        "claim": "  Maintained by Acme.  ",
+                        "source_uri": "  https://example.com/about#team  ",
+                    }
+                ],
+                "locale": "  en-US  ",
+                "audience": "  evaluator  ",
+                "goals": ["  second goal  ", "  first goal  "],
+            }
+        ),
+        encoding="utf-8",
+    )
+    result = diagnose(brief, tmp_path / "runs", clock=_clock)
+    output = Path(result["output"])
+    normalized = _load(output / "input" / "diagnosis-brief.json")
+    assert normalized["subject"] == "Acme"
+    assert normalized["locale"] == "en-US"
+    assert normalized["audience"] == "evaluator"
+    assert normalized["goals"] == ["second goal", "first goal"]
+    assert normalized["evidence"][0]["claim"] == "Maintained by Acme."
+    assert normalized["evidence"][0]["source_uri"] == "https://example.com/about"
+    assert normalized["source_html"][0]["path"] == "sources/snapshot-1.html"
+    assert normalized["source_html"][0]["source_uri"] == "https://example.com/page"
+    assert (output / "input" / "sources" / "snapshot-1.html").read_text(encoding="utf-8") == html
 
 
 def test_diagnosis_validator_rejects_finding_without_ledger_lineage():

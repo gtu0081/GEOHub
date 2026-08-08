@@ -99,6 +99,8 @@ def main() -> int:
     if "production" in json.dumps(diagnose_manifest, ensure_ascii=False):
         fail("geo-diagnose manifest must not claim production maturity")
     expected_outputs = {
+        "input/diagnosis-brief.json",
+        "input/sources/*.html",
         "report",
         "diagnosis",
         "evidence-ledger",

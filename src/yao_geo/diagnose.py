@@ -45,7 +45,7 @@ class SourceUnavailable(RuntimeError):
 class FetchResult:
     final_url: str
     body: bytes
-    content_type: str = "text/html; charset=utf-8"
+    content_type: str = ""
 
 
 Fetcher = Callable[[str], FetchResult]
@@ -365,7 +365,7 @@ def _default_fetch(
             return FetchResult(
                 final_url=current,
                 body=body,
-                content_type=response.getheader("Content-Type", "text/html; charset=utf-8"),
+                content_type=response.getheader("Content-Type", "") or "",
             )
         finally:
             connection.close()
@@ -728,7 +728,7 @@ def _load_source_html(
     index: int,
 ) -> tuple[str, str, str, str]:
     if isinstance(value, dict):
-        path = Path(value["path"])
+        path = Path(value["path"].strip())
         if path.is_absolute() or ".." in path.parts:
             raise ValueError("source_html fixture path must stay relative to the brief directory")
         brief_root = input_path.parent.resolve()
@@ -748,7 +748,8 @@ def _load_source_html(
             raise ValueError(f"source_html fixture exceeds {MAX_FETCH_BYTES} bytes")
         html = resolved.read_text(encoding="utf-8")
         digest = hashlib.sha256(html.encode("utf-8")).hexdigest()
-        if value.get("sha256") and value["sha256"] != digest:
+        declared_digest = value.get("sha256", "").strip()
+        if declared_digest and declared_digest != digest:
             raise ValueError(f"source_html[{index}] digest does not match its file snapshot")
         source_uri = _normalize_provenance_uri(
             value.get("source_uri", f"urn:yao-geo:input:source-html:{index + 1}"),
@@ -757,7 +758,7 @@ def _load_source_html(
         return (
             html,
             source_uri,
-            value.get("source_id", f"source-html-{index + 1}"),
+            value.get("source_id", f"source-html-{index + 1}").strip(),
             value.get("source_type", "source_html"),
         )
     return (
@@ -945,6 +946,14 @@ def diagnose(
         now = now.replace(tzinfo=timezone.utc)
     created_at = now.astimezone(timezone.utc).isoformat().replace("+00:00", "Z")
 
+    normalized_brief = dict(brief)
+    normalized_brief["subject"] = brief["subject"].strip()
+    for field in ("locale", "audience"):
+        if field in brief:
+            normalized_brief[field] = brief[field].strip()
+    if "goals" in brief:
+        normalized_brief["goals"] = [goal.strip() for goal in brief["goals"]]
+
     provided = []
     for record in brief.get("evidence", []):
         claim = record["claim"].strip()
@@ -963,7 +972,6 @@ def diagnose(
     analyzed_sources: list[dict[str, Any]] = []
     source_status: list[dict[str, Any]] = []
     limitations: list[str] = []
-    normalized_brief = dict(brief)
     if provided:
         normalized_brief["evidence"] = provided
     total_source_bytes = 0
@@ -1012,7 +1020,11 @@ def diagnose(
         if source_id in loaded_source_ids:
             raise ValueError(f"target URL source_id collides with source_html: {source_id}")
         clean_target, _hostname = _validate_url_syntax(target_url)
-        remaining = fetch_deadline - time.monotonic()
+        source_deadline = min(
+            fetch_deadline,
+            time.monotonic() + FETCH_TIMEOUT_SECONDS,
+        )
+        remaining = source_deadline - time.monotonic()
         if remaining <= 0:
             source_status.append({"source_id": source_id, "source_type": "target_url", "source_uri": clean_target, "status": "source_gap", "message": "total fetch budget exhausted", "observations": None})
             limitations.append(f"Source unavailable: {clean_target}. No page observation was inferred for it.")
@@ -1024,14 +1036,14 @@ def diagnose(
                 resolver=resolver,
                 dns_timeout=remaining,
             )
-            remaining = fetch_deadline - time.monotonic()
+            remaining = source_deadline - time.monotonic()
             if remaining <= 0:
                 raise SourceUnavailable("total fetch budget exhausted")
             result = fetcher(clean_target) if fetcher else _default_fetch(
                 clean_target,
                 resolver=resolver,
-                timeout=min(FETCH_TIMEOUT_SECONDS, remaining),
-                deadline=fetch_deadline,
+                timeout=remaining,
+                deadline=source_deadline,
                 initial_addresses=initial_addresses,
             )
             if not isinstance(result, FetchResult):
@@ -1039,7 +1051,7 @@ def diagnose(
             if not isinstance(result.body, bytes):
                 raise SourceUnavailable("fetcher result body must be bytes")
             try:
-                remaining = fetch_deadline - time.monotonic()
+                remaining = source_deadline - time.monotonic()
                 if remaining <= 0:
                     raise SourceUnavailable("total fetch budget exhausted")
                 clean_final = validate_public_url(
@@ -1178,7 +1190,7 @@ def diagnose(
     diagnosis_artifact = {
         "protocol_version": PROTOCOL_VERSION,
         "run_id": run_id,
-        "subject": brief["subject"].strip(),
+        "subject": normalized_brief["subject"],
         "scope": brief["scope"],
         "status": "degraded" if degraded else "completed",
         "scores": scores,
@@ -1195,7 +1207,7 @@ def diagnose(
     query_map, finding_queries = _build_diagnosis_query_map(
         run_id,
         findings,
-        audience=brief.get("audience", "general user"),
+        audience=normalized_brief.get("audience", "general user"),
     )
     opportunity_map = _opportunities(run_id, findings, finding_queries)
     warnings = list(limitations)
