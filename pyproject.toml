@@ -55,6 +55,16 @@ where = ["src"]
   "skills/geo-discover/references/input-example.json",
 ]
 "share/yao-geo/skills/geo-discover/scripts" = ["skills/geo-discover/scripts/run_discover.py"]
+"share/yao-geo/skills/geo-diagnose" = [
+  "skills/geo-diagnose/SKILL.md",
+  "skills/geo-diagnose/manifest.json",
+]
+"share/yao-geo/skills/geo-diagnose/agents" = ["skills/geo-diagnose/agents/interface.yaml"]
+"share/yao-geo/skills/geo-diagnose/references" = [
+  "skills/geo-diagnose/references/diagnosis-method.md",
+  "skills/geo-diagnose/references/input-example.json",
+]
+"share/yao-geo/skills/geo-diagnose/scripts" = ["skills/geo-diagnose/scripts/run_diagnose.py"]
 
 [tool.pytest.ini_options]
 addopts = "-q"

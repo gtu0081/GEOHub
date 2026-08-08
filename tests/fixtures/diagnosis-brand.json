@@ -1,0 +1,11 @@
+{
+  "subject": "Acme",
+  "scope": "brand",
+  "evidence": [
+    {
+      "evidence_id": "ev-acme-about",
+      "claim": "Acme is a company offering a product for customer teams with a unique advantage and published case evidence; contact details are public.",
+      "source_uri": "https://example.com/about"
+    }
+  ]
+}

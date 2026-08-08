@@ -93,10 +93,15 @@ def test_skill_manifests_declare_license_governance():
         "copyright_owner": "姚金刚 / Yao",
         "third_party_notice_required": True,
     }
-    for skill_id in ("geo", "geo-discover"):
+    for skill_id in ("geo", "geo-discover", "geo-diagnose"):
         path = repository_root() / "skills" / skill_id / "manifest.json"
         manifest = json.loads(path.read_text(encoding="utf-8"))
         assert {key: manifest[key] for key in expected} == expected
+
+    diagnose_manifest = json.loads((repository_root() / "skills" / "geo-diagnose" / "manifest.json").read_text(encoding="utf-8"))
+    assert diagnose_manifest["status"] == "experimental"
+    assert diagnose_manifest["maturity"] == "experimental"
+    assert "production" not in json.dumps(diagnose_manifest)
 
 
 def _write_test_registry(tmp_path, registry):

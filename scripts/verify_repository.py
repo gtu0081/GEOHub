@@ -36,16 +36,35 @@ def main() -> int:
 
     registry = load_registry(ROOT / "registry" / "skills.yaml")
     registered = {item["id"]: item for item in registry["skills"]}
-    for skill_id in ("geo", "geo-discover"):
+    for skill_id in ("geo", "geo-discover", "geo-diagnose"):
         if registered[skill_id]["status"] != "active":
             fail(f"{skill_id} must be active")
-    for skill_id in ("geo-diagnose", "geo-content"):
+    for skill_id in ("geo-content",):
         if registered[skill_id]["status"] != "pending-implementation":
             fail(f"{skill_id} must be pending-implementation")
 
-    for skill_id in ("geo", "geo-discover"):
+    required_files = {
+        "geo": ("SKILL.md", "manifest.json", "agents/interface.yaml", "references/routing-contract.md"),
+        "geo-discover": (
+            "SKILL.md",
+            "manifest.json",
+            "agents/interface.yaml",
+            "references/discovery-method.md",
+            "references/input-example.json",
+            "scripts/run_discover.py",
+        ),
+        "geo-diagnose": (
+            "SKILL.md",
+            "manifest.json",
+            "agents/interface.yaml",
+            "references/diagnosis-method.md",
+            "references/input-example.json",
+            "scripts/run_diagnose.py",
+        ),
+    }
+    for skill_id, relative_paths in required_files.items():
         skill_root = ROOT / "skills" / skill_id
-        for relative in ("SKILL.md", "manifest.json", "agents/interface.yaml"):
+        for relative in relative_paths:
             if not (skill_root / relative).is_file():
                 fail(f"{skill_id} missing {relative}")
         manifest = json.loads((skill_root / "manifest.json").read_text(encoding="utf-8"))
@@ -69,6 +88,27 @@ def main() -> int:
             if not manifest.get(key):
                 fail(f"{skill_id} manifest missing {key}")
         yaml.safe_load((skill_root / "agents/interface.yaml").read_text(encoding="utf-8"))
+
+    diagnose_manifest = json.loads(
+        (ROOT / "skills" / "geo-diagnose" / "manifest.json").read_text(encoding="utf-8")
+    )
+    if diagnose_manifest.get("status") != "experimental":
+        fail("geo-diagnose manifest status must be experimental")
+    if diagnose_manifest.get("maturity") != "experimental":
+        fail("geo-diagnose manifest maturity must be experimental")
+    if "production" in json.dumps(diagnose_manifest, ensure_ascii=False):
+        fail("geo-diagnose manifest must not claim production maturity")
+    expected_outputs = {
+        "report",
+        "diagnosis",
+        "evidence-ledger",
+        "query-map",
+        "opportunity-map",
+        "quality-report",
+        "run-manifest",
+    }
+    if set(diagnose_manifest.get("output_contract", [])) != expected_outputs:
+        fail("geo-diagnose manifest output contract is incomplete")
 
     print("repository verification passed")
     return 0

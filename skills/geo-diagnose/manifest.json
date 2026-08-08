@@ -1,0 +1,21 @@
+{
+  "name": "geo-diagnose",
+  "version": "0.1.0",
+  "owner": "姚金刚 / Yao",
+  "updated_at": "2026-08-08",
+  "review_cadence": "per-release",
+  "status": "experimental",
+  "maturity": "experimental",
+  "maturity_tier": "experimental",
+  "lifecycle_stage": "experimental",
+  "context_budget_tier": "experimental",
+  "license_expression": "AGPL-3.0-only",
+  "commercial_license_available": true,
+  "commercial_license_status": "inquiry_only",
+  "copyright_owner": "姚金刚 / Yao",
+  "third_party_notice_required": true,
+  "input_files": ["file-backed fixture: diagnosis brief JSON and optional source_html path"],
+  "output_contract": ["report", "diagnosis", "evidence-ledger", "query-map", "opportunity-map", "quality-report", "run-manifest"],
+  "rollback_boundary": "Remove generated diagnosis run directories and revert diagnose, CLI, registry, packaging, and geo-diagnose together.",
+  "factory_components": ["references", "scripts", "agents"]
+}

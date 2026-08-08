@@ -39,3 +39,11 @@ class ArtifactBus:
         )
         temporary.replace(target)
         return target
+
+    def write_text(self, relative_path: str, content: str) -> Path:
+        target = self._resolve(relative_path)
+        target.parent.mkdir(parents=True, exist_ok=True)
+        temporary = target.with_suffix(target.suffix + ".tmp")
+        temporary.write_text(content, encoding="utf-8")
+        temporary.replace(target)
+        return target

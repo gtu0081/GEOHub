@@ -27,6 +27,24 @@ def test_discover_cli_prints_summary(tmp_path, capsys):
     assert Path(payload["output"]).name.startswith("run-")
 
 
+def test_diagnose_cli_prints_summary(tmp_path, capsys):
+    fixture = Path(__file__).parent / "fixtures" / "diagnosis-brand.json"
+    runs_root = tmp_path / "runs"
+    assert main(["diagnose", "--input", str(fixture), "--output", str(runs_root)]) == 0
+    payload = json.loads(capsys.readouterr().out)
+    assert payload["diagnosis_status"] == "completed"
+    assert Path(payload["output"]).parent == runs_root
+
+
+def test_diagnose_cli_validation_error_is_json(tmp_path, capsys):
+    fixture = tmp_path / "invalid-diagnosis.json"
+    fixture.write_text(json.dumps({"subject": "Acme", "scope": "page"}), encoding="utf-8")
+    assert main(["diagnose", "--input", str(fixture), "--output", str(tmp_path / "runs")]) == 2
+    payload = json.loads(capsys.readouterr().err)
+    assert payload["status"] == "error"
+    assert "at least one" in payload["message"]
+
+
 def test_route_cli_rejects_empty_text(capsys):
     assert main(["route", "--text", "   "]) == 2
     payload = json.loads(capsys.readouterr().err)

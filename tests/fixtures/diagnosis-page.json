@@ -1,0 +1,10 @@
+{
+  "subject": "Acme guide",
+  "scope": "page",
+  "source_html": {
+    "path": "diagnosis-page.html"
+  },
+  "locale": "en",
+  "audience": "buyers",
+  "goals": ["Improve answer extraction"]
+}

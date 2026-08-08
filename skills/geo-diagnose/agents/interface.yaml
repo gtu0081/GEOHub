@@ -1,0 +1,42 @@
+interface:
+  display_name: "Yao GEO Diagnose"
+  short_description: "Diagnose brand, site, and page GEO gaps with evidence lineage"
+  default_prompt: "Use $geo-diagnose to assess this brand, site, or page from the explicit sources and preserve all source gaps and limitations."
+  input_contract:
+    required:
+      subject: "non-blank string"
+      scope: "brand | site | page"
+    optional:
+      target_urls: "array of explicit public HTTP(S) URLs"
+      source_html: "non-blank HTML string or {path: file-backed fixture}"
+      evidence: "array of unique {evidence_id, claim, source_uri} records"
+      locale: "non-blank string"
+      audience: "non-blank string"
+      goals: "array of non-blank strings"
+    source_requirement: "at least one of target_urls, source_html, or evidence"
+  output_contract:
+    - "input/diagnosis-brief.json"
+    - "diagnosis.json"
+    - "report.md"
+    - "evidence-ledger.json"
+    - "query-map.json"
+    - "opportunity-map.json"
+    - "quality-report.json"
+    - "run-manifest.json"
+compatibility:
+  canonical_format: "agent-skills"
+  adapter_targets: [openai, claude, generic]
+  activation:
+    mode: "auto"
+    paths: []
+  execution:
+    context: "inline"
+    shell: "python"
+  trust:
+    source_tier: "local"
+    remote_inline_execution: "forbid"
+    remote_metadata_policy: "allow-metadata-only"
+  degradation:
+    openai: "metadata-adapter"
+    claude: "neutral-source-plus-adapter"
+    generic: "neutral-source"

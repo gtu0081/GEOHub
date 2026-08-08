@@ -2,13 +2,14 @@
 
 **Version 0.1.0 · Experimental**
 
-Yao GEO is a protocol-first toolkit for turning GEO work into auditable, reusable runs. This first vertical slice includes a registry-driven router, an Artifact Bus, deterministic discovery, JSON Schema contracts, and the `geo` and `geo-discover` skills.
+Yao GEO is a protocol-first toolkit for turning GEO work into auditable, reusable runs. The current vertical slice includes a registry-driven router, an Artifact Bus, deterministic discovery, evidence-lined diagnosis, JSON Schema contracts, and three active skills.
 
 ## Current scope
 
 - `geo`: routes Chinese and English requests through the registry and reports unavailable routes honestly.
 - `geo-discover`: converts a validated GEO brief into a deterministic query map, opportunity map, evidence ledger, run manifest, and quality report.
-- `geo-diagnose` and `geo-content`: reserved as pending implementations for the next main-flow slice.
+- `geo-diagnose`: evaluates explicit brand, site, or page sources and emits a structured diagnosis, deterministic report, evidence ledger, remediation query map, opportunity map, quality report, and run manifest.
+- `geo-content`: reserved as pending implementation for the next main-flow slice.
 - strategy, knowledge, publish, and measure: visible roadmap routes with `planned` status.
 
 No connector, platform sampling, search volume, ranking, or conversion data is inferred. Missing evidence remains explicit in generated artifacts.
@@ -21,10 +22,11 @@ Requires Python 3.11 or newer.
 python3 -m pip install -e '.[dev]'
 python3 -m yao_geo route --text "帮我挖掘 AI 搜索问题"
 python3 -m yao_geo discover --input tests/fixtures/brief.json --output runs
+python3 -m yao_geo diagnose --input tests/fixtures/diagnosis-page.json --output runs
 make verify
 ```
 
-The CLI prints JSON. The `--output` value is a runs root; each discover call writes protocol `1.0.0` artifacts to `<output>/<run-id>/` and returns that actual run directory.
+The CLI prints JSON. The `--output` value is a runs root; discover and diagnose write protocol `1.0.0` runs to `<output>/<run-id>/` and return that actual run directory. Diagnose fetches only explicit public HTTP(S) URLs, performs no crawl expansion, and records unavailable sources as gaps. Its scores do not represent live AI-platform recall, ranking, or citation share.
 
 ## License and governance
 

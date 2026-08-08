@@ -29,11 +29,19 @@ def test_planned_route_is_honest():
     assert result["suggestion"] == "geo-discover"
 
 
-def test_pending_route_is_not_active_placeholder():
+def test_routes_chinese_website_diagnosis():
     result = route("诊断我们的网站 GEO 差距")
     assert result["skill_id"] == "geo-diagnose"
-    assert result["status"] == "pending-implementation"
-    assert result["runnable"] is False
+    assert result["status"] == "active"
+    assert result["runnable"] is True
+    assert result["entry"] == "skills/geo-diagnose/SKILL.md"
+
+
+def test_routes_english_brand_and_page_audits():
+    for text in ("Run a brand diagnosis for Acme", "Audit this website", "Page audit for our pricing page"):
+        result = route(text)
+        assert result["skill_id"] == "geo-diagnose"
+        assert result["runnable"] is True
 
 
 def test_unknown_request_falls_back_to_geo():
