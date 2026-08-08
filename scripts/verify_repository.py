@@ -49,6 +49,16 @@ def main() -> int:
             if not (skill_root / relative).is_file():
                 fail(f"{skill_id} missing {relative}")
         manifest = json.loads((skill_root / "manifest.json").read_text(encoding="utf-8"))
+        expected_license_fields = {
+            "license_expression": "AGPL-3.0-only",
+            "commercial_license_available": True,
+            "commercial_license_status": "inquiry_only",
+            "copyright_owner": "姚金刚 / Yao",
+            "third_party_notice_required": True,
+        }
+        for key, expected in expected_license_fields.items():
+            if manifest.get(key) != expected:
+                fail(f"{skill_id} manifest {key} must be {expected!r}")
         for key in (
             "owner",
             "review_cadence",

@@ -19,7 +19,7 @@ def build_parser() -> argparse.ArgumentParser:
 
     discover_parser = subparsers.add_parser("discover", help="Generate discover artifacts")
     discover_parser.add_argument("--input", required=True, type=Path, help="GEO brief JSON")
-    discover_parser.add_argument("--output", required=True, type=Path, help="Run directory")
+    discover_parser.add_argument("--output", required=True, type=Path, help="Runs root directory")
     return parser
 
 

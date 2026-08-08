@@ -20,11 +20,11 @@ Requires Python 3.11 or newer.
 ```bash
 python3 -m pip install -e '.[dev]'
 python3 -m yao_geo route --text "帮我挖掘 AI 搜索问题"
-python3 -m yao_geo discover --input tests/fixtures/brief.json --output runs/demo
+python3 -m yao_geo discover --input tests/fixtures/brief.json --output runs
 make verify
 ```
 
-The CLI prints JSON. A discover run writes protocol `1.0.0` artifacts under the requested output directory.
+The CLI prints JSON. The `--output` value is a runs root; each discover call writes protocol `1.0.0` artifacts to `<output>/<run-id>/` and returns that actual run directory.
 
 ## License and governance
 

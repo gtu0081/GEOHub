@@ -8,13 +8,13 @@ description: Discover evidence-aware GEO questions, query rewrites, intent clust
 ## Workflow
 
 1. Read 'references/discovery-method.md' and prepare a protocol '1.0.0' GEO brief.
-2. Run 'python -m yao_geo discover --input <brief.json> --output <run-directory>'.
+2. Run 'python -m yao_geo discover --input <brief.json> --output <runs-root>'.
 3. Inspect 'quality-report.json'; surface all warnings and failed checks.
 4. Deliver the Artifact Bus directory as the output contract.
 
 ## Output contract
 
-Produce 'input/geo-brief.json', 'run-manifest.json', 'evidence-ledger.json', 'query-map.json', 'opportunity-map.json', and 'quality-report.json'.
+Treat the output argument as the runs root. Produce '<runs-root>/<run-id>/input/geo-brief.json', 'run-manifest.json', 'evidence-ledger.json', 'query-map.json', 'opportunity-map.json', and 'quality-report.json'. Return the actual '<runs-root>/<run-id>' directory.
 
 ## Boundaries
 

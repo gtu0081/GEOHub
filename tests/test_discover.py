@@ -20,11 +20,15 @@ def _clock():
 
 
 def test_discover_happy_path_writes_valid_artifact_bus(tmp_path):
-    output = tmp_path / "happy"
-    result = discover(FIXTURES / "brief.json", output, clock=_clock)
+    runs_root = tmp_path / "runs"
+    result = discover(FIXTURES / "brief.json", runs_root, clock=_clock)
+    output = runs_root / result["run_id"]
     assert result["status"] == "completed"
     assert result["query_count"] == 4
     assert result["warning_count"] == 0
+    assert Path(result["output"]) == output
+    assert output.parent.name == "runs"
+    assert output.name.startswith("run-")
 
     expected = {
         "input/geo-brief.json",
@@ -55,8 +59,9 @@ def test_discover_happy_path_writes_valid_artifact_bus(tmp_path):
 
 
 def test_discover_records_missing_evidence_without_fabrication(tmp_path):
-    output = tmp_path / "missing"
-    result = discover(FIXTURES / "brief-missing-evidence.json", output, clock=_clock)
+    runs_root = tmp_path / "runs"
+    result = discover(FIXTURES / "brief-missing-evidence.json", runs_root, clock=_clock)
+    output = runs_root / result["run_id"]
     ledger = _load(output / "evidence-ledger.json")
     report = _load(output / "quality-report.json")
     queries = _load(output / "query-map.json")["queries"]
@@ -70,14 +75,14 @@ def test_discover_records_missing_evidence_without_fabrication(tmp_path):
 
 
 def test_discovery_content_is_deterministic(tmp_path):
-    first = tmp_path / "first"
-    second = tmp_path / "second"
-    discover(FIXTURES / "brief.json", first, clock=_clock)
-    discover(
+    first_result = discover(FIXTURES / "brief.json", tmp_path / "first", clock=_clock)
+    second_result = discover(
         FIXTURES / "brief.json",
-        second,
+        tmp_path / "second",
         clock=lambda: datetime(2027, 1, 1, tzinfo=timezone.utc),
     )
+    first = Path(first_result["output"])
+    second = Path(second_result["output"])
     for filename in ("query-map.json", "opportunity-map.json", "evidence-ledger.json"):
         assert _load(first / filename) == _load(second / filename)
 
@@ -100,4 +105,4 @@ def test_discover_rejects_duplicate_evidence_ids(tmp_path):
     duplicate_brief = tmp_path / "duplicate.json"
     duplicate_brief.write_text(json.dumps(source), encoding="utf-8")
     with pytest.raises(ValueError, match="duplicate evidence_id"):
-        discover(duplicate_brief, tmp_path / "run", clock=_clock)
+        discover(duplicate_brief, tmp_path / "runs", clock=_clock)

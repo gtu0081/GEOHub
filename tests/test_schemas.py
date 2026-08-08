@@ -78,3 +78,17 @@ def test_registry_validates_and_unavailable_routes_have_no_entry():
         if skill["status"] != "active":
             assert skill["entry"] is None
             assert skill["active_placeholder"] is False
+
+
+def test_skill_manifests_declare_license_governance():
+    expected = {
+        "license_expression": "AGPL-3.0-only",
+        "commercial_license_available": True,
+        "commercial_license_status": "inquiry_only",
+        "copyright_owner": "姚金刚 / Yao",
+        "third_party_notice_required": True,
+    }
+    for skill_id in ("geo", "geo-discover"):
+        path = repository_root() / "skills" / skill_id / "manifest.json"
+        manifest = json.loads(path.read_text(encoding="utf-8"))
+        assert {key: manifest[key] for key in expected} == expected

@@ -12,9 +12,12 @@ def test_route_cli_prints_json(capsys):
 
 def test_discover_cli_prints_summary(tmp_path, capsys):
     fixture = Path(__file__).parent / "fixtures" / "brief.json"
-    assert main(["discover", "--input", str(fixture), "--output", str(tmp_path / "run")]) == 0
+    runs_root = tmp_path / "runs"
+    assert main(["discover", "--input", str(fixture), "--output", str(runs_root)]) == 0
     payload = json.loads(capsys.readouterr().out)
     assert payload["query_count"] == 4
+    assert Path(payload["output"]).parent == runs_root
+    assert Path(payload["output"]).name.startswith("run-")
 
 
 def test_route_cli_rejects_empty_text(capsys):
