@@ -8,8 +8,8 @@
     "fabricated_citations": 0
   },
   "router": {
-    "case_count": 230,
-    "tp": 230,
+    "case_count": 256,
+    "tp": 256,
     "fp": 0,
     "fn": 0,
     "precision": 1.0,
@@ -3233,6 +3233,370 @@
         "actual": {
           "skill_id": "geo-content",
           "workflow_id": null,
+          "runnable": true
+        }
+      },
+      {
+        "id": "r231",
+        "passed": true,
+        "expected": {
+          "skill_id": "geo-discover",
+          "workflow_id": "brand-baseline-lite",
+          "runnable": true
+        },
+        "actual": {
+          "skill_id": "geo-discover",
+          "workflow_id": "brand-baseline-lite",
+          "runnable": true
+        }
+      },
+      {
+        "id": "r232",
+        "passed": true,
+        "expected": {
+          "skill_id": "geo-discover",
+          "workflow_id": "content-campaign",
+          "runnable": true
+        },
+        "actual": {
+          "skill_id": "geo-discover",
+          "workflow_id": "content-campaign",
+          "runnable": true
+        }
+      },
+      {
+        "id": "r233",
+        "passed": true,
+        "expected": {
+          "skill_id": "geo-discover",
+          "workflow_id": "brand-baseline-lite",
+          "runnable": true
+        },
+        "actual": {
+          "skill_id": "geo-discover",
+          "workflow_id": "brand-baseline-lite",
+          "runnable": true
+        }
+      },
+      {
+        "id": "r234",
+        "passed": true,
+        "expected": {
+          "skill_id": "geo-discover",
+          "workflow_id": "content-campaign",
+          "runnable": true
+        },
+        "actual": {
+          "skill_id": "geo-discover",
+          "workflow_id": "content-campaign",
+          "runnable": true
+        }
+      },
+      {
+        "id": "r235",
+        "passed": true,
+        "expected": {
+          "skill_id": "geo-publish",
+          "workflow_id": null,
+          "runnable": false
+        },
+        "actual": {
+          "skill_id": "geo-publish",
+          "workflow_id": null,
+          "runnable": false
+        }
+      },
+      {
+        "id": "r236",
+        "passed": true,
+        "expected": {
+          "skill_id": "geo-publish",
+          "workflow_id": null,
+          "runnable": false
+        },
+        "actual": {
+          "skill_id": "geo-publish",
+          "workflow_id": null,
+          "runnable": false
+        }
+      },
+      {
+        "id": "r237",
+        "passed": true,
+        "expected": {
+          "skill_id": "geo-content",
+          "workflow_id": null,
+          "runnable": true
+        },
+        "actual": {
+          "skill_id": "geo-content",
+          "workflow_id": null,
+          "runnable": true
+        }
+      },
+      {
+        "id": "r238",
+        "passed": true,
+        "expected": {
+          "skill_id": "geo-diagnose",
+          "workflow_id": null,
+          "runnable": true
+        },
+        "actual": {
+          "skill_id": "geo-diagnose",
+          "workflow_id": null,
+          "runnable": true
+        }
+      },
+      {
+        "id": "r239",
+        "passed": true,
+        "expected": {
+          "skill_id": "geo-content",
+          "workflow_id": null,
+          "runnable": true
+        },
+        "actual": {
+          "skill_id": "geo-content",
+          "workflow_id": null,
+          "runnable": true
+        }
+      },
+      {
+        "id": "r240",
+        "passed": true,
+        "expected": {
+          "skill_id": "geo-discover",
+          "workflow_id": "brand-baseline-lite",
+          "runnable": true
+        },
+        "actual": {
+          "skill_id": "geo-discover",
+          "workflow_id": "brand-baseline-lite",
+          "runnable": true
+        }
+      },
+      {
+        "id": "r241",
+        "passed": true,
+        "expected": {
+          "skill_id": "geo-publish",
+          "workflow_id": null,
+          "runnable": false
+        },
+        "actual": {
+          "skill_id": "geo-publish",
+          "workflow_id": null,
+          "runnable": false
+        }
+      },
+      {
+        "id": "r242",
+        "passed": true,
+        "expected": {
+          "skill_id": "geo-content",
+          "workflow_id": null,
+          "runnable": true
+        },
+        "actual": {
+          "skill_id": "geo-content",
+          "workflow_id": null,
+          "runnable": true
+        }
+      },
+      {
+        "id": "r243",
+        "passed": true,
+        "expected": {
+          "skill_id": "geo-diagnose",
+          "workflow_id": null,
+          "runnable": true
+        },
+        "actual": {
+          "skill_id": "geo-diagnose",
+          "workflow_id": null,
+          "runnable": true
+        }
+      },
+      {
+        "id": "r244",
+        "passed": true,
+        "expected": {
+          "skill_id": "geo-content",
+          "workflow_id": null,
+          "runnable": true
+        },
+        "actual": {
+          "skill_id": "geo-content",
+          "workflow_id": null,
+          "runnable": true
+        }
+      },
+      {
+        "id": "r245",
+        "passed": true,
+        "expected": {
+          "skill_id": "geo-content",
+          "workflow_id": null,
+          "runnable": true
+        },
+        "actual": {
+          "skill_id": "geo-content",
+          "workflow_id": null,
+          "runnable": true
+        }
+      },
+      {
+        "id": "r246",
+        "passed": true,
+        "expected": {
+          "skill_id": "geo-discover",
+          "workflow_id": "brand-baseline-lite+content-campaign",
+          "runnable": true
+        },
+        "actual": {
+          "skill_id": "geo-discover",
+          "workflow_id": "brand-baseline-lite+content-campaign",
+          "runnable": true
+        }
+      },
+      {
+        "id": "r247",
+        "passed": true,
+        "expected": {
+          "skill_id": "geo-discover",
+          "workflow_id": "brand-baseline-lite+content-campaign",
+          "runnable": true
+        },
+        "actual": {
+          "skill_id": "geo-discover",
+          "workflow_id": "brand-baseline-lite+content-campaign",
+          "runnable": true
+        }
+      },
+      {
+        "id": "r248",
+        "passed": true,
+        "expected": {
+          "skill_id": "geo-discover",
+          "workflow_id": "brand-baseline-lite",
+          "runnable": true
+        },
+        "actual": {
+          "skill_id": "geo-discover",
+          "workflow_id": "brand-baseline-lite",
+          "runnable": true
+        }
+      },
+      {
+        "id": "r249",
+        "passed": true,
+        "expected": {
+          "skill_id": "geo-publish",
+          "workflow_id": null,
+          "runnable": false
+        },
+        "actual": {
+          "skill_id": "geo-publish",
+          "workflow_id": null,
+          "runnable": false
+        }
+      },
+      {
+        "id": "r250",
+        "passed": true,
+        "expected": {
+          "skill_id": "geo-content",
+          "workflow_id": null,
+          "runnable": true
+        },
+        "actual": {
+          "skill_id": "geo-content",
+          "workflow_id": null,
+          "runnable": true
+        }
+      },
+      {
+        "id": "r251",
+        "passed": true,
+        "expected": {
+          "skill_id": "geo-content",
+          "workflow_id": null,
+          "runnable": true
+        },
+        "actual": {
+          "skill_id": "geo-content",
+          "workflow_id": null,
+          "runnable": true
+        }
+      },
+      {
+        "id": "r252",
+        "passed": true,
+        "expected": {
+          "skill_id": "geo-content",
+          "workflow_id": null,
+          "runnable": true
+        },
+        "actual": {
+          "skill_id": "geo-content",
+          "workflow_id": null,
+          "runnable": true
+        }
+      },
+      {
+        "id": "r253",
+        "passed": true,
+        "expected": {
+          "skill_id": "geo-publish",
+          "workflow_id": null,
+          "runnable": false
+        },
+        "actual": {
+          "skill_id": "geo-publish",
+          "workflow_id": null,
+          "runnable": false
+        }
+      },
+      {
+        "id": "r254",
+        "passed": true,
+        "expected": {
+          "skill_id": "geo-discover",
+          "workflow_id": "brand-baseline-lite+content-campaign",
+          "runnable": true
+        },
+        "actual": {
+          "skill_id": "geo-discover",
+          "workflow_id": "brand-baseline-lite+content-campaign",
+          "runnable": true
+        }
+      },
+      {
+        "id": "r255",
+        "passed": true,
+        "expected": {
+          "skill_id": "geo-discover",
+          "workflow_id": "brand-baseline-lite+content-campaign",
+          "runnable": true
+        },
+        "actual": {
+          "skill_id": "geo-discover",
+          "workflow_id": "brand-baseline-lite+content-campaign",
+          "runnable": true
+        }
+      },
+      {
+        "id": "r256",
+        "passed": true,
+        "expected": {
+          "skill_id": "geo-discover",
+          "workflow_id": "brand-baseline-lite+content-campaign",
+          "runnable": true
+        },
+        "actual": {
+          "skill_id": "geo-discover",
+          "workflow_id": "brand-baseline-lite+content-campaign",
           "runnable": true
         }
       }

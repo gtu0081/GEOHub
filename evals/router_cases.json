@@ -1654,5 +1654,161 @@
     "text": "不再光发布，改为写文章",
     "category": "adversarial",
     "expected": {"skill_id": "geo-content", "workflow_id": null, "runnable": true}
+  },
+  {
+    "id": "r231",
+    "text": "不再仅拓词，还要诊断网站",
+    "category": "adversarial",
+    "expected": {"skill_id": "geo-discover", "workflow_id": "brand-baseline-lite", "runnable": true}
+  },
+  {
+    "id": "r232",
+    "text": "不再只拓词，也要写文章",
+    "category": "adversarial",
+    "expected": {"skill_id": "geo-discover", "workflow_id": "content-campaign", "runnable": true}
+  },
+  {
+    "id": "r233",
+    "text": "不再仅拓词，还需诊断网站",
+    "category": "adversarial",
+    "expected": {"skill_id": "geo-discover", "workflow_id": "brand-baseline-lite", "runnable": true}
+  },
+  {
+    "id": "r234",
+    "text": "不再只拓词，同时写文章",
+    "category": "adversarial",
+    "expected": {"skill_id": "geo-discover", "workflow_id": "content-campaign", "runnable": true}
+  },
+  {
+    "id": "r235",
+    "text": "不再仅发布，还要写文章",
+    "category": "adversarial",
+    "expected": {"skill_id": "geo-publish", "workflow_id": null, "runnable": false}
+  },
+  {
+    "id": "r236",
+    "text": "不再光发布，同时写文章",
+    "category": "adversarial",
+    "expected": {"skill_id": "geo-publish", "workflow_id": null, "runnable": false}
+  },
+  {
+    "id": "r237",
+    "text": "不再仅发布，改为写文章",
+    "category": "adversarial",
+    "expected": {"skill_id": "geo-content", "workflow_id": null, "runnable": true}
+  },
+  {
+    "id": "r238",
+    "text": "不再光监测，转而诊断网站",
+    "category": "adversarial",
+    "expected": {"skill_id": "geo-diagnose", "workflow_id": null, "runnable": true}
+  },
+  {
+    "id": "r239",
+    "text": "不再只拓词，只写文章",
+    "category": "adversarial",
+    "expected": {"skill_id": "geo-content", "workflow_id": null, "runnable": true}
+  },
+  {
+    "id": "r240",
+    "text": "仅拓词，还要诊断网站",
+    "category": "adversarial",
+    "expected": {"skill_id": "geo-discover", "workflow_id": "brand-baseline-lite", "runnable": true}
+  },
+  {
+    "id": "r241",
+    "text": "光发布，同时写文章",
+    "category": "adversarial",
+    "expected": {"skill_id": "geo-publish", "workflow_id": null, "runnable": false}
+  },
+  {
+    "id": "r242",
+    "text": "不再仅发布，改为调整方案，还要写文章",
+    "category": "adversarial",
+    "expected": {"skill_id": "geo-content", "workflow_id": null, "runnable": true}
+  },
+  {
+    "id": "r243",
+    "text": "不再光监测，转而另做安排，同时诊断网站",
+    "category": "adversarial",
+    "expected": {"skill_id": "geo-diagnose", "workflow_id": null, "runnable": true}
+  },
+  {
+    "id": "r244",
+    "text": "不再仅发布。还要写文章",
+    "category": "adversarial",
+    "expected": {"skill_id": "geo-content", "workflow_id": null, "runnable": true}
+  },
+  {
+    "id": "r245",
+    "text": "不再仅发布, instead adjust the plan, 还要写文章",
+    "category": "adversarial",
+    "expected": {"skill_id": "geo-content", "workflow_id": null, "runnable": true}
+  },
+  {
+    "id": "r246",
+    "text": "不再仅拓词，不只写文章还要诊断网站",
+    "category": "adversarial",
+    "expected": {"skill_id": "geo-discover", "workflow_id": "brand-baseline-lite+content-campaign", "runnable": true}
+  },
+  {
+    "id": "r247",
+    "text": "不再仅拓词，不只是写文章还要诊断网站",
+    "category": "adversarial",
+    "expected": {"skill_id": "geo-discover", "workflow_id": "brand-baseline-lite+content-campaign", "runnable": true}
+  },
+  {
+    "id": "r248",
+    "text": "no longer only keyword research, also audit the website",
+    "category": "adversarial",
+    "expected": {"skill_id": "geo-discover", "workflow_id": "brand-baseline-lite", "runnable": true}
+  },
+  {
+    "id": "r249",
+    "text": "no longer only publish, also write article",
+    "category": "adversarial",
+    "expected": {"skill_id": "geo-publish", "workflow_id": null, "runnable": false}
+  },
+  {
+    "id": "r250",
+    "text": "no longer only publish, instead adjust the plan, also write article",
+    "category": "adversarial",
+    "expected": {"skill_id": "geo-content", "workflow_id": null, "runnable": true}
+  },
+  {
+    "id": "r251",
+    "text": "no longer only publish, rather than adjust the plan, also write article",
+    "category": "adversarial",
+    "expected": {"skill_id": "geo-content", "workflow_id": null, "runnable": true}
+  },
+  {
+    "id": "r252",
+    "text": "no longer only publish, switching to another plan, also write article",
+    "category": "adversarial",
+    "expected": {"skill_id": "geo-content", "workflow_id": null, "runnable": true}
+  },
+  {
+    "id": "r253",
+    "text": "no longer only publish insteadness notes, also write article",
+    "category": "adversarial",
+    "expected": {"skill_id": "geo-publish", "workflow_id": null, "runnable": false}
+  },
+  {
+    "id": "r254",
+    "text": "不再仅拓词，不 仅 只写文章还要诊断网站",
+    "category": "adversarial",
+    "expected": {"skill_id": "geo-discover", "workflow_id": "brand-baseline-lite+content-campaign", "runnable": true}
+  },
+  {
+    "id": "r255",
+    "text": "不再仅拓词，不 单 只写文章还要诊断网站",
+    "category": "adversarial",
+    "expected": {"skill_id": "geo-discover", "workflow_id": "brand-baseline-lite+content-campaign", "runnable": true}
+  },
+  {
+    "id": "r256",
+    "text": "不再仅拓词，不 光 只写文章还要诊断网站",
+    "category": "adversarial",
+    "expected": {"skill_id": "geo-discover", "workflow_id": "brand-baseline-lite+content-campaign", "runnable": true}
   }
 ]

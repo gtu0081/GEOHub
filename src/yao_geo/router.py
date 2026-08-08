@@ -21,14 +21,27 @@ _BARE_ZH_NEGATION_RE = re.compile(
 )
 _HARD_CLAUSE_RE = re.compile(r"[;；。.!?！？]")
 _CLAUSE_BOUNDARY_RE = re.compile(
-    r"(?:[;；。.!?！？]|(?:,\s*)?\b(?:but|instead|however)(?:\s+please)?\b|"
+    r"(?:[;；。.!?！？]|(?:,\s*)?\b(?:but|instead(?:\s+of)?|however|"
+    r"rather\s+than|switch(?:ing)?\s+to)(?:\s+please)?\b|"
     r"(?:,\s*)?(?:and\s+)?(?:then|only)\b|"
-    r",\s*(?:only|just)\b|(?:，\s*)?(?:但是|但|改为|转而)(?:请)?|"
-    r"(?:，\s*)?(?:然后|再|只)|，\s*(?:只|仅|请)|请)"
+    r"(?:,\s*)?\balso\b|,\s*(?:only|just)\b|"
+    r"(?:，\s*)?(?:但是|但|改为|转而)(?:请)?|"
+    r"(?:，\s*)?(?:然后|再|只|还要|也要|还需|同时)|，\s*(?:只|仅|请)|请)"
 )
 _WORKFLOW_CONNECTOR_RE = re.compile(
-    r"(?:\b(?:and|then|plus|followed by|but|instead|however)\b|"
-    r"[,&+;，；、]|再|然后|还要|还需|并且|但是|但|改为|转而|并|和|加|及)"
+    r"(?:\b(?:and|then|also|plus|followed by|but|instead(?:\s+of)?|however|"
+    r"rather\s+than|switch(?:ing)?\s+to)\b|"
+    r"[,&+;，；、]|再|然后|还要|也要|还需|同时|并且|但是|但|改为|转而|并|和|加|及)"
+)
+_ADDITIVE_CONNECTOR_RE = re.compile(r"(?:还要|也要|还需|同时|\balso\b)")
+_REPLACEMENT_CONNECTOR_RE = re.compile(
+    r"(?:改为|转而|只|\binstead(?:\s+of)?\b|"
+    r"\brather\s+than\b|\bswitch(?:ing)?\s+to\b)"
+)
+_EXCLUSIVITY_LEAD_IN_RE = re.compile(r"(?:仅仅|仅|光|只)\s*")
+_ENGLISH_ADDITIVE_EXCLUSIVITY_RE = re.compile(r"\bno\s+longer\s+only\s+")
+_LEXICAL_POSITIVE_ZHI_RE = re.compile(
+    r"不\s*(?:(?:仅(?:\s*仅)?|单(?!\s*独)|光)\s*)?只(?:\s*是)?"
 )
 _NEGATION_FILLER_RE = re.compile(
     r"\b(?:under|any|circumstances|at|all|ever|in|way|please|just|only|really|want|"
@@ -60,7 +73,23 @@ _ACTION_VERB_PREFIXES = frozenset(
     }
 )
 _SEQUENCE_SCOPE_TOKENS = frozenset(
-    {"then", "and then", "only", "and only", "just", "然后", "再", "只", "仅", "请"}
+    {
+        "then",
+        "and then",
+        "only",
+        "and only",
+        "just",
+        "然后",
+        "再",
+        "只",
+        "仅",
+        "请",
+        "还要",
+        "也要",
+        "还需",
+        "同时",
+        "also",
+    }
 )
 _ACTION_LEAD_IN_RE = re.compile(
     r"(?:(?:please|need|want)\s+|"
@@ -104,18 +133,28 @@ def build_action_phrase_index(registry: dict[str, Any]) -> ActionPhraseIndex:
     )
 
 
+def _registered_action_span(
+    text: str,
+    action_index: ActionPhraseIndex,
+    start: int = 0,
+) -> tuple[int, int] | None:
+    if start < len(text) and text[start] == " ":
+        start += 1
+    lead_in = _ACTION_LEAD_IN_RE.match(text, start)
+    action_start = lead_in.end() if lead_in else start
+    action_match = action_index.start_pattern.match(text, action_start)
+    if action_match is None:
+        return None
+    return action_match.span()
+
+
 def _registered_action_start(
     text: str,
     action_index: ActionPhraseIndex,
     start: int = 0,
 ) -> int | None:
-    if start < len(text) and text[start] == " ":
-        start += 1
-    lead_in = _ACTION_LEAD_IN_RE.match(text, start)
-    action_start = lead_in.end() if lead_in else start
-    if action_index.start_pattern.match(text, action_start) is None:
-        return None
-    return action_start
+    span = _registered_action_span(text, action_index, start)
+    return span[0] if span is not None else None
 
 
 def _starts_registered_action(
@@ -124,6 +163,84 @@ def _starts_registered_action(
     start: int = 0,
 ) -> bool:
     return _registered_action_start(text, action_index, start) is not None
+
+
+def _raw_replacement_spans(
+    text: str,
+    action_index: ActionPhraseIndex,
+) -> tuple[tuple[int, int], ...]:
+    lexical_positive_spans = tuple(
+        match.span() for match in _LEXICAL_POSITIVE_ZHI_RE.finditer(text)
+    )
+    lexical_positive_index = 0
+    spans = []
+    for match in _REPLACEMENT_CONNECTOR_RE.finditer(text):
+        if match.group() == "只":
+            while (
+                lexical_positive_index < len(lexical_positive_spans)
+                and lexical_positive_spans[lexical_positive_index][1] <= match.start()
+            ):
+                lexical_positive_index += 1
+            if (
+                lexical_positive_index < len(lexical_positive_spans)
+                and lexical_positive_spans[lexical_positive_index][0]
+                <= match.start()
+                < lexical_positive_spans[lexical_positive_index][1]
+            ):
+                continue
+            if not _starts_registered_action(text, action_index, match.end()):
+                continue
+        spans.append(match.span())
+    return tuple(spans)
+
+
+def _additive_exception_starts(
+    text: str,
+    action_index: ActionPhraseIndex,
+    candidates: tuple[tuple[int, int], ...],
+    additive_spans: tuple[tuple[int, int], ...],
+    replacement_spans: tuple[tuple[int, int], ...],
+    hard_clause_spans: tuple[tuple[int, int], ...],
+) -> frozenset[int]:
+    exceptions: set[int] = set()
+    additive_index = 0
+    replacement_index = 0
+    hard_clause_index = 0
+    for negation_start, action_search_start in candidates:
+        action_span = _registered_action_span(text, action_index, action_search_start)
+        if action_span is None:
+            continue
+        action_end = action_span[1]
+        while additive_index < len(additive_spans) and additive_spans[additive_index][0] < action_end:
+            additive_index += 1
+        while (
+            replacement_index < len(replacement_spans)
+            and replacement_spans[replacement_index][0] < action_end
+        ):
+            replacement_index += 1
+        while (
+            hard_clause_index < len(hard_clause_spans)
+            and hard_clause_spans[hard_clause_index][0] < action_end
+        ):
+            hard_clause_index += 1
+        additive_start = (
+            additive_spans[additive_index][0]
+            if additive_index < len(additive_spans)
+            else len(text) + 1
+        )
+        replacement_start = (
+            replacement_spans[replacement_index][0]
+            if replacement_index < len(replacement_spans)
+            else len(text) + 1
+        )
+        hard_clause_start = (
+            hard_clause_spans[hard_clause_index][0]
+            if hard_clause_index < len(hard_clause_spans)
+            else len(text) + 1
+        )
+        if additive_start < replacement_start and additive_start < hard_clause_start:
+            exceptions.add(negation_start)
+    return frozenset(exceptions)
 
 
 def _connector_starts_scope(
@@ -138,8 +255,10 @@ def _connector_starts_scope(
     token = _normalize(boundary.group().strip(" ,，"))
     right = text[boundary.end() :].lstrip()
     if token in _SEQUENCE_SCOPE_TOKENS:
-        if token in {"only", "and only"} and text[max(0, boundary.start() - 4) : boundary.start()].endswith("not "):
-            return False
+        if token in {"only", "and only"}:
+            left = text[max(0, boundary.start() - 12) : boundary.start()]
+            if re.search(r"(?:not|no\s+longer)\s+$", left):
+                return False
         if not _starts_registered_action(right, action_index):
             return False
     if (
@@ -159,16 +278,44 @@ def _parse_clause_scopes(
     text: str,
     action_index: ActionPhraseIndex,
 ) -> tuple[ClauseScope, ...]:
+    additive_spans = tuple(
+        match.span()
+        for match in _ADDITIVE_CONNECTOR_RE.finditer(text)
+        if _starts_registered_action(text, action_index, match.end())
+    )
+    replacement_spans = _raw_replacement_spans(text, action_index)
+    hard_clause_spans = tuple(match.span() for match in _HARD_CLAUSE_RE.finditer(text))
+    bare_negation_matches = tuple(_BARE_ZH_NEGATION_RE.finditer(text))
+    chinese_candidates = tuple(
+        (match.start(), match.end())
+        for match in bare_negation_matches
+        if match.group().replace(" ", "") == "不再"
+        and _EXCLUSIVITY_LEAD_IN_RE.match(text, match.end()) is not None
+    )
+    english_candidates = tuple(
+        match.span() for match in _ENGLISH_ADDITIVE_EXCLUSIVITY_RE.finditer(text)
+    )
+    additive_exception_starts = _additive_exception_starts(
+        text,
+        action_index,
+        tuple(sorted((*chinese_candidates, *english_candidates))),
+        additive_spans,
+        replacement_spans,
+        hard_clause_spans,
+    )
     static_negation_spans = tuple(
         (
             match.start(),
             _registered_action_start(text, action_index, match.end()) or match.end(),
         )
         for match in _NEGATION_RE.finditer(text)
+        if match.start() not in additive_exception_starts
     )
     bare_negation_spans: list[tuple[int, int]] = []
     static_index = 0
-    for match in _BARE_ZH_NEGATION_RE.finditer(text):
+    for match in bare_negation_matches:
+        if match.start() in additive_exception_starts:
+            continue
         while (
             static_index < len(static_negation_spans)
             and static_negation_spans[static_index][1] <= match.start()
@@ -180,9 +327,10 @@ def _parse_clause_scopes(
             < static_negation_spans[static_index][1]
         ):
             continue
-        action_start = _registered_action_start(text, action_index, match.end())
-        if action_start is not None:
-            bare_negation_spans.append((match.start(), action_start))
+        action_span = _registered_action_span(text, action_index, match.end())
+        if action_span is None:
+            continue
+        bare_negation_spans.append((match.start(), action_span[0]))
     negation_spans = tuple(sorted((*static_negation_spans, *bare_negation_spans)))
     negation_starts = tuple(span[0] for span in negation_spans)
     ignored = bytearray(len(text))

@@ -562,6 +562,248 @@ def test_internal_not_only_tokens_remain_in_buzai_negation(text, skill_id):
     assert "workflow" not in result
 
 
+def test_buzai_exclusivity_with_additive_active_stage_keeps_both_positive():
+    result = route("不再仅拓词，还要诊断网站")
+    assert result["skill_id"] == "geo-discover"
+    assert result["workflow"]["id"] == "brand-baseline-lite"
+    assert result["runnable"] is True
+
+
+def test_buzai_exclusivity_with_additive_planned_stage_keeps_planned_precedence():
+    result = route("不再仅发布，还要写文章")
+    assert result["skill_id"] == "geo-publish"
+    assert result["runnable"] is False
+    assert result["entry"] is None
+    assert result["required_inputs"]
+    assert result["closest_v0_artifact"]
+    assert "workflow" not in result
+
+
+@pytest.mark.parametrize(
+    "text,skill_id,workflow_id,runnable",
+    (
+        ("不再只拓词，也要写文章", "geo-discover", "content-campaign", True),
+        ("不再仅拓词，还需诊断网站", "geo-discover", "brand-baseline-lite", True),
+        ("不再只拓词，同时写文章", "geo-discover", "content-campaign", True),
+        ("不再光发布，同时写文章", "geo-publish", None, False),
+        ("不再仅监测，也要诊断网站", "geo-measure", None, False),
+    ),
+)
+def test_buzai_exclusivity_additive_variants_keep_both_stages_positive(
+    text,
+    skill_id,
+    workflow_id,
+    runnable,
+):
+    result = route(text)
+    assert result["skill_id"] == skill_id
+    assert result.get("workflow", {}).get("id") == workflow_id
+    assert result["runnable"] is runnable
+    if not runnable:
+        assert result["required_inputs"]
+        assert result["closest_v0_artifact"]
+
+
+@pytest.mark.parametrize(
+    "text,skill_id",
+    (
+        ("不再仅发布，改为写文章", "geo-content"),
+        ("不再光监测，转而诊断网站", "geo-diagnose"),
+        ("不再只拓词，只写文章", "geo-content"),
+    ),
+)
+def test_buzai_exclusivity_replacement_keeps_the_first_stage_negative(text, skill_id):
+    result = route(text)
+    assert result["skill_id"] == skill_id
+    assert result["runnable"] is True
+    assert "workflow" not in result
+
+
+@pytest.mark.parametrize(
+    "text,skill_id",
+    (
+        ("不再仅发布，改为调整方案，还要写文章", "geo-content"),
+        ("不再光监测，转而另做安排，同时诊断网站", "geo-diagnose"),
+    ),
+)
+def test_raw_replacement_blocks_later_additive_exception(text, skill_id):
+    result = route(text)
+    assert result["skill_id"] == skill_id
+    assert result["runnable"] is True
+    assert "workflow" not in result
+
+
+@pytest.mark.parametrize(
+    "text",
+    (
+        "不再仅拓词，不只写文章还要诊断网站",
+        "不再仅拓词，不只是写文章还要诊断网站",
+        "不再仅拓词，不 仅 只写文章还要诊断网站",
+        "不再仅拓词，不 单 只写文章还要诊断网站",
+        "不再仅拓词，不 光 只写文章还要诊断网站",
+        "不再仅拓词，不  仅  只写文章还要诊断网站",
+        "不再仅拓词，不　仅　只写文章还要诊断网站",
+    ),
+)
+def test_lexical_buzhi_does_not_block_additive_exception(text):
+    result = route(text)
+    assert result["skill_id"] == "geo-discover"
+    assert result["workflow"]["id"] == "brand-baseline-lite+content-campaign"
+    assert result["runnable"] is True
+
+
+@pytest.mark.parametrize(
+    "text",
+    (
+        "不单独只发布，还要写文章",
+        "不 单独 只发布，还要写文章",
+    ),
+)
+def test_budandu_zhi_remains_negative_before_additive_content(text):
+    result = route(text)
+    assert result["skill_id"] == "geo-content"
+    assert result["runnable"] is True
+    assert "workflow" not in result
+
+
+@pytest.mark.parametrize(
+    "text",
+    (
+        "不再仅发布。还要写文章",
+        "不再仅发布, instead adjust the plan, 还要写文章",
+    ),
+)
+def test_hard_or_english_replacement_boundaries_keep_publish_negative(text):
+    result = route(text)
+    assert result["skill_id"] == "geo-content"
+    assert result["runnable"] is True
+    assert "workflow" not in result
+
+
+def test_no_longer_only_with_also_keeps_both_active_stages_positive():
+    result = route("no longer only keyword research, also audit the website")
+    assert result["skill_id"] == "geo-discover"
+    assert result["workflow"]["id"] == "brand-baseline-lite"
+    assert result["runnable"] is True
+
+
+@pytest.mark.parametrize(
+    "text,skill_id,runnable",
+    (
+        ("no longer only publish, also write article", "geo-publish", False),
+        (
+            "no longer only publish, instead adjust the plan, also write article",
+            "geo-content",
+            True,
+        ),
+        (
+            "no longer only publish, rather than adjust the plan, also write article",
+            "geo-content",
+            True,
+        ),
+        (
+            "no longer only publish, switching to another plan, also write article",
+            "geo-content",
+            True,
+        ),
+        (
+            "no longer only publish insteadness notes, also write article",
+            "geo-publish",
+            False,
+        ),
+    ),
+)
+def test_english_additive_and_replacement_exclusivity_scope(text, skill_id, runnable):
+    result = route(text)
+    assert result["skill_id"] == skill_id
+    assert result["runnable"] is runnable
+    assert "workflow" not in result
+    if not runnable:
+        assert result["required_inputs"]
+        assert result["closest_v0_artifact"]
+
+
+@pytest.mark.parametrize(
+    "text,skill_id,workflow_id,runnable",
+    (
+        ("仅拓词，还要诊断网站", "geo-discover", "brand-baseline-lite", True),
+        ("光发布，同时写文章", "geo-publish", None, False),
+        ("不要发布，还要写文章", "geo-content", None, True),
+    ),
+)
+def test_additive_connectors_without_buzai_preserve_their_normal_scope(
+    text,
+    skill_id,
+    workflow_id,
+    runnable,
+):
+    result = route(text)
+    assert result["skill_id"] == skill_id
+    assert result.get("workflow", {}).get("id") == workflow_id
+    assert result["runnable"] is runnable
+
+
+def test_additive_and_replacement_connector_scans_are_single_pass(monkeypatch):
+    original_additive = router_module._ADDITIVE_CONNECTOR_RE
+    original_replacement = router_module._REPLACEMENT_CONNECTOR_RE
+    original_english = router_module._ENGLISH_ADDITIVE_EXCLUSIVITY_RE
+    original_lexical_positive = router_module._LEXICAL_POSITIVE_ZHI_RE
+    additive_calls = 0
+    replacement_calls = 0
+    english_calls = 0
+    lexical_positive_calls = 0
+
+    class CountingAdditivePattern:
+        def finditer(self, text):
+            nonlocal additive_calls
+            additive_calls += 1
+            return original_additive.finditer(text)
+
+    class CountingReplacementPattern:
+        def finditer(self, text):
+            nonlocal replacement_calls
+            replacement_calls += 1
+            return original_replacement.finditer(text)
+
+    class CountingEnglishPattern:
+        def finditer(self, text):
+            nonlocal english_calls
+            english_calls += 1
+            return original_english.finditer(text)
+
+    class CountingLexicalPositivePattern:
+        def finditer(self, text):
+            nonlocal lexical_positive_calls
+            lexical_positive_calls += 1
+            return original_lexical_positive.finditer(text)
+
+    monkeypatch.setattr(router_module, "_ADDITIVE_CONNECTOR_RE", CountingAdditivePattern())
+    monkeypatch.setattr(router_module, "_REPLACEMENT_CONNECTOR_RE", CountingReplacementPattern())
+    monkeypatch.setattr(
+        router_module,
+        "_ENGLISH_ADDITIVE_EXCLUSIVITY_RE",
+        CountingEnglishPattern(),
+    )
+    monkeypatch.setattr(
+        router_module,
+        "_LEXICAL_POSITIVE_ZHI_RE",
+        CountingLexicalPositivePattern(),
+    )
+    for target_length in (1_000, 2_000):
+        text = ("不再仅拓词，还要诊断网站；" * 200)[:target_length]
+        before = (
+            additive_calls,
+            replacement_calls,
+            english_calls,
+            lexical_positive_calls,
+        )
+        route(text)
+        assert additive_calls - before[0] == 1
+        assert replacement_calls - before[1] == 1
+        assert english_calls - before[2] == 1
+        assert lexical_positive_calls - before[3] == 1
+
+
 def test_bujin_with_action_lead_in_remains_positive():
     result = route("不仅想发布还要诊断网站")
     assert result["skill_id"] == "geo-publish"
