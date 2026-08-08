@@ -442,22 +442,13 @@ def _title_candidates(brief: dict[str, Any]) -> list[dict[str, Any]]:
 def _normalize_claim_text(value: str) -> str:
     normalized = unicodedata.normalize("NFKC", value).casefold()
     normalized = re.sub(r"\s+", " ", normalized).strip()
-    return normalized.strip(" \t\r\n。！？.!?；;：:'\"“”‘’（）()[]【】")
+    return normalized.rstrip("。！？.!?；;：:'\"“”‘’（）()[]【】")
 
 
 def _claim_text_matches(source_claim: str, evidence_claim: str) -> bool:
     source = _normalize_claim_text(source_claim)
     evidence = _normalize_claim_text(evidence_claim)
-    if not source or not evidence:
-        return False
-    if source == evidence:
-        return True
-    shorter, longer = sorted((source, evidence), key=len)
-    return (
-        len(shorter) >= 8
-        and len(shorter) / len(longer) >= 0.6
-        and shorter in longer
-    )
+    return bool(source) and source == evidence
 
 
 def _source_claims(

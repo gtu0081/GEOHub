@@ -401,18 +401,28 @@ def test_refine_all_exactly_matched_source_claims_can_be_ready(tmp_path):
     assert all(claim["evidence_ids"] and claim["status"] == "provided" for claim in claims)
 
 
-def test_refine_rejects_low_overlap_substring_as_unrelated_evidence(tmp_path):
+@pytest.mark.parametrize(
+    ("source_claim", "evidence_claim"),
+    (
+        ("该功能已经正式取消并停止服务", "该功能已经正式取消并停止服务的传言不准确"),
+        ("该功能目前仅限企业版客户使用", "该功能目前仅限企业版客户使用的限制已经解除"),
+        ("该产品曾经支持本地离线导出功能", "该产品曾经支持本地离线导出功能的记录已被官方更正"),
+    ),
+)
+def test_refine_rejects_high_overlap_semantically_different_evidence(
+    tmp_path, source_claim, evidence_claim
+):
     _, run = _run(
         tmp_path,
         {
             "mode": "refine",
-            "topic": "安全子串",
-            "source_content": "共享八个字符主张需要核验。",
+            "topic": "严格事实匹配",
+            "source_content": f"{source_claim}。",
             "evidence": [
                 {
-                    "label": "low-overlap",
-                    "claim": "共享八个字符主张后面跟着一段很长且含义不同的外部说明，不能据此解锁原始主张。",
-                    "source_uri": "https://example.com/low-overlap",
+                    "label": "semantic-mismatch",
+                    "claim": evidence_claim,
+                    "source_uri": "https://example.com/semantic-mismatch",
                 }
             ],
         },
@@ -420,7 +430,34 @@ def test_refine_rejects_low_overlap_substring_as_unrelated_evidence(tmp_path):
     artifact = _read(run / "content.json")
     claim = artifact["mode_data"]["refinement"]["source_claims"][0]
     assert claim["evidence_ids"] == []
+    assert claim["status"] == "unverified"
     assert artifact["status"] == "unverified"
+    assert _read(run / "content-spec.json")["status"] == "draft"
+
+
+def test_refine_exact_match_normalizes_nfkc_case_whitespace_and_trailing_punctuation(tmp_path):
+    _, run = _run(
+        tmp_path,
+        {
+            "mode": "refine",
+            "topic": "规范化严格相等",
+            "source_content": "Ｆｅａｔｕｒｅ   IS\tAVAILABLE！",
+            "evidence": [
+                {
+                    "label": "equivalent",
+                    "claim": "feature is available.",
+                    "source_uri": "https://example.com/equivalent",
+                }
+            ],
+        },
+    )
+    artifact = _read(run / "content.json")
+    claim = artifact["mode_data"]["refinement"]["source_claims"][0]
+    ledger = _read(run / "evidence-ledger.json")
+    assert claim["evidence_ids"] == [ledger["records"][0]["evidence_id"]]
+    assert claim["status"] == "provided"
+    assert artifact["status"] == "ready"
+    assert _read(run / "content-spec.json")["status"] == "ready"
 
 
 def test_source_snapshot_is_safe_and_replayable(tmp_path):
