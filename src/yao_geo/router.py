@@ -75,11 +75,10 @@ def _normalize(text: str) -> str:
 
 
 def build_action_phrase_index(registry: dict[str, Any]) -> ActionPhraseIndex:
-    """Compile every active registry intent plus narrow request verb prefixes."""
+    """Compile every registered intent plus narrow request verb prefixes."""
     phrases = {
         phrase
         for skill in registry["skills"]
-        if skill["status"] == "active"
         for intent in skill["intents"]
         if (phrase := _normalize(intent))
     }
@@ -239,8 +238,22 @@ def route(text: str, registry_path: Path | None = None) -> dict[str, Any]:
     scores = {skill["id"]: score for score, _, skill in ranked}
     spans_by_skill = {skill_id: analysis[1] for skill_id, analysis in analyses.items()}
     connector_spans = tuple(match.span() for match in _WORKFLOW_CONNECTOR_RE.finditer(normalized))
-    active_stage_matches = {skill_id for skill_id in ("geo-discover", "geo-diagnose", "geo-content") if scores.get(skill_id, 0) > 0}
-    matched_recipes = [recipe for recipe in registry["workflows"] if set(recipe["required_skills"]) <= active_stage_matches and _workflow_matches(recipe, spans_by_skill, connector_spans)]
+    planned_ranked = [
+        item
+        for item in ranked
+        if item[0] > 0 and item[2]["status"] != "active"
+    ]
+    active_stage_matches = {
+        skill_id
+        for skill_id in ("geo-discover", "geo-diagnose", "geo-content")
+        if scores.get(skill_id, 0) > 0
+    }
+    matched_recipes = [] if planned_ranked else [
+        recipe
+        for recipe in registry["workflows"]
+        if set(recipe["required_skills"]) <= active_stage_matches
+        and _workflow_matches(recipe, spans_by_skill, connector_spans)
+    ]
     workflow = None
     if len(matched_recipes) == 1 and active_stage_matches == set(matched_recipes[0]["required_skills"]):
         workflow = {"id": matched_recipes[0]["id"], "steps": [dict(step) for step in matched_recipes[0]["steps"]]}
@@ -254,7 +267,9 @@ def route(text: str, registry_path: Path | None = None) -> dict[str, Any]:
                 {"id": "content", "skill_id": "geo-content", "depends_on": ["discover"]},
             ],
         }
-    if any(score > 0 and skill["id"] != "geo" for score, _, skill in ranked):
+    if planned_ranked:
+        ranked = planned_ranked
+    elif any(score > 0 and skill["id"] != "geo" for score, _, skill in ranked):
         ranked = [item for item in ranked if item[2]["id"] != "geo"]
     ranked.sort(key=lambda item: (-item[0], item[1]))
     top_score = ranked[0][0]

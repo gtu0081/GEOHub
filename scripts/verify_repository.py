@@ -40,16 +40,15 @@ def main() -> int:
     registry = load_registry(ROOT / "registry" / "skills.yaml")
     registered = {item["id"]: item for item in registry["skills"]}
     action_index = build_action_phrase_index(registry)
-    active_intents = {
+    registered_intents = {
         " ".join(intent.casefold().split())
         for skill in registry["skills"]
-        if skill["status"] == "active"
         for intent in skill["intents"]
     }
-    missing_action_intents = active_intents - action_index.phrases
+    missing_action_intents = registered_intents - action_index.phrases
     if missing_action_intents:
         fail(
-            "active registry intents missing from router action index: "
+            "registry intents missing from router action index: "
             + ", ".join(sorted(missing_action_intents))
         )
     for skill_id in ("geo", "geo-discover", "geo-diagnose", "geo-content"):

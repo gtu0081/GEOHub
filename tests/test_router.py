@@ -154,6 +154,53 @@ def test_planned_route_exposes_inputs_and_closest_v0_artifact():
     assert result["closest_v0_artifact"]
 
 
+@pytest.mark.parametrize(
+    "text,skill_id",
+    (
+        ("No keyword research then publish", "geo-publish"),
+        ("No keyword research then strategy", "geo-strategy"),
+        ("No content then monitor", "geo-measure"),
+        ("Skip website audit then knowledge base", "geo-knowledge"),
+        ("Avoid content generation then publish to CMS", "geo-publish"),
+        ("No diagnosis then measure AI visibility", "geo-measure"),
+        ("Avoid content, then build a roadmap", "geo-strategy"),
+        ("不拓词然后发布", "geo-publish"),
+        ("不写文章然后策略", "geo-strategy"),
+        ("不写文章然后知识库", "geo-knowledge"),
+        ("不诊断然后监测", "geo-measure"),
+        ("不拓词然后分发", "geo-publish"),
+    ),
+)
+def test_planned_intents_after_negated_sequence_scope_remain_planned(text, skill_id):
+    result = route(text)
+    assert result["skill_id"] == skill_id
+    assert result["status"] == "planned"
+    assert result["runnable"] is False
+    assert result["entry"] is None
+    assert result["required_inputs"]
+    assert result["closest_v0_artifact"]
+    assert "workflow" not in result
+
+
+@pytest.mark.parametrize(
+    "text",
+    (
+        "No content then publish and keyword research and website audit",
+        "不写文章然后发布并拓词和诊断网站",
+        "No content then publish and website audit",
+    ),
+)
+def test_positive_planned_intent_blocks_active_workflow_execution(text):
+    result = route(text)
+    assert result["skill_id"] == "geo-publish"
+    assert result["status"] == "planned"
+    assert result["runnable"] is False
+    assert result["entry"] is None
+    assert result["required_inputs"]
+    assert result["closest_v0_artifact"]
+    assert "workflow" not in result
+
+
 def test_long_scope_negations_exclude_only_the_negated_stage():
     cases = (
         ("Do not under any circumstances create an article; audit our website instead", "geo-diagnose"),
@@ -418,13 +465,12 @@ def test_all_registered_content_modes_start_positive_sequence_scope(text):
     assert "workflow" not in result
 
 
-def test_action_index_contains_every_active_registry_intent():
+def test_action_index_contains_every_registry_intent():
     registry = load_registry()
     index = build_action_phrase_index(registry)
     expected = {
         " ".join(intent.casefold().split())
         for skill in registry["skills"]
-        if skill["status"] == "active"
         for intent in skill["intents"]
     }
     assert expected <= index.phrases
