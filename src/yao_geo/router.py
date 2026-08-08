@@ -16,7 +16,7 @@ _NEGATION_RE = re.compile(
     r"(?:请勿|不需要|不要|无需|无须|不能|不可|别|禁止|拒绝|不想|不必|不准|切勿|"
     r"不做|不进行|不创建|不生成|不开展|跳过|避免|勿))"
 )
-_BARE_ZH_NEGATION_RE = re.compile(r"不\s*(?:再\s*)?")
+_BARE_ZH_NEGATION_RE = re.compile(r"不(?!\s*(?:只|仅|单|光))\s*(?:再\s*)?")
 _HARD_CLAUSE_RE = re.compile(r"[;；。.!?！？]")
 _CLAUSE_BOUNDARY_RE = re.compile(
     r"(?:[;；。.!?！？]|(?:,\s*)?\b(?:but|instead|however)(?:\s+please)?\b|"

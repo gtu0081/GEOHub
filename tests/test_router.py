@@ -435,6 +435,53 @@ def test_positive_action_lead_in_chain_keeps_planned_precedence():
     assert result["runnable"] is False
 
 
+def test_buzhi_keeps_both_active_intents_positive():
+    result = route("不只拓词还要诊断网站")
+    assert result["skill_id"] == "geo-discover"
+    assert result["workflow"]["id"] == "brand-baseline-lite"
+    assert result["runnable"] is True
+
+
+@pytest.mark.parametrize(
+    "text,skill_id,workflow_id,runnable",
+    (
+        ("不 只拓词还要写文章", "geo-discover", "content-campaign", True),
+        ("不只监测还要诊断网站", "geo-measure", None, False),
+        ("不只是拓词还要诊断网站", "geo-discover", "brand-baseline-lite", True),
+        ("不单拓词还要写文章", "geo-discover", "content-campaign", True),
+        ("不光发布还要写文章", "geo-publish", None, False),
+        ("不只想发布而是还要写文章", "geo-publish", None, False),
+    ),
+)
+def test_buzhi_and_not_only_compounds_remain_positive(
+    text,
+    skill_id,
+    workflow_id,
+    runnable,
+):
+    result = route(text)
+    assert result["skill_id"] == skill_id
+    assert result.get("workflow", {}).get("id") == workflow_id
+    assert result["runnable"] is runnable
+    if not runnable:
+        assert result["required_inputs"]
+        assert result["closest_v0_artifact"]
+
+
+@pytest.mark.parametrize(
+    "text,skill_id",
+    (
+        ("不再想只发布只写文章", "geo-content"),
+        ("不再打算只拓词只诊断网站", "geo-diagnose"),
+    ),
+)
+def test_internal_zhi_after_buzai_remains_in_the_negative_lead_in(text, skill_id):
+    result = route(text)
+    assert result["skill_id"] == skill_id
+    assert result["runnable"] is True
+    assert "workflow" not in result
+
+
 def test_bujin_with_action_lead_in_remains_positive():
     result = route("不仅想发布还要诊断网站")
     assert result["skill_id"] == "geo-publish"
