@@ -14,7 +14,15 @@ ROOT = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(ROOT / "src"))
 
 from yao_geo.registry import load_registry  # noqa: E402
-from yao_geo.router import build_action_phrase_index  # noqa: E402
+from yao_geo.router import (  # noqa: E402
+    GOVERNED_ADDITIVE_CONNECTORS,
+    _ADDITIVE_CONNECTOR_RE,
+    _CLAUSE_BOUNDARY_RE,
+    _GOVERNED_ADDITIVE_PATTERN,
+    _SEQUENCE_SCOPE_TOKENS,
+    _WORKFLOW_CONNECTOR_RE,
+    build_action_phrase_index,
+)
 from yao_geo.validation import load_schema  # noqa: E402
 
 
@@ -22,7 +30,43 @@ def fail(message: str) -> None:
     raise SystemExit(f"repository verification failed: {message}")
 
 
+EXPECTED_GOVERNED_ADDITIVE_CONNECTORS = (
+    ("and also", r"\band\s+also\b", True),
+    ("also", r"\balso\b", True),
+    ("and", r"\band\b", False),
+    ("plus", r"\bplus\b(?!-size\b)", False),
+    ("还要", r"还要", True),
+    ("也要", r"也要", True),
+    ("还需", r"还需", True),
+    ("同时", r"同时", True),
+    ("并且", r"并且", False),
+    ("以及", r"以及", False),
+    ("并", r"并", False),
+    ("且", r"且", False),
+    ("和", r"和", False),
+    ("加", r"加", False),
+    ("及", r"及", False),
+)
+
+
+def verify_additive_connector_parity() -> None:
+    tokens = [token for token, _, _ in GOVERNED_ADDITIVE_CONNECTORS]
+    patterns = [pattern for _, pattern, _ in GOVERNED_ADDITIVE_CONNECTORS]
+    if tuple(GOVERNED_ADDITIVE_CONNECTORS) != EXPECTED_GOVERNED_ADDITIVE_CONNECTORS:
+        fail("governed additive connector inventory is invalid")
+    compiled = "(?:" + "|".join(patterns) + ")"
+    if (
+        compiled != _GOVERNED_ADDITIVE_PATTERN
+        or _ADDITIVE_CONNECTOR_RE.pattern != compiled
+        or compiled not in _CLAUSE_BOUNDARY_RE.pattern
+        or compiled not in _WORKFLOW_CONNECTOR_RE.pattern
+        or set(tokens) & _SEQUENCE_SCOPE_TOKENS
+    ):
+        fail("governed additive connector parity is broken")
+
+
 def main() -> int:
+    verify_additive_connector_parity()
     if (ROOT / "VERSION").read_text(encoding="utf-8").strip() != "0.1.0":
         fail("VERSION must be 0.1.0")
     if "GNU AFFERO GENERAL PUBLIC LICENSE" not in (ROOT / "LICENSE").read_text(encoding="utf-8"):

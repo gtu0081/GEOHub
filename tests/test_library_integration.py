@@ -37,6 +37,41 @@ def test_registry_workflows_are_valid_stable_dags():
             seen.add(step["id"])
 
 
+def test_repository_verifier_fails_closed_on_additive_connector_drift(monkeypatch):
+    verifier = load_script("verify_repository")
+    verifier.verify_additive_connector_parity()
+    monkeypatch.setattr(verifier, "_WORKFLOW_CONNECTOR_RE", re.compile(r"\band\b"))
+    with pytest.raises(SystemExit, match="connector parity"):
+        verifier.verify_additive_connector_parity()
+
+
+def test_repository_verifier_rejects_additive_flag_and_order_drift(monkeypatch):
+    verifier = load_script("verify_repository")
+    original = verifier.GOVERNED_ADDITIVE_CONNECTORS
+    attacks = (
+        tuple(
+            (token, pattern, not breaks_negation if token == "and" else breaks_negation)
+            for token, pattern, breaks_negation in original
+        ),
+        tuple(
+            (token, pattern, not breaks_negation if token == "also" else breaks_negation)
+            for token, pattern, breaks_negation in original
+        ),
+        (original[2], original[1], original[0], *original[3:]),
+        (original[0], original[1], original[0], *original[3:]),
+        (
+            original[0],
+            original[1],
+            (original[2][0], original[3][1], original[2][2]),
+            *original[3:],
+        ),
+    )
+    for attack in attacks:
+        monkeypatch.setattr(verifier, "GOVERNED_ADDITIVE_CONNECTORS", attack)
+        with pytest.raises(SystemExit, match="connector inventory"):
+            verifier.verify_additive_connector_parity()
+
+
 @pytest.mark.parametrize("skill_id", SKILLS)
 def test_library_manifests_and_interfaces_are_consistent(skill_id):
     skill_root = ROOT / "skills" / skill_id

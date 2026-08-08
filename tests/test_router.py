@@ -655,6 +655,23 @@ def test_lexical_buzhi_does_not_block_additive_exception(text):
 @pytest.mark.parametrize(
     "text",
     (
+        "不再仅拓词，不光是只写文章还要诊断网站",
+        "不再仅拓词，不单是只写文章还要诊断网站",
+        "不再仅拓词，不仅是只写文章还要诊断网站",
+        "不再仅拓词，不只是只写文章还要诊断网站",
+        "不再仅拓词，不 光 是 只写文章还要诊断网站",
+    ),
+)
+def test_lexical_positive_qualifier_with_shi_protects_internal_zhi(text):
+    result = route(text)
+    assert result["skill_id"] == "geo-discover"
+    assert result["workflow"]["id"] == "brand-baseline-lite+content-campaign"
+    assert result["runnable"] is True
+
+
+@pytest.mark.parametrize(
+    "text",
+    (
         "不单独只发布，还要写文章",
         "不 单独 只发布，还要写文章",
     ),
@@ -685,6 +702,177 @@ def test_no_longer_only_with_also_keeps_both_active_stages_positive():
     assert result["skill_id"] == "geo-discover"
     assert result["workflow"]["id"] == "brand-baseline-lite"
     assert result["runnable"] is True
+
+
+def test_no_longer_only_with_and_keeps_both_active_stages_positive():
+    result = route("no longer only keyword research and audit the website")
+    assert result["skill_id"] == "geo-discover"
+    assert result["workflow"]["id"] == "brand-baseline-lite"
+    assert result["runnable"] is True
+
+
+def test_additive_action_lead_in_accepts_need_to_before_registered_action():
+    result = route("no longer only keyword research, also need to audit the website")
+    assert result["skill_id"] == "geo-discover"
+    assert result["workflow"]["id"] == "brand-baseline-lite"
+    assert result["runnable"] is True
+
+
+@pytest.mark.parametrize(
+    "lead_in",
+    ("need to", "want to", "plan to", "intend to", "prepare to", "want"),
+)
+def test_governed_english_action_lead_ins_work_after_additive_connector(lead_in):
+    result = route(
+        f"no longer only keyword research, also {lead_in} audit the website"
+    )
+    assert result["skill_id"] == "geo-discover"
+    assert result["workflow"]["id"] == "brand-baseline-lite"
+    assert result["runnable"] is True
+
+
+def test_governed_english_action_lead_ins_are_shared_by_sequence_and_negation():
+    sequence = route("No keyword research, then plan to write article")
+    assert sequence["skill_id"] == "geo-content"
+    assert "workflow" not in sequence
+
+    negation = route("Do not intend to publish; prepare to write article")
+    assert negation["skill_id"] == "geo-content"
+    assert "workflow" not in negation
+
+    planned = route("no longer only publish, also prepare to write article")
+    assert planned["skill_id"] == "geo-publish"
+    assert planned["runnable"] is False
+    assert planned["entry"] is None
+    assert planned["required_inputs"]
+    assert planned["closest_v0_artifact"]
+
+
+@pytest.mark.parametrize(
+    "text",
+    (
+        "no longer only keyword research, also wanted audit the website",
+        "no longer only keyword research, also need tool audit the website",
+    ),
+)
+def test_english_action_lead_in_word_boundaries_reject_wanted_and_tool(text):
+    result = route(text)
+    assert result["skill_id"] == "geo"
+    assert "workflow" not in result
+
+
+@pytest.mark.parametrize(
+    "text,skill_id,workflow_id,runnable",
+    (
+        (
+            "no longer only keyword research and also audit the website",
+            "geo-discover",
+            "brand-baseline-lite",
+            True,
+        ),
+        (
+            "no longer only publish plus write article",
+            "geo-publish",
+            None,
+            False,
+        ),
+        ("不再仅拓词并且诊断网站", "geo-discover", "brand-baseline-lite", True),
+        ("不再仅发布并写文章", "geo-publish", None, False),
+        ("不再仅拓词以及诊断网站", "geo-discover", "brand-baseline-lite", True),
+        ("不再仅拓词且诊断网站", "geo-discover", "brand-baseline-lite", True),
+    ),
+)
+def test_governed_additive_connectors_share_scope_workflow_and_exception_semantics(
+    text,
+    skill_id,
+    workflow_id,
+    runnable,
+):
+    result = route(text)
+    assert result["skill_id"] == skill_id
+    assert result.get("workflow", {}).get("id") == workflow_id
+    assert result["runnable"] is runnable
+    if not runnable:
+        assert result["entry"] is None
+        assert result["required_inputs"]
+        assert result["closest_v0_artifact"]
+
+
+@pytest.mark.parametrize(
+    "text",
+    (
+        "keyword research brand website audit",
+        "keyword research plus-size website audit",
+    ),
+)
+def test_additive_english_word_boundaries_do_not_create_workflows(text):
+    result = route(text)
+    assert "workflow" not in result
+
+
+@pytest.mark.parametrize(
+    "text",
+    (
+        "拓词调和诊断网站",
+        "拓词涉及诊断网站",
+        "拓词增加诊断网站",
+        "拓词合并诊断网站",
+        "keyword research also-ran website audit",
+        "keyword research and-based website audit",
+        "keyword research plus–size website audit",
+        "keyword research and produce notes quoting website audit",
+        "keyword research also build a dictionary for the phrase website audit",
+        "拓词并写一段说明，其中引用诊断一词",
+    ),
+)
+def test_connector_substrings_and_hyphenated_words_do_not_create_workflows(text):
+    result = route(text)
+    assert "workflow" not in result
+
+
+@pytest.mark.parametrize(
+    "text",
+    (
+        "keyword research and also audit the website",
+        "keyword research plus audit the website",
+        "拓词并且诊断网站",
+        "拓词以及诊断网站",
+    ),
+)
+def test_independent_adjacent_additive_connectors_still_create_exact_workflows(text):
+    result = route(text)
+    assert result["skill_id"] == "geo-discover"
+    assert result["workflow"]["id"] == "brand-baseline-lite"
+    assert result["runnable"] is True
+
+
+@pytest.mark.parametrize(
+    "text",
+    (
+        "不再仅拓词调和诊断网站",
+        "不再仅拓词涉及诊断网站",
+        "不再仅拓词增加诊断网站",
+        "不再仅拓词合并诊断网站",
+        "不再仅发布调和写文章",
+        "不再仅发布涉及写文章",
+        "不再仅发布增加写文章",
+        "不再仅发布合并写文章",
+    ),
+)
+def test_connector_substrings_do_not_cancel_exclusivity_negation(text):
+    result = route(text)
+    assert result["skill_id"] == "geo"
+    assert "workflow" not in result
+
+
+def test_incremental_chinese_lead_in_stops_at_registered_full_action():
+    content = route("跳过拓词，然后做页面蓝图")
+    assert content["skill_id"] == "geo-content"
+    assert "workflow" not in content
+
+    workflow = route("拓词并做页面蓝图")
+    assert workflow["skill_id"] == "geo-discover"
+    assert workflow["workflow"]["id"] == "content-campaign"
 
 
 @pytest.mark.parametrize(
@@ -772,6 +960,9 @@ def test_additive_and_replacement_connector_scans_are_single_pass(monkeypatch):
             return original_english.finditer(text)
 
     class CountingLexicalPositivePattern:
+        def match(self, text, *args):
+            return original_lexical_positive.match(text, *args)
+
         def finditer(self, text):
             nonlocal lexical_positive_calls
             lexical_positive_calls += 1
@@ -1090,7 +1281,8 @@ def test_registry_action_index_is_compiled_once_and_checked_once_per_sequence(mo
     text = ("No keyword research, then title; " * 100)[:3_000]
     route(text)
     assert build_calls == 1
-    assert match_calls <= text.count("then") + text.count("No")
+    connector_count = text.count("then") + text.count(",") + text.count(";")
+    assert match_calls <= connector_count + text.count("No")
 
 
 def test_bare_chinese_request_marker_starts_positive_clause():

@@ -2,7 +2,7 @@ from __future__ import annotations
 
 import re
 from bisect import bisect_right
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 from pathlib import Path
 from typing import Any
 
@@ -20,20 +20,53 @@ _BARE_ZH_NEGATION_RE = re.compile(
     r"不(?!\s*(?:只|仅|光|单(?!\s*独)))\s*(?:再\s*)?"
 )
 _HARD_CLAUSE_RE = re.compile(r"[;；。.!?！？]")
+GOVERNED_ADDITIVE_CONNECTORS = (
+    ("and also", r"\band\s+also\b", True),
+    ("also", r"\balso\b", True),
+    ("and", r"\band\b", False),
+    ("plus", r"\bplus\b(?!-size\b)", False),
+    ("还要", r"还要", True),
+    ("也要", r"也要", True),
+    ("还需", r"还需", True),
+    ("同时", r"同时", True),
+    ("并且", r"并且", False),
+    ("以及", r"以及", False),
+    ("并", r"并", False),
+    ("且", r"且", False),
+    ("和", r"和", False),
+    ("加", r"加", False),
+    ("及", r"及", False),
+)
+_GOVERNED_ADDITIVE_PATTERN = "(?:" + "|".join(
+    pattern for _, pattern, _ in GOVERNED_ADDITIVE_CONNECTORS
+) + ")"
+_GOVERNED_ADDITIVE_TOKENS = frozenset(
+    token for token, _, _ in GOVERNED_ADDITIVE_CONNECTORS
+)
+_GOVERNED_ADDITIVE_SCOPE_BREAKS = frozenset(
+    token for token, _, breaks_negation in GOVERNED_ADDITIVE_CONNECTORS if breaks_negation
+)
+_GOVERNED_SINGLE_ZH_ADDITIVE_TOKENS = frozenset(
+    token
+    for token, _, _ in GOVERNED_ADDITIVE_CONNECTORS
+    if len(token) == 1 and not token.isascii()
+)
 _CLAUSE_BOUNDARY_RE = re.compile(
     r"(?:[;；。.!?！？]|(?:,\s*)?\b(?:but|instead(?:\s+of)?|however|"
     r"rather\s+than|switch(?:ing)?\s+to)(?:\s+please)?\b|"
     r"(?:,\s*)?(?:and\s+)?(?:then|only)\b|"
-    r"(?:,\s*)?\balso\b|,\s*(?:only|just)\b|"
+    rf"(?:[,，]\s*)?{_GOVERNED_ADDITIVE_PATTERN}|,\s*(?:only|just)\b|"
     r"(?:，\s*)?(?:但是|但|改为|转而)(?:请)?|"
-    r"(?:，\s*)?(?:然后|再|只|还要|也要|还需|同时)|，\s*(?:只|仅|请)|请)"
+    r"(?:，\s*)?(?:然后|再|只)|，\s*(?:只|仅|请)|请)"
 )
 _WORKFLOW_CONNECTOR_RE = re.compile(
-    r"(?:\b(?:and|then|also|plus|followed by|but|instead(?:\s+of)?|however|"
+    r"(?:\b(?:then|followed by|but|instead(?:\s+of)?|however|"
     r"rather\s+than|switch(?:ing)?\s+to)\b|"
-    r"[,&+;，；、]|再|然后|还要|也要|还需|同时|并且|但是|但|改为|转而|并|和|加|及)"
+    rf"{_GOVERNED_ADDITIVE_PATTERN}|"
+    r"[,&+;，；、]|再|然后|但是|但|改为|转而)"
 )
-_ADDITIVE_CONNECTOR_RE = re.compile(r"(?:还要|也要|还需|同时|\balso\b)")
+_WORKFLOW_CONNECTOR_GAP_CHARACTERS = frozenset(",，、&+;；")
+_ADDITIVE_CONNECTOR_RE = re.compile(_GOVERNED_ADDITIVE_PATTERN)
 _REPLACEMENT_CONNECTOR_RE = re.compile(
     r"(?:改为|转而|只|\binstead(?:\s+of)?\b|"
     r"\brather\s+than\b|\bswitch(?:ing)?\s+to\b)"
@@ -41,7 +74,8 @@ _REPLACEMENT_CONNECTOR_RE = re.compile(
 _EXCLUSIVITY_LEAD_IN_RE = re.compile(r"(?:仅仅|仅|光|只)\s*")
 _ENGLISH_ADDITIVE_EXCLUSIVITY_RE = re.compile(r"\bno\s+longer\s+only\s+")
 _LEXICAL_POSITIVE_ZHI_RE = re.compile(
-    r"不\s*(?:(?:仅(?:\s*仅)?|单(?!\s*独)|光)\s*)?只(?:\s*是)?"
+    r"不\s*(?:(?:仅(?:\s*仅)?|单(?!\s*独)|光|只)\s*(?:是\s*)?)?"
+    r"只(?:\s*是)?"
 )
 _NEGATION_FILLER_RE = re.compile(
     r"\b(?:under|any|circumstances|at|all|ever|in|way|please|just|only|really|want|"
@@ -84,17 +118,44 @@ _SEQUENCE_SCOPE_TOKENS = frozenset(
         "只",
         "仅",
         "请",
-        "还要",
-        "也要",
-        "还需",
-        "同时",
-        "also",
     }
 )
-_ACTION_LEAD_IN_RE = re.compile(
-    r"(?:(?:please|need|want)\s+|"
-    r"(?:(?:请|需要|继续|想|去|要|打算|准备|单\s*独|仅仅|仅|再|只|光)\s*){1,4})"
+GOVERNED_EN_ACTION_LEAD_INS = ("need", "want", "plan", "intend", "prepare")
+_GOVERNED_EN_ACTION_LEAD_IN_PATTERN = (
+    r"(?:" + "|".join(re.escape(token) for token in GOVERNED_EN_ACTION_LEAD_INS) + r")"
+    r"\b\s+(?:to\b\s+)?"
 )
+GOVERNED_ZH_ACTION_LEAD_INS = (
+    "单独",
+    "仅仅",
+    "需要",
+    "继续",
+    "打算",
+    "准备",
+    "页面",
+    "请",
+    "想",
+    "去",
+    "要",
+    "做",
+    "仅",
+    "再",
+    "只",
+    "光",
+)
+_GOVERNED_ZH_ACTION_LEAD_IN_PATTERN = "(?:" + "|".join(
+    r"单\s*独" if token == "单独" else re.escape(token)
+    for token in GOVERNED_ZH_ACTION_LEAD_INS
+) + r")\s*"
+_ACTION_LEAD_IN_RE = re.compile(
+    rf"(?:please\s+|{_GOVERNED_EN_ACTION_LEAD_IN_PATTERN}|"
+    rf"(?:{_GOVERNED_ZH_ACTION_LEAD_IN_PATTERN}){{1,4}})"
+)
+_ZH_ACTION_LEAD_IN_TOKEN_RE = re.compile(_GOVERNED_ZH_ACTION_LEAD_IN_PATTERN)
+_EN_ACTION_LEAD_IN_RE = re.compile(
+    rf"(?:please\s+|{_GOVERNED_EN_ACTION_LEAD_IN_PATTERN})"
+)
+_WORKFLOW_OBJECT_LEAD_IN_RE = re.compile(r"\s*(?:(?:a|an|the)\b\s+)?")
 
 
 @dataclass(frozen=True)
@@ -108,6 +169,11 @@ class ClauseScope:
 class ActionPhraseIndex:
     phrases: frozenset[str]
     start_pattern: re.Pattern[str]
+    span_cache: dict[int, tuple[int, int] | None] = field(
+        default_factory=dict,
+        compare=False,
+        repr=False,
+    )
 
 
 def _normalize(text: str) -> str:
@@ -140,12 +206,35 @@ def _registered_action_span(
 ) -> tuple[int, int] | None:
     if start < len(text) and text[start] == " ":
         start += 1
-    lead_in = _ACTION_LEAD_IN_RE.match(text, start)
-    action_start = lead_in.end() if lead_in else start
-    action_match = action_index.start_pattern.match(text, action_start)
-    if action_match is None:
-        return None
-    return action_match.span()
+    if start in action_index.span_cache:
+        return action_index.span_cache[start]
+    lexical_positive = _LEXICAL_POSITIVE_ZHI_RE.match(text, start)
+    prefix_end = lexical_positive.end() if lexical_positive else start
+    action_match = action_index.start_pattern.match(text, prefix_end)
+    if action_match is not None:
+        result = action_match.span()
+        action_index.span_cache[start] = result
+        return result
+    english_lead_in = _EN_ACTION_LEAD_IN_RE.match(text, prefix_end)
+    if english_lead_in is not None:
+        action_match = action_index.start_pattern.match(text, english_lead_in.end())
+        if action_match is not None:
+            result = action_match.span()
+            action_index.span_cache[start] = result
+            return result
+    cursor = prefix_end
+    for _ in range(4):
+        token = _ZH_ACTION_LEAD_IN_TOKEN_RE.match(text, cursor)
+        if token is None:
+            break
+        cursor = token.end()
+        action_match = action_index.start_pattern.match(text, cursor)
+        if action_match is not None:
+            result = action_match.span()
+            action_index.span_cache[start] = result
+            return result
+    action_index.span_cache[start] = None
+    return None
 
 
 def _registered_action_start(
@@ -201,6 +290,7 @@ def _additive_exception_starts(
     additive_spans: tuple[tuple[int, int], ...],
     replacement_spans: tuple[tuple[int, int], ...],
     hard_clause_spans: tuple[tuple[int, int], ...],
+    gap_prefix: tuple[int, ...],
 ) -> frozenset[int]:
     exceptions: set[int] = set()
     additive_index = 0
@@ -228,6 +318,15 @@ def _additive_exception_starts(
             if additive_index < len(additive_spans)
             else len(text) + 1
         )
+        if additive_index < len(additive_spans):
+            additive_token = _normalize(
+                text[additive_spans[additive_index][0] : additive_spans[additive_index][1]]
+            )
+            if (
+                additive_token in _GOVERNED_SINGLE_ZH_ADDITIVE_TOKENS
+                and gap_prefix[action_end] != gap_prefix[additive_start]
+            ):
+                additive_start = len(text) + 1
         replacement_start = (
             replacement_spans[replacement_index][0]
             if replacement_index < len(replacement_spans)
@@ -254,12 +353,13 @@ def _connector_starts_scope(
 ) -> bool:
     token = _normalize(boundary.group().strip(" ,，"))
     right = text[boundary.end() :].lstrip()
-    if token in _SEQUENCE_SCOPE_TOKENS:
+    is_additive = token in _GOVERNED_ADDITIVE_TOKENS
+    if token in _SEQUENCE_SCOPE_TOKENS or is_additive:
         if token in {"only", "and only"}:
             left = text[max(0, boundary.start() - 12) : boundary.start()]
             if re.search(r"(?:not|no\s+longer)\s+$", left):
                 return False
-        if not _starts_registered_action(right, action_index):
+        if not _starts_registered_action(text, action_index, boundary.end()):
             return False
     if (
         token.startswith(("however", "instead"))
@@ -270,6 +370,8 @@ def _connector_starts_scope(
     negation_index = bisect_right(negation_starts, boundary.start() - 1) - 1
     if negation_index < 0 or negation_spans[negation_index][0] < scope_start:
         return True
+    if is_additive and token not in _GOVERNED_ADDITIVE_SCOPE_BREAKS:
+        return False
     after_negation = negation_spans[negation_index][1]
     return object_prefix[boundary.start()] > object_prefix[after_negation]
 
@@ -277,6 +379,7 @@ def _connector_starts_scope(
 def _parse_clause_scopes(
     text: str,
     action_index: ActionPhraseIndex,
+    gap_prefix: tuple[int, ...],
 ) -> tuple[ClauseScope, ...]:
     additive_spans = tuple(
         match.span()
@@ -302,6 +405,7 @@ def _parse_clause_scopes(
         additive_spans,
         replacement_spans,
         hard_clause_spans,
+        gap_prefix,
     )
     static_negation_spans = tuple(
         (
@@ -399,18 +503,79 @@ def _analyze_skill_intents(
 def _workflow_matches(
     recipe: dict[str, Any],
     spans_by_skill: dict[str, list[tuple[int, int]]],
-    connector_spans: tuple[tuple[int, int], ...],
+    connector_spans: tuple[tuple[int, int, int, int, int | None, str], ...],
+    gap_prefix: tuple[int, ...],
 ) -> bool:
     first_id, second_id = recipe["required_skills"]
     first_ends = sorted(span[1] for span in spans_by_skill[first_id])
     second_starts = sorted(span[0] for span in spans_by_skill[second_id])
+    second_start_set = set(second_starts)
     if not first_ends or not second_starts:
         return False
-    return any(
-        bisect_right(first_ends, connector_start) > 0
-        and bisect_right(second_starts, connector_end - 1) < len(second_starts)
-        for connector_start, connector_end in connector_spans
-    )
+    for (
+        connector_start,
+        _,
+        action_start,
+        _,
+        later_intent_start,
+        token,
+    ) in connector_spans:
+        first_index = bisect_right(first_ends, connector_start) - 1
+        second_is_adjacent = action_start in second_start_set or (
+            later_intent_start is not None
+            and later_intent_start in second_start_set
+        )
+        if (
+            first_index >= 0
+            and second_is_adjacent
+            and (
+                token not in _GOVERNED_SINGLE_ZH_ADDITIVE_TOKENS
+                or gap_prefix[first_ends[first_index]] == gap_prefix[connector_start]
+            )
+        ):
+            return True
+    return False
+
+
+def _workflow_connector_spans(
+    text: str,
+    action_index: ActionPhraseIndex,
+) -> tuple[tuple[int, int, int, int, int | None, str], ...]:
+    spans = []
+    for match in _WORKFLOW_CONNECTOR_RE.finditer(text):
+        action_span = _registered_action_span(text, action_index, match.end())
+        if action_span is not None:
+            token = _normalize(match.group().strip(" ,，"))
+            action_phrase = text[action_span[0] : action_span[1]]
+            later_intent_start = None
+            if action_phrase in _ACTION_VERB_PREFIXES:
+                object_lead_in = _WORKFLOW_OBJECT_LEAD_IN_RE.match(text, action_span[1])
+                if object_lead_in is not None:
+                    later_intent_start = object_lead_in.end()
+            spans.append(
+                (
+                    match.start(),
+                    match.end(),
+                    action_span[0],
+                    action_span[1],
+                    later_intent_start,
+                    token,
+                )
+            )
+    return tuple(spans)
+
+
+def _workflow_gap_prefix(text: str) -> tuple[int, ...]:
+    prefix = [0]
+    for character in text:
+        prefix.append(
+            prefix[-1]
+            + int(
+                not character.isspace()
+                and character not in _WORKFLOW_CONNECTOR_GAP_CHARACTERS
+            )
+        )
+    return tuple(prefix)
 
 
 def route(text: str, registry_path: Path | None = None) -> dict[str, Any]:
@@ -425,7 +590,8 @@ def route(text: str, registry_path: Path | None = None) -> dict[str, Any]:
 
     registry = load_registry(registry_path)
     action_index = build_action_phrase_index(registry)
-    scopes = _parse_clause_scopes(normalized, action_index)
+    workflow_gap_prefix = _workflow_gap_prefix(normalized)
+    scopes = _parse_clause_scopes(normalized, action_index, workflow_gap_prefix)
     analyses = {
         skill["id"]: _analyze_skill_intents(normalized, skill["intents"], scopes)
         for skill in registry["skills"]
@@ -436,7 +602,7 @@ def route(text: str, registry_path: Path | None = None) -> dict[str, Any]:
     ]
     scores = {skill["id"]: score for score, _, skill in ranked}
     spans_by_skill = {skill_id: analysis[1] for skill_id, analysis in analyses.items()}
-    connector_spans = tuple(match.span() for match in _WORKFLOW_CONNECTOR_RE.finditer(normalized))
+    connector_spans = _workflow_connector_spans(normalized, action_index)
     planned_ranked = [
         item
         for item in ranked
@@ -451,7 +617,7 @@ def route(text: str, registry_path: Path | None = None) -> dict[str, Any]:
         recipe
         for recipe in registry["workflows"]
         if set(recipe["required_skills"]) <= active_stage_matches
-        and _workflow_matches(recipe, spans_by_skill, connector_spans)
+        and _workflow_matches(recipe, spans_by_skill, connector_spans, workflow_gap_prefix)
     ]
     workflow = None
     if len(matched_recipes) == 1 and active_stage_matches == set(matched_recipes[0]["required_skills"]):
