@@ -1,0 +1,19 @@
+{
+  "protocol_version": "1.0.0",
+  "brief_id": "team-kb-missing-001",
+  "subject": "small-team knowledge base selection",
+  "locale": "en",
+  "seed_queries": [
+    "best knowledge base for a small team"
+  ],
+  "audiences": [
+    "operations lead"
+  ],
+  "scenarios": [
+    "vendor evaluation"
+  ],
+  "competitors": [
+    "Vendor A"
+  ],
+  "evidence": []
+}

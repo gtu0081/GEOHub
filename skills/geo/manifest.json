@@ -1,0 +1,15 @@
+{
+  "name": "geo",
+  "version": "0.1.0",
+  "owner": "姚金刚 / Yao",
+  "updated_at": "2026-08-08",
+  "review_cadence": "per-release",
+  "status": "experimental",
+  "maturity_tier": "production",
+  "lifecycle_stage": "production",
+  "context_budget_tier": "production",
+  "input_files": ["file-backed fixture: registry/skills.yaml"],
+  "output_contract": ["route-decision"],
+  "rollback_boundary": "Revert the router, registry, and geo skill together to the previous protocol-compatible release.",
+  "factory_components": ["references", "agents"]
+}

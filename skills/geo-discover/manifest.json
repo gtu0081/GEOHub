@@ -1,0 +1,15 @@
+{
+  "name": "geo-discover",
+  "version": "0.1.0",
+  "owner": "姚金刚 / Yao",
+  "updated_at": "2026-08-08",
+  "review_cadence": "per-release",
+  "status": "experimental",
+  "maturity_tier": "production",
+  "lifecycle_stage": "production",
+  "context_budget_tier": "production",
+  "input_files": ["file-backed fixture: protocol 1.0.0 geo-brief JSON"],
+  "output_contract": ["Artifact Bus run directory", "query-map", "opportunity-map", "evidence-ledger", "quality-report"],
+  "rollback_boundary": "Remove the generated run directory and revert discover, Artifact Bus, schemas, and registry together.",
+  "factory_components": ["references", "scripts", "agents"]
+}

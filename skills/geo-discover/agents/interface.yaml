@@ -1,0 +1,21 @@
+interface:
+  display_name: "Yao GEO Discover"
+  short_description: "Build deterministic evidence-aware GEO discovery artifacts"
+  default_prompt: "Use $geo-discover to create an evidence-aware query and opportunity map from this brief."
+compatibility:
+  canonical_format: "agent-skills"
+  adapter_targets: [openai, claude, generic]
+  activation:
+    mode: "auto"
+    paths: []
+  execution:
+    context: "inline"
+    shell: "python"
+  trust:
+    source_tier: "local"
+    remote_inline_execution: "forbid"
+    remote_metadata_policy: "allow-metadata-only"
+  degradation:
+    openai: "metadata-adapter"
+    claude: "neutral-source-plus-adapter"
+    generic: "neutral-source"

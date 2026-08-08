@@ -1,0 +1,59 @@
+protocol_version: 1.0.0
+registry_version: 0.1.0
+skills:
+  - id: geo
+    status: active
+    active_placeholder: false
+    entry: skills/geo/SKILL.md
+    summary: Unified GEO intent router and capability status surface.
+    intents: [geo, generative engine optimization, 生成式引擎优化, AI搜索优化]
+    outputs: [route-decision]
+  - id: geo-discover
+    status: active
+    active_placeholder: false
+    entry: skills/geo-discover/SKILL.md
+    summary: Deterministic query and opportunity discovery from evidence-aware briefs.
+    intents: [discover, intent mining, query research, 意图挖掘, 问题挖掘, AI搜索问题, AI 搜索问题, 查询拓展, 选题发现]
+    outputs: [query-map, opportunity-map, evidence-ledger, run-manifest, quality-report]
+  - id: geo-diagnose
+    status: pending-implementation
+    active_placeholder: false
+    entry: null
+    summary: Reserved for evidence-based GEO diagnosis.
+    intents: [diagnose, audit, 诊断, 审计, 差距分析]
+    outputs: [quality-report, opportunity-map]
+  - id: geo-content
+    status: pending-implementation
+    active_placeholder: false
+    entry: null
+    summary: Reserved for evidence-grounded content specifications.
+    intents: [content, draft, 内容生产, 内容优化, 写文章]
+    outputs: [content-spec]
+  - id: geo-strategy
+    status: planned
+    active_placeholder: false
+    entry: null
+    summary: Roadmap route for strategy planning.
+    intents: [strategy, roadmap, 策略, 路线图]
+    outputs: [opportunity-map]
+  - id: geo-knowledge
+    status: planned
+    active_placeholder: false
+    entry: null
+    summary: Roadmap route for knowledge operations.
+    intents: [knowledge, knowledge base, 知识库, 知识治理]
+    outputs: [brand-fact-card]
+  - id: geo-publish
+    status: planned
+    active_placeholder: false
+    entry: null
+    summary: Roadmap route for publishing workflows.
+    intents: [publish, distribute, 发布, 分发]
+    outputs: [run-manifest]
+  - id: geo-measure
+    status: planned
+    active_placeholder: false
+    entry: null
+    summary: Roadmap route for measurement.
+    intents: [measure, monitor, tracking, 监测, 衡量, 效果]
+    outputs: [quality-report]

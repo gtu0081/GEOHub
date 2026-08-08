@@ -1,0 +1,24 @@
+{
+  "protocol_version": "1.0.0",
+  "brief_id": "team-kb-001",
+  "subject": "中小团队知识库选型",
+  "brand": "Example Brand",
+  "locale": "zh-CN",
+  "seed_queries": [
+    "适合中小团队的知识库"
+  ],
+  "audiences": [
+    "运营负责人"
+  ],
+  "scenarios": [
+    "工具选型"
+  ],
+  "competitors": [],
+  "evidence": [
+    {
+      "evidence_id": "ev-001",
+      "claim": "团队需要权限管理与版本记录",
+      "source_uri": "https://example.invalid/requirements"
+    }
+  ]
+}

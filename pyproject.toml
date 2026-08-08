@@ -1,0 +1,62 @@
+[build-system]
+requires = ["setuptools>=68"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "yao-geo"
+version = "0.1.0"
+description = "Experimental, protocol-first GEO workflow toolkit"
+readme = "README.md"
+requires-python = ">=3.11"
+license = {text = "AGPL-3.0-only"}
+authors = [{name = "姚金刚 / Yao"}]
+dependencies = [
+  "jsonschema>=4.21,<5",
+  "PyYAML>=6.0,<7",
+]
+
+[project.optional-dependencies]
+dev = ["pytest>=8,<9"]
+
+[project.scripts]
+yao-geo = "yao_geo.cli:main"
+
+[tool.setuptools.packages.find]
+where = ["src"]
+
+[tool.setuptools.data-files]
+"share/yao-geo/registry" = [
+  "registry/skills.yaml",
+  "registry/skills.schema.json",
+]
+"share/yao-geo/schemas" = [
+  "schemas/brand-fact-card.schema.json",
+  "schemas/content-spec.schema.json",
+  "schemas/evidence-ledger.schema.json",
+  "schemas/geo-brief.schema.json",
+  "schemas/opportunity-map.schema.json",
+  "schemas/quality-report.schema.json",
+  "schemas/query-map.schema.json",
+  "schemas/run-manifest.schema.json",
+]
+"share/yao-geo/skills/geo" = [
+  "skills/geo/SKILL.md",
+  "skills/geo/manifest.json",
+]
+"share/yao-geo/skills/geo/agents" = ["skills/geo/agents/interface.yaml"]
+"share/yao-geo/skills/geo/references" = ["skills/geo/references/routing-contract.md"]
+"share/yao-geo/skills/geo-discover" = [
+  "skills/geo-discover/SKILL.md",
+  "skills/geo-discover/manifest.json",
+]
+"share/yao-geo/skills/geo-discover/agents" = ["skills/geo-discover/agents/interface.yaml"]
+"share/yao-geo/skills/geo-discover/references" = [
+  "skills/geo-discover/references/discovery-method.md",
+  "skills/geo-discover/references/input-example.json",
+]
+"share/yao-geo/skills/geo-discover/scripts" = ["skills/geo-discover/scripts/run_discover.py"]
+
+[tool.pytest.ini_options]
+addopts = "-q"
+testpaths = ["tests"]
+pythonpath = ["src"]

@@ -1,0 +1,33 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://yao.example/geo/registry/skills.schema.json",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["protocol_version", "registry_version", "skills"],
+  "properties": {
+    "protocol_version": {"const": "1.0.0"},
+    "registry_version": {"type": "string", "pattern": "^\\d+\\.\\d+\\.\\d+$"},
+    "skills": {
+      "type": "array",
+      "minItems": 1,
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["id", "status", "active_placeholder", "entry", "summary", "intents", "outputs"],
+        "properties": {
+          "id": {"type": "string", "pattern": "^geo(?:-[a-z]+)?$"},
+          "status": {"enum": ["active", "pending-implementation", "planned"]},
+          "active_placeholder": {"type": "boolean"},
+          "entry": {"type": ["string", "null"]},
+          "summary": {"type": "string", "minLength": 1},
+          "intents": {"type": "array", "minItems": 1, "items": {"type": "string", "minLength": 1}},
+          "outputs": {"type": "array", "items": {"type": "string", "minLength": 1}}
+        },
+        "allOf": [
+          {"if": {"properties": {"status": {"const": "active"}}}, "then": {"properties": {"entry": {"type": "string"}}}},
+          {"if": {"properties": {"status": {"enum": ["planned", "pending-implementation"]}}}, "then": {"properties": {"entry": {"type": "null"}, "active_placeholder": {"const": false}}}}
+        ]
+      }
+    }
+  }
+}

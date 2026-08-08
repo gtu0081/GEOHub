@@ -1,0 +1,21 @@
+interface:
+  display_name: "Yao GEO Router"
+  short_description: "Route GEO requests through an honest capability registry"
+  default_prompt: "Use $geo to route this GEO request and report unavailable stages honestly."
+compatibility:
+  canonical_format: "agent-skills"
+  adapter_targets: [openai, claude, generic]
+  activation:
+    mode: "auto"
+    paths: []
+  execution:
+    context: "inline"
+    shell: "python"
+  trust:
+    source_tier: "local"
+    remote_inline_execution: "forbid"
+    remote_metadata_policy: "allow-metadata-only"
+  degradation:
+    openai: "metadata-adapter"
+    claude: "neutral-source-plus-adapter"
+    generic: "neutral-source"
