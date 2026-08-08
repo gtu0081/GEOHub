@@ -4,10 +4,12 @@ import hashlib
 import http.client
 import ipaddress
 import json
+import os
 import queue
 import re
 import socket
 import ssl
+import stat
 import threading
 import time
 from dataclasses import dataclass
@@ -731,22 +733,54 @@ def _load_source_html(
         path = Path(value["path"].strip())
         if path.is_absolute() or ".." in path.parts:
             raise ValueError("source_html fixture path must stay relative to the brief directory")
-        brief_root = input_path.parent.resolve()
-        candidate = brief_root / path
-        current = brief_root
-        for part in path.parts:
-            current = current / part
-            if current.is_symlink():
-                raise ValueError(f"source_html fixture path must not contain symlinks: {path}")
+        parts = path.parts
+        if not parts:
+            raise ValueError("source_html fixture path must name a file")
+        opened_fds: list[int] = []
         try:
-            resolved = candidate.resolve(strict=True)
+            directory_flags = os.O_RDONLY | os.O_DIRECTORY | os.O_NOFOLLOW | os.O_CLOEXEC
+            current_fd = os.open(input_path.parent, directory_flags)
+            opened_fds.append(current_fd)
+            for component in parts[:-1]:
+                current_fd = os.open(
+                    component,
+                    directory_flags,
+                    dir_fd=current_fd,
+                )
+                opened_fds.append(current_fd)
+            file_fd = os.open(
+                parts[-1],
+                os.O_RDONLY | os.O_NOFOLLOW | os.O_CLOEXEC,
+                dir_fd=current_fd,
+            )
+            opened_fds.append(file_fd)
+            file_stat = os.fstat(file_fd)
+            if not stat.S_ISREG(file_stat.st_mode):
+                raise ValueError(f"source_html fixture must be a regular file: {path}")
+            if file_stat.st_size > MAX_FETCH_BYTES:
+                raise ValueError(f"source_html fixture exceeds {MAX_FETCH_BYTES} bytes")
+            chunks: list[bytes] = []
+            byte_count = 0
+            while True:
+                chunk = os.read(
+                    file_fd,
+                    min(64 * 1024, MAX_FETCH_BYTES + 1 - byte_count),
+                )
+                if not chunk:
+                    break
+                chunks.append(chunk)
+                byte_count += len(chunk)
+                if byte_count > MAX_FETCH_BYTES:
+                    raise ValueError(f"source_html fixture exceeds {MAX_FETCH_BYTES} bytes")
+            html = b"".join(chunks).decode("utf-8")
         except OSError as exc:
-            raise ValueError(f"source_html fixture is unavailable: {path}") from exc
-        if brief_root not in resolved.parents or not resolved.is_file():
-            raise ValueError(f"source_html fixture must be a regular file within the brief directory: {path}")
-        if resolved.stat().st_size > MAX_FETCH_BYTES:
-            raise ValueError(f"source_html fixture exceeds {MAX_FETCH_BYTES} bytes")
-        html = resolved.read_text(encoding="utf-8")
+            raise ValueError(f"source_html fixture is unavailable or unsafe: {path}") from exc
+        finally:
+            for descriptor in reversed(opened_fds):
+                try:
+                    os.close(descriptor)
+                except OSError:
+                    pass
         digest = hashlib.sha256(html.encode("utf-8")).hexdigest()
         declared_digest = value.get("sha256", "").strip()
         if declared_digest and declared_digest != digest:
@@ -1258,17 +1292,18 @@ def diagnose(
     validate_artifact("run-manifest", run_manifest)
 
     run_path = output_path / run_id
-    bus = ArtifactBus(run_path)
-    bus.write_json("input/diagnosis-brief.json", normalized_brief)
-    for source in analyzed_sources:
-        bus.write_text(f"input/sources/{source['source_id']}.html", source["html"])
-    bus.write_json("diagnosis.json", diagnosis_artifact)
-    bus.write_text("report.md", report)
-    bus.write_json("evidence-ledger.json", evidence_ledger, "evidence-ledger")
-    bus.write_json("query-map.json", query_map, "query-map")
-    bus.write_json("opportunity-map.json", opportunity_map, "opportunity-map")
-    bus.write_json("quality-report.json", quality_report, "quality-report")
-    bus.write_json("run-manifest.json", run_manifest, "run-manifest")
+    with ArtifactBus.transaction(output_path, run_id) as bus:
+        bus.write_json("input/diagnosis-brief.json", normalized_brief)
+        for source in analyzed_sources:
+            bus.write_text(f"input/sources/{source['source_id']}.html", source["html"])
+        bus.write_json("diagnosis.json", diagnosis_artifact)
+        bus.write_text("report.md", report)
+        bus.write_json("evidence-ledger.json", evidence_ledger, "evidence-ledger")
+        bus.write_json("query-map.json", query_map, "query-map")
+        bus.write_json("opportunity-map.json", opportunity_map, "opportunity-map")
+        bus.write_json("quality-report.json", quality_report, "quality-report")
+        bus.write_json("run-manifest.json", run_manifest, "run-manifest")
+        bus.publish(set(manifest_paths) | {"run-manifest.json"})
     return {
         "run_id": run_id,
         "status": run_manifest["status"],

@@ -1,6 +1,11 @@
 from __future__ import annotations
 
 import json
+import os
+import re
+import shutil
+import stat
+import tempfile
 from pathlib import Path
 from typing import Any
 
@@ -12,9 +17,39 @@ class ArtifactBus:
 
     def __init__(self, root: Path):
         self.root = root.resolve()
+        self.final_root: Path | None = None
+        self._published = False
         if self.root.exists() and any(self.root.iterdir()):
             raise ValueError(f"Output directory must be empty: {self.root}")
         self.root.mkdir(parents=True, exist_ok=True)
+
+    @classmethod
+    def transaction(cls, runs_root: Path, run_id: str) -> "ArtifactBus":
+        if not re.fullmatch(r"run-[A-Za-z0-9._-]+", run_id):
+            raise ValueError(f"Invalid run ID: {run_id}")
+        resolved_runs_root = runs_root.resolve()
+        resolved_runs_root.mkdir(parents=True, exist_ok=True)
+        final_root = resolved_runs_root / run_id
+        if final_root.exists():
+            raise ValueError(f"Run directory already exists: {final_root}")
+        staging = Path(
+            tempfile.mkdtemp(
+                prefix=f".{run_id}.staging-",
+                dir=resolved_runs_root,
+            )
+        )
+        bus = cls.__new__(cls)
+        bus.root = staging
+        bus.final_root = final_root
+        bus._published = False
+        return bus
+
+    def __enter__(self) -> "ArtifactBus":
+        return self
+
+    def __exit__(self, _exc_type, _exc, _traceback) -> None:
+        if self.final_root is not None and not self._published and self.root.exists():
+            shutil.rmtree(self.root)
 
     def _resolve(self, relative_path: str) -> Path:
         target = (self.root / relative_path).resolve()
@@ -47,3 +82,43 @@ class ArtifactBus:
         temporary.write_text(content, encoding="utf-8")
         temporary.replace(target)
         return target
+
+    def publish(self, expected_files: set[str]) -> Path:
+        if self.final_root is None:
+            raise ValueError("Direct ArtifactBus instances cannot be published")
+        actual_files: set[str] = set()
+        for path in self.root.rglob("*"):
+            if path.is_dir():
+                continue
+            mode = path.lstat().st_mode
+            if path.is_symlink() or not stat.S_ISREG(mode):
+                raise ValueError(f"Artifact Bus contains a non-regular file: {path}")
+            actual_files.add(path.relative_to(self.root).as_posix())
+        if actual_files != expected_files:
+            missing = sorted(expected_files - actual_files)
+            extra = sorted(actual_files - expected_files)
+            raise ValueError(
+                f"Artifact Bus file set mismatch; missing={missing}, extra={extra}"
+            )
+        manifest_path = self.root / "run-manifest.json"
+        try:
+            manifest = json.loads(manifest_path.read_text(encoding="utf-8"))
+        except (OSError, json.JSONDecodeError) as exc:
+            raise ValueError(f"Unable to validate staged run manifest: {exc}") from exc
+        declared = set(manifest.get("artifacts", []))
+        expected_declared = expected_files - {"run-manifest.json"}
+        if declared != expected_declared:
+            raise ValueError(
+                "Run manifest artifacts do not match the staged Artifact Bus files"
+            )
+        if self.final_root.exists():
+            raise ValueError(f"Run directory already exists: {self.final_root}")
+        try:
+            os.rename(self.root, self.final_root)
+        except OSError as exc:
+            if self.final_root.exists():
+                raise ValueError(f"Run directory already exists: {self.final_root}") from exc
+            raise
+        self._published = True
+        self.root = self.final_root
+        return self.final_root

@@ -200,11 +200,12 @@ def discover(
     validate_artifact("run-manifest", run_manifest)
 
     run_path = output_path / run_id
-    bus = ArtifactBus(run_path)
-    bus.write_json("input/geo-brief.json", brief, "geo-brief")
-    for relative_path, (artifact, schema_name) in artifacts.items():
-        bus.write_json(relative_path, artifact, schema_name)
-    bus.write_json("run-manifest.json", run_manifest, "run-manifest")
+    with ArtifactBus.transaction(output_path, run_id) as bus:
+        bus.write_json("input/geo-brief.json", brief, "geo-brief")
+        for relative_path, (artifact, schema_name) in artifacts.items():
+            bus.write_json(relative_path, artifact, schema_name)
+        bus.write_json("run-manifest.json", run_manifest, "run-manifest")
+        bus.publish(set(manifest_paths) | {"run-manifest.json"})
     return {
         "run_id": run_id,
         "status": run_manifest["status"],

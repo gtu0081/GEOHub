@@ -1,4 +1,6 @@
 import json
+import threading
+from concurrent.futures import ThreadPoolExecutor
 from datetime import datetime, timezone
 from pathlib import Path
 
@@ -97,6 +99,57 @@ def test_artifact_bus_rejects_nonempty_output_and_path_escape(tmp_path):
     bus = ArtifactBus(tmp_path / "clean")
     with pytest.raises(ValueError, match="escapes run directory"):
         bus.write_json("../outside.json", {})
+
+
+def test_artifact_bus_failure_is_invisible_and_retryable(tmp_path, monkeypatch):
+    runs_root = tmp_path / "runs"
+    original_write_json = ArtifactBus.write_json
+    calls = 0
+
+    def fail_midway(self, *args, **kwargs):
+        nonlocal calls
+        calls += 1
+        if calls == 3:
+            raise RuntimeError("simulated staged write failure")
+        return original_write_json(self, *args, **kwargs)
+
+    with monkeypatch.context() as scoped:
+        scoped.setattr(ArtifactBus, "write_json", fail_midway)
+        with pytest.raises(RuntimeError, match="staged write failure"):
+            discover(FIXTURES / "brief.json", runs_root, clock=_clock)
+
+    assert runs_root.is_dir()
+    assert list(runs_root.iterdir()) == []
+    result = discover(FIXTURES / "brief.json", runs_root, clock=_clock)
+    assert Path(result["output"]).is_dir()
+    assert not any(path.name.startswith(".") for path in runs_root.iterdir())
+
+
+def test_artifact_bus_concurrent_same_run_id_has_one_winner(tmp_path):
+    runs_root = tmp_path / "runs"
+    barrier = threading.Barrier(2)
+
+    def publish(label):
+        try:
+            with ArtifactBus.transaction(runs_root, "run-concurrent") as bus:
+                bus.write_text("payload.txt", label)
+                bus.write_json(
+                    "run-manifest.json",
+                    {"artifacts": ["payload.txt"]},
+                )
+                barrier.wait(timeout=5)
+                path = bus.publish({"payload.txt", "run-manifest.json"})
+                return "ok", path
+        except ValueError as exc:
+            return "error", str(exc)
+
+    with ThreadPoolExecutor(max_workers=2) as pool:
+        results = list(pool.map(publish, ("first", "second")))
+
+    assert [status for status, _value in results].count("ok") == 1
+    assert [status for status, _value in results].count("error") == 1
+    assert (runs_root / "run-concurrent" / "payload.txt").read_text() in {"first", "second"}
+    assert not any(path.name.startswith(".run-") for path in runs_root.iterdir())
 
 
 def test_discover_rejects_duplicate_evidence_ids(tmp_path):

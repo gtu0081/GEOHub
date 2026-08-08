@@ -1,4 +1,5 @@
 import json
+import os
 import socket
 from datetime import datetime, timezone
 from pathlib import Path
@@ -9,7 +10,10 @@ from yao_geo.diagnose import (
     FetchResult,
     SourceUnavailable,
     URLPolicyError,
+    _BoundHTTPSConnection,
     _default_fetch,
+    _load_source_html,
+    _validate_public_url,
     diagnose,
     validate_diagnosis,
     validate_diagnosis_brief,
@@ -296,6 +300,104 @@ def test_private_redirect_becomes_source_gap_policy_error(monkeypatch):
         _default_fetch("http://example.com", resolver=_public_resolver)
 
 
+def test_http_fetch_pins_the_validated_public_ip(monkeypatch):
+    resolver_answers = iter(["93.184.216.34", "127.0.0.1"])
+    resolver_calls = []
+    connected = []
+
+    def changing_resolver(_host, _port, *, type):
+        resolver_calls.append(type)
+        return [(socket.AF_INET, type, 6, "", (next(resolver_answers), 0))]
+
+    normalized, addresses = _validate_public_url(
+        "http://example.com/page",
+        resolver=changing_resolver,
+    )
+
+    class Response:
+        status = 200
+
+        def __init__(self):
+            self.sent = False
+
+        @staticmethod
+        def getheader(name, default=None):
+            return "text/html" if name == "Content-Type" else default
+
+        def read(self, _size):
+            if self.sent:
+                return b""
+            self.sent = True
+            return b"<title>Pinned</title>"
+
+    class Connection:
+        sock = None
+
+        def __init__(self, host, *, port, timeout):
+            connected.append((host, port, timeout))
+
+        def request(self, *_args, **_kwargs):
+            pass
+
+        def getresponse(self):
+            return Response()
+
+        def close(self):
+            pass
+
+    monkeypatch.setattr("yao_geo.diagnose.http.client.HTTPConnection", Connection)
+    result = _default_fetch(
+        normalized,
+        resolver=changing_resolver,
+        initial_addresses=addresses,
+    )
+    assert result.body == b"<title>Pinned</title>"
+    assert connected[0][0] == "93.184.216.34"
+    assert len(resolver_calls) == 1
+
+
+def test_https_binding_preserves_hostname_sni_and_default_cert_context(monkeypatch):
+    import ssl
+
+    created_contexts = []
+    connected = []
+
+    class Context:
+        check_hostname = True
+        verify_mode = ssl.CERT_REQUIRED
+
+        def wrap_socket(self, raw_socket, *, server_hostname):
+            self.server_hostname = server_hostname
+            self.raw_socket = raw_socket
+            return object()
+
+    def create_default_context():
+        context = Context()
+        created_contexts.append(context)
+        return context
+
+    raw_socket = object()
+
+    def create_connection(endpoint, timeout, source_address):
+        connected.append((endpoint, timeout, source_address))
+        return raw_socket
+
+    monkeypatch.setattr("yao_geo.diagnose.ssl.create_default_context", create_default_context)
+    monkeypatch.setattr("yao_geo.diagnose.socket.create_connection", create_connection)
+    connection = _BoundHTTPSConnection(
+        "example.com",
+        "93.184.216.34",
+        port=443,
+        timeout=8,
+    )
+    connection.connect()
+    assert connected[0][0] == ("93.184.216.34", 443)
+    assert created_contexts[0].server_hostname == "example.com"
+    assert created_contexts[0].raw_socket is raw_socket
+    assert created_contexts[0].check_hostname is True
+    assert created_contexts[0].verify_mode == ssl.CERT_REQUIRED
+
+
 def test_file_fixture_cannot_escape_brief_directory(tmp_path):
     outside = tmp_path.parent / f"{tmp_path.name}-outside.html"
     outside.write_text("<title>outside</title>", encoding="utf-8")
@@ -312,8 +414,75 @@ def test_file_fixture_rejects_symlink_component(tmp_path):
     (tmp_path / "linked").symlink_to(real, target_is_directory=True)
     brief = tmp_path / "brief.json"
     brief.write_text(json.dumps({"subject": "Symlink", "scope": "page", "source_html": {"path": "linked/page.html"}}), encoding="utf-8")
-    with pytest.raises(ValueError, match="symlinks"):
+    with pytest.raises(ValueError, match="unsafe"):
         diagnose(brief, tmp_path / "runs", clock=_clock)
+
+
+def test_fd_reader_uses_opened_file_when_path_is_replaced(tmp_path, monkeypatch):
+    brief = tmp_path / "brief.json"
+    brief.write_text("{}", encoding="utf-8")
+    page = tmp_path / "page.html"
+    replacement = tmp_path / "replacement.html"
+    page.write_text("<title>Original</title>", encoding="utf-8")
+    replacement.write_text("<title>Replacement</title>", encoding="utf-8")
+    real_open = os.open
+    replaced = False
+
+    def racing_open(path, flags, mode=0o777, *, dir_fd=None):
+        nonlocal replaced
+        descriptor = real_open(path, flags, mode, dir_fd=dir_fd)
+        if path == "page.html" and not flags & os.O_DIRECTORY and not replaced:
+            replacement.replace(page)
+            replaced = True
+        return descriptor
+
+    monkeypatch.setattr("yao_geo.diagnose.os.open", racing_open)
+    html, _uri, _source_id, _source_type = _load_source_html(
+        {"path": "page.html"}, brief, index=0
+    )
+    assert replaced is True
+    assert html == "<title>Original</title>"
+    assert page.read_text(encoding="utf-8") == "<title>Replacement</title>"
+
+
+def test_fd_reader_detects_growth_after_fstat_and_closes_all_fds(tmp_path, monkeypatch):
+    brief = tmp_path / "brief.json"
+    brief.write_text("{}", encoding="utf-8")
+    page = tmp_path / "page.html"
+    page.write_bytes(b"1234")
+    real_open = os.open
+    real_close = os.close
+    real_fstat = os.fstat
+    opened = []
+    closed = []
+    grew = False
+
+    def tracked_open(*args, **kwargs):
+        descriptor = real_open(*args, **kwargs)
+        opened.append(descriptor)
+        return descriptor
+
+    def growing_fstat(descriptor):
+        nonlocal grew
+        result = real_fstat(descriptor)
+        if not grew:
+            with page.open("ab") as stream:
+                stream.write(b"56789")
+            grew = True
+        return result
+
+    def tracked_close(descriptor):
+        closed.append(descriptor)
+        return real_close(descriptor)
+
+    monkeypatch.setattr("yao_geo.diagnose.MAX_FETCH_BYTES", 8)
+    monkeypatch.setattr("yao_geo.diagnose.os.open", tracked_open)
+    monkeypatch.setattr("yao_geo.diagnose.os.fstat", growing_fstat)
+    monkeypatch.setattr("yao_geo.diagnose.os.close", tracked_close)
+    with pytest.raises(ValueError, match="exceeds 8 bytes"):
+        _load_source_html({"path": "page.html"}, brief, index=0)
+    assert grew is True
+    assert set(opened) <= set(closed)
 
 
 def test_run_and_evidence_ids_change_with_html_content(tmp_path):
