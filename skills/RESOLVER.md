@@ -6,7 +6,7 @@ The registry is the single capability source. Resolution preserves the existing 
 - `brand-baseline-lite` requires explicit discovery and diagnosis language. Its stable DAG is `discover` followed by `diagnose`.
 - `content-campaign` requires explicit discovery and content language. Its stable DAG is `discover` followed by `content`.
 - When both exact recipes are explicitly requested in discovery-first order, return composed workflow `brand-baseline-lite+content-campaign`: `discover` fans out to `diagnose` and `content`. Preserve both recipe IDs in `recipes`.
-- A planned route is never runnable. It returns the nearest active stage in the same work domain: strategy → discover, knowledge/publish → content, measure → diagnose.
+- A planned route is never runnable. It returns the nearest active stage in the same work domain, plus `required_inputs` and `closest_v0_artifact`: strategy → discover, knowledge/publish → content, measure → diagnose.
 - Unknown language falls back to the active `geo` capability selector.
 - A workflow step has exactly `id`, `skill_id`, and `depends_on`; dependencies refer only to earlier step IDs.
 

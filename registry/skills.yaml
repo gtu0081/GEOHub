@@ -24,7 +24,7 @@ skills:
     active_placeholder: false
     entry: skills/geo-discover/SKILL.md
     summary: Deterministic query and opportunity discovery from evidence-aware briefs.
-    intents: [discover, intent mining, query research, 意图挖掘, 问题挖掘, AI搜索问题, AI 搜索问题, 查询拓展, 选题发现]
+    intents: [discover, intent mining, query research, query expansion, keyword expansion, keyword research, 意图挖掘, 问题挖掘, AI搜索问题, AI 搜索问题, 查询拓展, 关键词拓展, 关键词扩展, 拓词, 选题发现]
     outputs: [query-map, opportunity-map, evidence-ledger, run-manifest, quality-report]
   - id: geo-diagnose
     status: active
@@ -38,13 +38,15 @@ skills:
     active_placeholder: false
     entry: skills/geo-content/SKILL.md
     summary: Offline evidence-lined content generation across seven bounded modes.
-    intents: [content, draft, title, headline, explainer, explanation, comparison, ranking, page blueprint, content refine, article-friendly, 内容生产, 内容优化, 写文章, 标题, 科普, 解释, 对比, 榜单, 排名, 页面蓝图, 文章友好]
+    intents: [content, draft, title, headline, explainer, explanation, comparison, ranking, page blueprint, content refine, article-friendly, 内容生产, 内容优化, 写文章, 生成文章, 文章生成, 标题, 科普, 解释, 对比, 榜单, 排名, 页面蓝图, 文章友好]
     outputs: [content-spec, content, markdown, json, html, docx, pdf, evidence-ledger, quality-report, run-manifest]
   - id: geo-strategy
     status: planned
     active_placeholder: false
     entry: null
     nearest_active: geo-discover
+    required_inputs: [subject, goals, constraints]
+    closest_v0_artifact: opportunity-map
     summary: Roadmap route for strategy planning.
     intents: [strategy, roadmap, 策略, 路线图]
     outputs: [opportunity-map]
@@ -53,6 +55,8 @@ skills:
     active_placeholder: false
     entry: null
     nearest_active: geo-content
+    required_inputs: [subject, approved_sources]
+    closest_v0_artifact: brand-fact-card
     summary: Roadmap route for knowledge operations.
     intents: [knowledge, knowledge base, 知识库, 知识治理]
     outputs: [brand-fact-card]
@@ -61,6 +65,8 @@ skills:
     active_placeholder: false
     entry: null
     nearest_active: geo-content
+    required_inputs: [content_artifact, target_channel]
+    closest_v0_artifact: run-manifest
     summary: Roadmap route for publishing workflows.
     intents: [publish, distribute, 发布, 分发]
     outputs: [run-manifest]
@@ -69,6 +75,8 @@ skills:
     active_placeholder: false
     entry: null
     nearest_active: geo-diagnose
+    required_inputs: [subject, baseline, observation_window]
+    closest_v0_artifact: quality-report
     summary: Roadmap route for measurement.
     intents: [measure, monitor, tracking, 监测, 衡量, 效果]
     outputs: [quality-report]

@@ -2,12 +2,14 @@
   "schema_version": "2.0.0",
   "name": "geo-discover",
   "title": "Yao GEO Discover",
-  "job_to_be_done": "Discover evidence-aware GEO questions, query rewrites, intent clusters, and prioritized content opportunities from a structured brief. Use for AI search intent mining, question expansion, query research, FAQ discovery, and GEO topic discovery in Chinese or English.",
+  "job_to_be_done": "Discover evidence-aware GEO questions, query rewrites, intent clusters, and prioritized content opportunities from a structured brief. Use for AI search intent mining, question or keyword expansion, query research, FAQ discovery, 拓词, and GEO topic discovery in Chinese or English.",
   "trigger_surface": {
-    "description": "Discover evidence-aware GEO questions, query rewrites, intent clusters, and prioritized content opportunities from a structured brief. Use for AI search intent mining, question expansion, query research, FAQ discovery, and GEO topic discovery in Chinese or English.",
+    "description": "Discover evidence-aware GEO questions, query rewrites, intent clusters, and prioritized content opportunities from a structured brief. Use for AI search intent mining, question or keyword expansion, query research, FAQ discovery, 拓词, and GEO topic discovery in Chinese or English.",
     "should_trigger": [
       "Discover AI search questions",
-      "帮我做意图挖掘和查询拓展"
+      "帮我做意图挖掘和查询拓展",
+      "先给这个主题拓词",
+      "Run keyword expansion and query research"
     ],
     "should_not_trigger": [
       "Publish this article",
@@ -15,7 +17,8 @@
     ],
     "edge_cases": [
       "Write an explainer",
-      "Build a GEO roadmap"
+      "Build a GEO roadmap",
+      "不要拓词，只生成文章"
     ]
   },
   "workflow": {

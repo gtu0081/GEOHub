@@ -129,3 +129,22 @@ def test_chinese_not_needed_stage_is_excluded():
     result = route("意图挖掘后不需要发布内容")
     assert result["skill_id"] == "geo-discover"
     assert "workflow" not in result
+
+
+def test_keyword_expansion_then_article_uses_content_campaign_dag():
+    result = route("先拓词再生成文章")
+    assert result["skill_id"] == "geo-discover"
+    assert result["workflow"]["id"] == "content-campaign"
+    assert [step["skill_id"] for step in result["workflow"]["steps"]] == ["geo-discover", "geo-content"]
+
+    negated = route("不要拓词，只生成文章")
+    assert negated["skill_id"] == "geo-content"
+    assert "workflow" not in negated
+
+
+def test_planned_route_exposes_inputs_and_closest_v0_artifact():
+    result = route("制定 GEO strategy roadmap")
+    assert result["status"] == "planned"
+    assert result["runnable"] is False
+    assert result["required_inputs"]
+    assert result["closest_v0_artifact"]

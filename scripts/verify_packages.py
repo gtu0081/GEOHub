@@ -6,8 +6,11 @@ import importlib.util
 import json
 import re
 import sys
+import tomllib
 import zipfile
 from pathlib import Path, PurePosixPath
+
+import yaml
 
 ROOT = Path(__file__).resolve().parents[1]
 DIST = ROOT / "dist"
@@ -86,7 +89,40 @@ def verify_archive(path: Path) -> dict:
             raise ValueError(f"duplicate manifest identities in {path.name}")
         if "registry/skills.yaml" not in stripped or "pyproject.toml" not in stripped:
             raise ValueError(f"{path.name} missing runtime registry or pyproject")
-    return {"name": path.name, "sha256": sha256(path), "members": len(names), "skill_count": skill_count, "status": "pass"}
+        self_installable = True
+        resolved_entries = 0
+        if not path.name.startswith("yao-geo-source-"):
+            project = tomllib.loads(archive.read(members["pyproject.toml"]).decode("utf-8"))
+            if project["project"].get("requires-python") != ">=3.11,<3.15":
+                raise ValueError(f"{path.name} has unsupported Python contract")
+            readme = project["project"].get("readme")
+            if not isinstance(readme, str) or readme not in members:
+                raise ValueError(f"{path.name} has a missing project readme")
+            data_sources = {source for sources in project.get("tool", {}).get("setuptools", {}).get("data-files", {}).values() for source in sources}
+            missing_data = sorted(data_sources - set(members))
+            if missing_data:
+                raise ValueError(f"{path.name} pyproject references missing data: {missing_data}")
+            registry = yaml.safe_load(archive.read(members["registry/skills.yaml"]))
+            active_skills = [skill for skill in registry["skills"] if skill["status"] == "active"]
+            active_entries = [skill["entry"] for skill in active_skills]
+            missing_entries = sorted(entry for entry in active_entries if entry not in members)
+            if missing_entries:
+                raise ValueError(f"{path.name} registry entries are missing: {missing_entries}")
+            for skill in active_skills:
+                text = archive.read(members[skill["entry"]]).decode("utf-8")
+                parts = text.split("---", 2)
+                frontmatter = yaml.safe_load(parts[1]) if len(parts) == 3 else None
+                if not isinstance(frontmatter, dict) or frontmatter.get("name") != skill["id"]:
+                    raise ValueError(f"{path.name} has an invalid provider entry for {skill['id']}")
+                referenced = set(re.findall(r"(?:references|scripts)/[A-Za-z0-9_.\-/]+", text))
+                missing_references = sorted(referenced - set(members))
+                if missing_references:
+                    raise ValueError(f"{path.name} provider entry {skill['id']} references missing resources: {missing_references}")
+            resolved_entries = len(active_entries)
+            expected_wrappers = {f"scripts/run_{name}.py" for name in ("route", "discover", "diagnose", "content")}
+            if not expected_wrappers <= set(members):
+                raise ValueError(f"{path.name} missing provider wrappers")
+    return {"name": path.name, "sha256": sha256(path), "members": len(names), "skill_count": skill_count, "self_installable": self_installable, "resolved_active_entries": resolved_entries, "status": "pass"}
 
 
 def load_packager():

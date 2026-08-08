@@ -6,8 +6,8 @@ Status: **pass**
 
 
 
-Fresh wheel/CLI smoke: route, discover, diagnose, content.
+Fresh source install and CLI smokes: route, discover, diagnose, content.
 
-Fresh isolated ZIP wrapper smokes with declared dependencies: 7.
+Fresh per-ZIP `pip install .`, route-entry resolution, and provider executions: 7.
 
 Temporary install roots were removed.

@@ -82,7 +82,7 @@ def test_title_surface_is_canonical_across_core_and_renderer_inputs(tmp_path, mo
     def fake_pdf(html_document, markdown):
         captured["pdf_html"] = html_document
         captured["pdf_markdown"] = markdown
-        return b"%PDF-test", []
+        return b"%PDF-test", [], [], []
 
     monkeypatch.setattr(content_module, "_render_docx", fake_docx)
     monkeypatch.setattr(content_module, "_render_pdf", fake_pdf)
@@ -648,7 +648,91 @@ def test_missing_optional_renderers_degrade_explicitly(tmp_path, monkeypatch):
     assert quality["status"] == "passed-with-warnings"
     assert any("DOCX renderer" in item for item in quality["warnings"])
     assert any("PDF renderer" in item for item in quality["warnings"])
-    assert _read(run / "run-manifest.json")["status"] == "completed-with-warnings"
+    manifest = _read(run / "run-manifest.json")
+    assert manifest["status"] == "completed-with-warnings"
+    assert manifest["degraded"] is True
+    assert manifest["missing_dependencies"] == ["python-docx", "reportlab", "weasyprint"]
+
+
+def test_pdf_fallback_records_only_missing_primary_dependency(tmp_path, monkeypatch):
+    real_import = importlib.import_module
+
+    class FakeCanvas:
+        def __init__(self, buffer):
+            self.buffer = buffer
+
+        def drawString(self, *_args):
+            return None
+
+        def showPage(self):
+            return None
+
+        def save(self):
+            self.buffer.write(b"%PDF-1.4\n% synthetic reportlab fixture\n")
+
+    class FakeReportLab:
+        Canvas = FakeCanvas
+
+    def primary_missing(name, package=None):
+        if name == "weasyprint":
+            raise ModuleNotFoundError("No module named 'weasyprint'", name="weasyprint")
+        if name == "reportlab.pdfgen.canvas":
+            return FakeReportLab
+        return real_import(name, package)
+
+    monkeypatch.setattr(importlib, "import_module", primary_missing)
+    _, run = _run(tmp_path, {"mode": "title", "topic": "fallback", "desired_formats": ["pdf"]})
+    assert (run / "content.pdf").read_bytes().startswith(b"%PDF")
+    manifest = _read(run / "run-manifest.json")
+    assert manifest["degraded"] is True
+    assert manifest["missing_dependencies"] == ["weasyprint"]
+    assert manifest["renderer_errors"] == []
+
+
+def test_pdf_fallback_separates_renderer_error_from_missing_dependency(tmp_path, monkeypatch):
+    real_import = importlib.import_module
+
+    class FakeCanvas:
+        def __init__(self, buffer):
+            self.buffer = buffer
+
+        def drawString(self, *_args):
+            return None
+
+        def showPage(self):
+            return None
+
+        def save(self):
+            self.buffer.write(b"%PDF-1.4\n% synthetic reportlab fixture\n")
+
+    class FakeReportLab:
+        Canvas = FakeCanvas
+
+    class BrokenHTML:
+        def __init__(self, **_kwargs):
+            pass
+
+        def write_pdf(self):
+            raise RuntimeError("synthetic renderer failure")
+
+    class BrokenWeasyPrint:
+        HTML = BrokenHTML
+
+    def primary_broken(name, package=None):
+        if name == "weasyprint":
+            return BrokenWeasyPrint
+        if name == "reportlab.pdfgen.canvas":
+            return FakeReportLab
+        return real_import(name, package)
+
+    monkeypatch.setattr(importlib, "import_module", primary_broken)
+    _, run = _run(tmp_path, {"mode": "title", "topic": "renderer error", "desired_formats": ["pdf"]})
+    assert (run / "content.pdf").read_bytes().startswith(b"%PDF")
+    manifest = _read(run / "run-manifest.json")
+    assert manifest["degraded"] is True
+    assert manifest["missing_dependencies"] == []
+    assert len(manifest["renderer_errors"]) == 1
+    assert manifest["renderer_errors"][0].startswith("weasyprint:")
 
 
 def test_artifact_bus_failure_does_not_publish_partial_run(tmp_path, monkeypatch):

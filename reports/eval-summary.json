@@ -8,8 +8,8 @@
     "fabricated_citations": 0
   },
   "router": {
-    "case_count": 66,
-    "tp": 66,
+    "case_count": 68,
+    "tp": 68,
     "fp": 0,
     "fn": 0,
     "precision": 1.0,
@@ -939,12 +939,40 @@
           "workflow_id": null,
           "runnable": true
         }
+      },
+      {
+        "id": "r067",
+        "passed": true,
+        "expected": {
+          "skill_id": "geo-discover",
+          "workflow_id": "content-campaign",
+          "runnable": true
+        },
+        "actual": {
+          "skill_id": "geo-discover",
+          "workflow_id": "content-campaign",
+          "runnable": true
+        }
+      },
+      {
+        "id": "r068",
+        "passed": true,
+        "expected": {
+          "skill_id": "geo-content",
+          "workflow_id": null,
+          "runnable": true
+        },
+        "actual": {
+          "skill_id": "geo-content",
+          "workflow_id": null,
+          "runnable": true
+        }
       }
     ]
   },
   "triggers": {
-    "case_count": 24,
-    "passed": 24,
+    "case_count": 27,
+    "passed": 27,
     "compliance": 1.0,
     "results": [
       {
@@ -1005,6 +1033,20 @@
       },
       {
         "skill_id": "geo-discover",
+        "family": "should_trigger",
+        "text": "先给这个主题拓词",
+        "passed": true,
+        "actual": "geo-discover"
+      },
+      {
+        "skill_id": "geo-discover",
+        "family": "should_trigger",
+        "text": "Run keyword expansion and query research",
+        "passed": true,
+        "actual": "geo-discover"
+      },
+      {
+        "skill_id": "geo-discover",
         "family": "should_not_trigger",
         "text": "Publish this article",
         "passed": true,
@@ -1030,6 +1072,13 @@
         "text": "Build a GEO roadmap",
         "passed": true,
         "actual": "geo-strategy"
+      },
+      {
+        "skill_id": "geo-discover",
+        "family": "near_neighbor",
+        "text": "不要拓词，只生成文章",
+        "passed": true,
+        "actual": "geo-content"
       },
       {
         "skill_id": "geo-diagnose",

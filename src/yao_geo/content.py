@@ -53,6 +53,14 @@ Clock = Callable[[], datetime]
 TypedBlock = tuple[str, str]
 
 
+class RendererFailure(RuntimeError):
+    def __init__(self, message: str, *, missing_dependencies: list[str], renderer_errors: list[str], warnings: list[str]):
+        super().__init__(message)
+        self.missing_dependencies = missing_dependencies
+        self.renderer_errors = renderer_errors
+        self.warnings = warnings
+
+
 def _stable_id(prefix: str, *parts: str) -> str:
     canonical = "\x1f".join(parts).encode("utf-8")
     return f"{prefix}-{hashlib.sha256(canonical).hexdigest()[:12]}"
@@ -985,16 +993,31 @@ def _render_docx(markdown: str) -> bytes:
     return buffer.getvalue()
 
 
-def _render_pdf(html_document: str, markdown: str) -> tuple[bytes, list[str]]:
-    warnings = []
+def _is_missing_module(exc: BaseException, module: str) -> bool:
+    if not isinstance(exc, ModuleNotFoundError):
+        return False
+    root = module.split(".", 1)[0]
+    missing_name = getattr(exc, "name", None)
+    return missing_name in {module, root} or (missing_name is None and (str(exc) == module or module in str(exc)))
+
+
+def _render_pdf(html_document: str, markdown: str) -> tuple[bytes, list[str], list[str], list[str]]:
+    warnings: list[str] = []
+    missing_dependencies: list[str] = []
+    renderer_errors: list[str] = []
     try:
         weasyprint = importlib.import_module("weasyprint")
         rendered = weasyprint.HTML(string=html_document).write_pdf()
         if not rendered.startswith(b"%PDF"):
             raise ValueError("WeasyPrint returned an invalid PDF")
-        return rendered, warnings
+        return rendered, warnings, missing_dependencies, renderer_errors
     except Exception as primary_exc:
-        warnings.append(f"degraded: PDF primary renderer failed; ReportLab fallback used: {primary_exc}")
+        if _is_missing_module(primary_exc, "weasyprint"):
+            missing_dependencies.append("weasyprint")
+            warnings.append("degraded: WeasyPrint dependency is missing; ReportLab fallback used")
+        else:
+            renderer_errors.append(f"weasyprint: {primary_exc}")
+            warnings.append(f"degraded: WeasyPrint renderer failed; ReportLab fallback used: {primary_exc}")
     try:
         canvas_module = importlib.import_module("reportlab.pdfgen.canvas")
         buffer = io.BytesIO()
@@ -1010,9 +1033,18 @@ def _render_pdf(html_document: str, markdown: str) -> tuple[bytes, list[str]]:
         rendered = buffer.getvalue()
         if not rendered.startswith(b"%PDF"):
             raise ValueError("ReportLab returned an invalid PDF")
-        return rendered, warnings
+        return rendered, warnings, missing_dependencies, renderer_errors
     except Exception as fallback_exc:
-        raise RuntimeError(f"WeasyPrint and ReportLab renderers failed: {fallback_exc}") from fallback_exc
+        if _is_missing_module(fallback_exc, "reportlab.pdfgen.canvas"):
+            missing_dependencies.append("reportlab")
+        else:
+            renderer_errors.append(f"reportlab: {fallback_exc}")
+        raise RendererFailure(
+            f"WeasyPrint and ReportLab renderers failed: {fallback_exc}",
+            missing_dependencies=sorted(set(missing_dependencies)),
+            renderer_errors=sorted(set(renderer_errors)),
+            warnings=warnings,
+        ) from fallback_exc
 
 
 def content(input_path: Path, output_path: Path, *, clock: Clock | None = None) -> dict[str, Any]:
@@ -1037,18 +1069,32 @@ def content(input_path: Path, output_path: Path, *, clock: Clock | None = None) 
 
     requested = set(normalized["desired_formats"])
     warnings: list[str] = []
+    missing_dependencies: set[str] = set()
+    renderer_errors: set[str] = set()
     binary_artifacts: dict[str, bytes] = {}
     if "docx" in requested:
         try:
             binary_artifacts["content.docx"] = _render_docx(markdown)
         except Exception as exc:
+            if _is_missing_module(exc, "docx"):
+                missing_dependencies.add("python-docx")
+            else:
+                renderer_errors.add(f"python-docx: {exc}")
             warnings.append(f"degraded: DOCX renderer unavailable or failed; core artifacts succeeded: {exc}")
     if "pdf" in requested:
         try:
-            binary_artifacts["content.pdf"], pdf_warnings = _render_pdf(html_document, markdown)
+            binary_artifacts["content.pdf"], pdf_warnings, pdf_missing, pdf_errors = _render_pdf(html_document, markdown)
             warnings.extend(pdf_warnings)
-        except Exception as exc:
+            missing_dependencies.update(pdf_missing)
+            renderer_errors.update(pdf_errors)
+        except RendererFailure as exc:
+            warnings.extend(exc.warnings)
+            missing_dependencies.update(exc.missing_dependencies)
+            renderer_errors.update(exc.renderer_errors)
             warnings.append(f"degraded: PDF renderer unavailable or failed; core artifacts succeeded: {exc}")
+        except Exception as exc:
+            renderer_errors.add(f"pdf: {exc}")
+            warnings.append(f"degraded: PDF renderer failed; core artifacts succeeded: {exc}")
     if generated_content["status"] != "ready":
         warnings.append(f"content status is {generated_content['status']}; review evidence and supplement requests")
 
@@ -1086,6 +1132,9 @@ def content(input_path: Path, output_path: Path, *, clock: Clock | None = None) 
         "input_artifact": "input/content-brief.json",
         "artifacts": artifacts,
         "status": "completed-with-warnings" if warnings else "completed",
+        "degraded": bool(missing_dependencies or renderer_errors),
+        "missing_dependencies": sorted(missing_dependencies),
+        "renderer_errors": sorted(renderer_errors),
     }
     validate_artifact("run-manifest", manifest)
     run_path = output_path / run_id

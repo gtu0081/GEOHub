@@ -16,4 +16,4 @@ The router may suggest 'geo-discover' when a downstream route is unavailable. A 
 `geo-strategy`, `geo-knowledge`, `geo-publish`, and `geo-measure` remain planned roadmap routes with no runnable entry.
 # Routing contract
 
-`registry/skills.yaml` and `skills/RESOLVER.md` define route ownership. Existing response keys remain stable. `workflow` is optional and appears only for an exact supported multi-intent recipe. Planned entries have no entrypoint, stay non-runnable, and expose a domain-nearest active suggestion.
+`registry/skills.yaml` and `skills/RESOLVER.md` define route ownership. Existing response keys remain stable. `workflow` is optional and appears only for an exact supported multi-intent recipe. Planned entries have no entrypoint, stay non-runnable, and expose a domain-nearest active suggestion, `required_inputs`, and `closest_v0_artifact`.

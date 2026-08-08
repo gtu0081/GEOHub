@@ -1,0 +1,40 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["schema_version", "status", "commands", "failed_commands", "source_digest", "evidence_digests", "gate_schema_digest", "waiver_digest", "deterministic_pass", "waived_missing_evidence", "release_blocking", "review_classifications", "note"],
+  "properties": {
+    "schema_version": {"const": "2.0.0"},
+    "status": {"enum": ["pass", "pass-with-waivers", "fail"]},
+    "commands": {
+      "type": "array",
+      "minItems": 53,
+      "maxItems": 53,
+      "uniqueItems": true,
+      "items": {
+        "type": "object",
+        "required": ["skill_id", "command", "exit_code", "status", "structured_status", "report_path", "report_digest", "stdout_tail", "stderr_tail"]
+      }
+    },
+    "failed_commands": {"type": "integer", "minimum": 0},
+    "source_digest": {"type": "string", "pattern": "^[a-f0-9]{64}$"},
+    "evidence_digests": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["reports/eval-summary.json", "reports/package-verification.json", "reports/install-simulation.json", "reports/python-compatibility.json"],
+      "properties": {
+        "reports/eval-summary.json": {"type": "string", "pattern": "^[a-f0-9]{64}$"},
+        "reports/package-verification.json": {"type": "string", "pattern": "^[a-f0-9]{64}$"},
+        "reports/install-simulation.json": {"type": "string", "pattern": "^[a-f0-9]{64}$"},
+        "reports/python-compatibility.json": {"type": "string", "pattern": "^[a-f0-9]{64}$"}
+      }
+    },
+    "gate_schema_digest": {"type": "string", "pattern": "^[a-f0-9]{64}$"},
+    "waiver_digest": {"type": "string", "pattern": "^[a-f0-9]{64}$"},
+    "deterministic_pass": {"type": "array", "uniqueItems": true, "items": {"type": "string"}},
+    "waived_missing_evidence": {"type": "array", "uniqueItems": true, "items": {"type": "string"}},
+    "release_blocking": {"type": "array", "uniqueItems": true, "items": {"type": "string"}},
+    "review_classifications": {"type": "object"},
+    "note": {"type": "string", "minLength": 1}
+  }
+}

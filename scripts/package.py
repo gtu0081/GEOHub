@@ -4,10 +4,13 @@ from __future__ import annotations
 import argparse
 import json
 import os
+import re
 import stat
 import subprocess
 import zipfile
 from pathlib import Path
+
+import yaml
 
 ROOT = Path(__file__).resolve().parents[1]
 VERSION = (ROOT / "VERSION").read_text(encoding="utf-8").strip()
@@ -57,14 +60,65 @@ def tracked_files() -> list[Path]:
 
 
 def common_runtime(files: list[Path]) -> dict[str, bytes]:
-    allowed = set(LEGAL) | {"pyproject.toml"}
-    prefixes = ("src/", "schemas/", "registry/")
+    allowed = set(LEGAL)
+    prefixes = ("src/", "schemas/")
     return {path.as_posix(): (ROOT / path).read_bytes() for path in files if path.as_posix() in allowed or path.as_posix().startswith(prefixes)}
 
 
-def packaged_skill(skill_id: str) -> bytes:
+def packaged_skill(skill_id: str, *, nested: bool = False) -> bytes:
     text = (ROOT / "skills" / skill_id / "SKILL.md").read_text(encoding="utf-8")
-    return text.replace("`../RESOLVER.md`", "`references/RESOLVER.md`").encode()
+    if nested:
+        text = re.sub(r"references/([A-Za-z0-9_.\-/]+)", rf"references/providers/{skill_id}/\1", text)
+        text = text.replace("`../RESOLVER.md`", "`references/providers/geo/RESOLVER.md`")
+    else:
+        text = text.replace("`../RESOLVER.md`", "`references/RESOLVER.md`")
+    return text.encode()
+
+
+def packaged_registry(root_skill_id: str) -> bytes:
+    registry = yaml.safe_load((ROOT / "registry" / "skills.yaml").read_text(encoding="utf-8"))
+    for skill in registry["skills"]:
+        if skill["status"] != "active":
+            continue
+        skill["entry"] = "SKILL.md" if skill["id"] == root_skill_id else f"references/providers/{skill['id']}.md"
+    return yaml.safe_dump(registry, allow_unicode=True, sort_keys=False).encode()
+
+
+def packaged_pyproject(entries: dict[str, bytes]) -> bytes:
+    source = (ROOT / "pyproject.toml").read_text(encoding="utf-8")
+    base = source.split("[tool.setuptools.data-files]", 1)[0].replace('readme = "README.md"', 'readme = "SKILL.md"')
+    runtime_roots = {"SKILL.md", "PACKAGE-METADATA.json", "TARGET.md"}
+    runtime_prefixes = ("registry/", "schemas/", "references/", "scripts/", "agents/", "manifests/")
+    groups: dict[str, list[str]] = {}
+    for name in sorted(entries):
+        if name not in runtime_roots and not name.startswith(runtime_prefixes):
+            continue
+        parent = Path(name).parent.as_posix()
+        destination = "share/yao-geo" if parent == "." else f"share/yao-geo/{parent}"
+        groups.setdefault(destination, []).append(name)
+    lines = [base.rstrip(), "", "[tool.setuptools.data-files]"]
+    for destination, sources in groups.items():
+        if sources:
+            lines.append(f'"{destination}" = {json.dumps(sources)}')
+    return ("\n".join(lines) + "\n").encode()
+
+
+def adapter_runtime(files: list[Path], root_skill_id: str) -> dict[str, bytes]:
+    entries = common_runtime(files)
+    entries["SKILL.md"] = packaged_skill(root_skill_id)
+    entries["registry/skills.yaml"] = packaged_registry(root_skill_id)
+    entries["registry/skills.schema.json"] = (ROOT / "registry" / "skills.schema.json").read_bytes()
+    for skill_id in SKILLS:
+        entries[f"references/providers/{skill_id}.md"] = packaged_skill(skill_id, nested=True)
+        source_prefix = f"skills/{skill_id}/references/"
+        for path in files:
+            raw = path.as_posix()
+            if raw.startswith(source_prefix):
+                entries[f"references/providers/{skill_id}/{raw[len(source_prefix):]}"] = (ROOT / path).read_bytes()
+        wrapper = "route" if skill_id == "geo" else skill_id.removeprefix("geo-")
+        entries[f"scripts/run_{wrapper}.py"] = (ROOT / "skills" / skill_id / "scripts" / f"run_{wrapper}.py").read_bytes()
+    entries["references/providers/geo/RESOLVER.md"] = (ROOT / "skills" / "RESOLVER.md").read_bytes()
+    return entries
 
 
 def zip_write(output: Path, entries: dict[str, bytes], prefix: str = "") -> None:
@@ -88,26 +142,23 @@ def source_package(files: list[Path]) -> Path:
 
 
 def unified_package(files: list[Path]) -> Path:
-    entries = common_runtime(files)
-    entries["SKILL.md"] = packaged_skill("geo")
+    entries = adapter_runtime(files, "geo")
     entries["agents/interface.yaml"] = (ROOT / "skills" / "geo" / "agents" / "interface.yaml").read_bytes()
-    entries["scripts/run_route.py"] = (ROOT / "skills" / "geo" / "scripts" / "run_route.py").read_bytes()
     entries["references/RESOLVER.md"] = (ROOT / "skills" / "RESOLVER.md").read_bytes()
     entries["references/routing-contract.md"] = (ROOT / "skills" / "geo" / "references" / "routing-contract.md").read_bytes()
     for skill_id in SKILLS:
         skill_root = ROOT / "skills" / skill_id
-        entries[f"references/providers/{skill_id}.md"] = (skill_root / "SKILL.md").read_bytes()
         entries[f"manifests/{skill_id}.json"] = (skill_root / "manifest.json").read_bytes()
     entries["PACKAGE-METADATA.json"] = json.dumps({"channel": "community", "license": "AGPL-3.0-only", "commercial_license_status": "inquiry_only", "kind": "unified"}, indent=2).encode() + b"\n"
+    entries["pyproject.toml"] = packaged_pyproject(entries)
     output = DIST / f"yao-geo-unified-community-{VERSION}.zip"
     zip_write(output, entries)
     return output
 
 
 def provider_package(files: list[Path], skill_id: str) -> Path:
-    entries = common_runtime(files)
+    entries = adapter_runtime(files, skill_id)
     skill_root = ROOT / "skills" / skill_id
-    entries["SKILL.md"] = packaged_skill(skill_id)
     entries["agents/interface.yaml"] = (skill_root / "agents" / "interface.yaml").read_bytes()
     entries["manifest.json"] = (skill_root / "manifest.json").read_bytes()
     for path in files:
@@ -118,22 +169,22 @@ def provider_package(files: list[Path], skill_id: str) -> Path:
     if skill_id == "geo":
         entries["references/RESOLVER.md"] = (ROOT / "skills" / "RESOLVER.md").read_bytes()
     entries["PACKAGE-METADATA.json"] = json.dumps({"channel": "community", "license": "AGPL-3.0-only", "commercial_license_status": "inquiry_only", "kind": "provider", "skill_id": skill_id}, indent=2).encode() + b"\n"
+    entries["pyproject.toml"] = packaged_pyproject(entries)
     output = DIST / f"{skill_id}-community-{VERSION}.zip"
     zip_write(output, entries)
     return output
 
 
 def target_package(files: list[Path], target: str) -> Path:
-    entries = common_runtime(files)
-    entries["SKILL.md"] = packaged_skill("geo")
+    entries = adapter_runtime(files, "geo")
     entries["agents/interface.yaml"] = (ROOT / "skills" / "geo" / "agents" / "interface.yaml").read_bytes()
-    entries["scripts/run_route.py"] = (ROOT / "skills" / "geo" / "scripts" / "run_route.py").read_bytes()
     entries["references/RESOLVER.md"] = (ROOT / "skills" / "RESOLVER.md").read_bytes()
     entries["references/routing-contract.md"] = (ROOT / "skills" / "geo" / "references" / "routing-contract.md").read_bytes()
     for skill_id in SKILLS:
         entries[f"manifests/{skill_id}.json"] = (ROOT / "skills" / skill_id / "manifest.json").read_bytes()
     entries["TARGET.md"] = f"# {target.title()} adapter\n\nInstall this directory as one Yao GEO skill. Runtime contracts remain protocol 1.0.0.\n".encode()
     entries["PACKAGE-METADATA.json"] = json.dumps({"channel": "community", "license": "AGPL-3.0-only", "commercial_license_status": "inquiry_only", "kind": "target", "target": target}, indent=2).encode() + b"\n"
+    entries["pyproject.toml"] = packaged_pyproject(entries)
     output = DIST / f"yao-geo-{target}-community-{VERSION}.zip"
     zip_write(output, entries)
     return output

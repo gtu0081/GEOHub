@@ -49,6 +49,24 @@ def test_reserved_schemas_accept_protocol_examples():
             ],
         },
     )
+
+
+def test_run_manifest_accepts_explicit_optional_renderer_degradation():
+    validate_artifact(
+        "run-manifest",
+        {
+            "protocol_version": "1.0.0",
+            "run_id": "run-degraded",
+            "created_at": "2026-08-08T00:00:00Z",
+            "generator": {"name": "yao-geo-content", "version": "0.1.0"},
+            "input_artifact": "input/content-brief.json",
+            "artifacts": ["content.md"],
+            "status": "completed-with-warnings",
+            "degraded": True,
+            "missing_dependencies": ["python-docx", "reportlab", "weasyprint"],
+            "renderer_errors": [],
+        },
+    )
     validate_artifact(
         "content-spec",
         {
@@ -158,6 +176,9 @@ def test_registry_rejects_unrunnable_discover_suggestion(tmp_path):
     discover_skill = next(skill for skill in registry["skills"] if skill["id"] == "geo-discover")
     discover_skill["status"] = "planned"
     discover_skill["entry"] = None
+    discover_skill["nearest_active"] = "geo"
+    discover_skill["required_inputs"] = ["subject"]
+    discover_skill["closest_v0_artifact"] = "query-map"
     path = _write_test_registry(tmp_path, registry)
     with pytest.raises(RegistryError, match="suggestion must exist and be runnable"):
         load_registry(path)

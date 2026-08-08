@@ -12,6 +12,9 @@
     "generator": {"type": "object", "additionalProperties": false, "required": ["name", "version"], "properties": {"name": {"type": "string", "pattern": "\\S"}, "version": {"type": "string", "pattern": "\\S"}}},
     "input_artifact": {"type": "string", "minLength": 1, "pattern": "\\S"},
     "artifacts": {"type": "array", "uniqueItems": true, "items": {"type": "string", "minLength": 1, "pattern": "\\S"}},
-    "status": {"enum": ["completed", "completed-with-warnings", "failed"]}
+    "status": {"enum": ["completed", "completed-with-warnings", "failed"]},
+    "degraded": {"type": "boolean"},
+    "missing_dependencies": {"type": "array", "uniqueItems": true, "items": {"type": "string", "minLength": 1, "pattern": "\\S"}},
+    "renderer_errors": {"type": "array", "uniqueItems": true, "items": {"type": "string", "minLength": 1, "pattern": "\\S"}}
   }
 }

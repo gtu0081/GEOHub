@@ -129,7 +129,14 @@ def evaluate_outputs() -> dict:
                         result = route(case["route_text"])
                         passed = result["skill_id"] == case["expected_skill"]
                         if case["case_type"] == "boundary":
-                            passed = passed and result["status"] == "planned" and result["runnable"] is False and result["suggestion"] == case["expected_suggestion"]
+                            passed = (
+                                passed
+                                and result["status"] == "planned"
+                                and result["runnable"] is False
+                                and result["suggestion"] == case["expected_suggestion"]
+                                and result["required_inputs"] == case["expected_required_inputs"]
+                                and result["closest_v0_artifact"] == case["expected_closest_v0_artifact"]
+                            )
                 elif case["case_type"] == "missing_input":
                     try:
                         run_skill(case["skill_id"], invalid, temp_root / case["id"])

@@ -658,5 +658,25 @@
       "workflow_id": null,
       "runnable": true
     }
+  },
+  {
+    "id": "r067",
+    "text": "先拓词再生成文章",
+    "category": "mixed",
+    "expected": {
+      "skill_id": "geo-discover",
+      "workflow_id": "content-campaign",
+      "runnable": true
+    }
+  },
+  {
+    "id": "r068",
+    "text": "不要拓词，只生成文章",
+    "category": "adversarial",
+    "expected": {
+      "skill_id": "geo-content",
+      "workflow_id": null,
+      "runnable": true
+    }
   }
 ]

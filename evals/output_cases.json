@@ -28,6 +28,8 @@
     "route_text": "Build a GEO strategy",
     "expected_skill": "geo-strategy",
     "expected_suggestion": "geo-discover",
+    "expected_required_inputs": ["subject", "goals", "constraints"],
+    "expected_closest_v0_artifact": "opportunity-map",
     "expected_outcome": "planned",
     "fixture_policy": "synthetic only",
     "fabricated_citations": 0

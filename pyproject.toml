@@ -7,7 +7,7 @@ name = "yao-geo"
 version = "0.1.0"
 description = "Experimental, protocol-first GEO workflow toolkit"
 readme = "README.md"
-requires-python = ">=3.11"
+requires-python = ">=3.11,<3.15"
 license = {text = "AGPL-3.0-only"}
 authors = [{name = "姚金刚 / Yao"}]
 dependencies = [

@@ -1,0 +1,104 @@
+{
+  "schema_version": "1.0.0",
+  "waivers": [
+    {
+      "id": "suite-human-blind-review",
+      "skill_id": "suite",
+      "gate": "human-blind-review",
+      "owner": "Yao maintainer",
+      "reason": "A human reviewer has not adjudicated the generated blind pack.",
+      "expires_on": "2026-11-01",
+      "recheck": "Obtain an independent blind review before the next public release or this expiry date."
+    },
+    {
+      "id": "suite-real-platform-benchmark",
+      "skill_id": "suite",
+      "gate": "real-platform-benchmark",
+      "owner": "Yao maintainer",
+      "reason": "No governed benchmark has been run against a live third-party platform.",
+      "expires_on": "2026-11-01",
+      "recheck": "Run an approved benchmark before the next public release or this expiry date."
+    },
+    {
+      "id": "suite-commercial-legal-review",
+      "skill_id": "suite",
+      "gate": "commercial-legal-review",
+      "owner": "Yao maintainer",
+      "reason": "The CLA and commercial licensing process remain pending qualified legal review.",
+      "expires_on": "2026-11-01",
+      "recheck": "Request qualified legal review before enabling contributions or commercial terms."
+    },
+    {
+      "id": "geo-operations-loop",
+      "skill_id": "geo",
+      "gate": "operations-loop",
+      "owner": "Yao maintainer",
+      "reason": "The experimental package has no governed real-usage telemetry sample.",
+      "expires_on": "2026-11-01",
+      "recheck": "Review privacy-approved adoption evidence before the next public release."
+    },
+    {
+      "id": "geo-release-notes",
+      "skill_id": "geo",
+      "gate": "release-notes",
+      "owner": "Yao maintainer",
+      "reason": "Maturity promotion beyond experimental remains blocked pending external legal and human review evidence; experimental 0.1.0 source publication may continue.",
+      "expires_on": "2026-11-01",
+      "recheck": "Record a reviewer decision before any maturity promotion beyond experimental or this expiry date."
+    },
+    {
+      "id": "geo-discover-operations-loop",
+      "skill_id": "geo-discover",
+      "gate": "operations-loop",
+      "owner": "Yao maintainer",
+      "reason": "The experimental package has no governed real-usage telemetry sample.",
+      "expires_on": "2026-11-01",
+      "recheck": "Review privacy-approved adoption evidence before the next public release."
+    },
+    {
+      "id": "geo-discover-release-notes",
+      "skill_id": "geo-discover",
+      "gate": "release-notes",
+      "owner": "Yao maintainer",
+      "reason": "Maturity promotion beyond experimental remains blocked pending external legal and human review evidence; experimental 0.1.0 source publication may continue.",
+      "expires_on": "2026-11-01",
+      "recheck": "Record a reviewer decision before any maturity promotion beyond experimental or this expiry date."
+    },
+    {
+      "id": "geo-diagnose-operations-loop",
+      "skill_id": "geo-diagnose",
+      "gate": "operations-loop",
+      "owner": "Yao maintainer",
+      "reason": "The experimental package has no governed real-usage telemetry sample.",
+      "expires_on": "2026-11-01",
+      "recheck": "Review privacy-approved adoption evidence before the next public release."
+    },
+    {
+      "id": "geo-diagnose-release-notes",
+      "skill_id": "geo-diagnose",
+      "gate": "release-notes",
+      "owner": "Yao maintainer",
+      "reason": "Maturity promotion beyond experimental remains blocked pending external legal and human review evidence; experimental 0.1.0 source publication may continue.",
+      "expires_on": "2026-11-01",
+      "recheck": "Record a reviewer decision before any maturity promotion beyond experimental or this expiry date."
+    },
+    {
+      "id": "geo-content-operations-loop",
+      "skill_id": "geo-content",
+      "gate": "operations-loop",
+      "owner": "Yao maintainer",
+      "reason": "The experimental package has no governed real-usage telemetry sample.",
+      "expires_on": "2026-11-01",
+      "recheck": "Review privacy-approved adoption evidence before the next public release."
+    },
+    {
+      "id": "geo-content-release-notes",
+      "skill_id": "geo-content",
+      "gate": "release-notes",
+      "owner": "Yao maintainer",
+      "reason": "Maturity promotion beyond experimental remains blocked pending external legal and human review evidence; experimental 0.1.0 source publication may continue.",
+      "expires_on": "2026-11-01",
+      "recheck": "Record a reviewer decision before any maturity promotion beyond experimental or this expiry date."
+    }
+  ]
+}

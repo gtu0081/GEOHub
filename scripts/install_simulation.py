@@ -41,23 +41,44 @@ def run(command: list[str], cwd: Path, env: dict[str, str] | None = None) -> sub
     return result
 
 
-def source_smoke(source_zip: Path, temp_root: Path) -> tuple[dict, Path, Path]:
+def prepare_wheelhouse(wheelhouse: Path, clean_env: dict[str, str]) -> None:
+    wheelhouse.mkdir()
+    run(
+        [
+            sys.executable,
+            "-m",
+            "pip",
+            "wheel",
+            "-w",
+            str(wheelhouse),
+            "jsonschema>=4.21,<5",
+            "PyYAML>=6.0,<7",
+            "setuptools>=68",
+            "wheel",
+        ],
+        ROOT,
+        clean_env,
+    )
+
+
+def install_extracted(source_root: Path, venv: Path, wheelhouse: Path, clean_env: dict[str, str]) -> Path:
+    run([sys.executable, "-m", "venv", str(venv)], source_root, clean_env)
+    python = venv / ("Scripts/python.exe" if os.name == "nt" else "bin/python")
+    run([str(python), "-m", "pip", "install", "--no-index", "--find-links", str(wheelhouse), "."], source_root, clean_env)
+    run([str(python), "-c", "from pathlib import Path; import sys, yao_geo; assert Path(yao_geo.__file__).resolve().is_relative_to(Path(sys.prefix).resolve())"], source_root, clean_env)
+    return python
+
+
+def source_smoke(source_zip: Path, temp_root: Path, wheelhouse: Path) -> dict:
     extracted = temp_root / "source"
     extracted.mkdir()
     safe_extract(source_zip, extracted)
     source_root = next(extracted.iterdir())
-    wheelhouse = temp_root / "wheelhouse"
-    wheelhouse.mkdir()
     clean_env = os.environ.copy()
     clean_env.pop("PYTHONPATH", None)
     clean_env["PIP_DISABLE_PIP_VERSION_CHECK"] = "1"
-    run([sys.executable, "-m", "pip", "wheel", "--no-build-isolation", "-w", str(wheelhouse), "."], source_root, clean_env)
-    wheel = next(wheelhouse.glob("yao_geo-*.whl"))
     venv = temp_root / "venv"
-    run([sys.executable, "-m", "venv", str(venv)], temp_root, clean_env)
-    python = venv / ("Scripts/python.exe" if os.name == "nt" else "bin/python")
-    run([str(python), "-m", "pip", "install", "--no-index", "--find-links", str(wheelhouse), str(wheel)], temp_root, clean_env)
-    run([str(python), "-c", "from pathlib import Path; import sys, yao_geo; assert Path(yao_geo.__file__).resolve().is_relative_to(Path(sys.prefix).resolve())"], temp_root, clean_env)
+    python = install_extracted(source_root, venv, wheelhouse, clean_env)
     fixtures = temp_root / "fixtures"
     fixtures.mkdir()
     brief = fixtures / "brief.json"
@@ -75,11 +96,10 @@ def source_smoke(source_zip: Path, temp_root: Path) -> tuple[dict, Path, Path]:
     ]
     for command in commands:
         run(command, temp_root, clean_env)
-    result = {"package": source_zip.name, "wheel": wheel.name, "cli_smokes": ["route", "discover", "diagnose", "content"], "status": "pass"}
-    return result, wheelhouse, wheel
+    return {"package": source_zip.name, "installed_from": ".", "cli_smokes": ["route", "discover", "diagnose", "content"], "status": "pass"}
 
 
-def structural_smoke(path: Path, temp_root: Path, wheelhouse: Path, wheel: Path) -> dict:
+def structural_smoke(path: Path, temp_root: Path, wheelhouse: Path) -> dict:
     destination = temp_root / path.stem
     destination.mkdir()
     safe_extract(path, destination)
@@ -93,19 +113,59 @@ def structural_smoke(path: Path, temp_root: Path, wheelhouse: Path, wheel: Path)
     missing = [relative for relative in sorted(referenced) if not (skill_files[0].parent / relative).is_file()]
     if missing:
         raise ValueError(f"entry references missing packaged files for {path.name}: {missing}")
-    wrappers = list(destination.rglob("scripts/run_*.py"))
-    if len(wrappers) != 1:
-        raise ValueError(f"expected one wrapper in {path.name}; found {len(wrappers)}")
+    wrappers = {wrapper.name: wrapper for wrapper in destination.glob("scripts/run_*.py")}
+    expected_wrappers = {"run_route.py", "run_discover.py", "run_diagnose.py", "run_content.py"}
+    if set(wrappers) != expected_wrappers:
+        raise ValueError(f"expected provider wrappers in {path.name}; found {sorted(wrappers)}")
     clean_env = os.environ.copy()
     clean_env.pop("PYTHONPATH", None)
     clean_env["PYTHONNOUSERSITE"] = "1"
     venv = temp_root / "package-venvs" / path.stem
     venv.parent.mkdir(exist_ok=True)
-    run([sys.executable, "-m", "venv", str(venv)], temp_root, clean_env)
-    python = venv / ("Scripts/python.exe" if os.name == "nt" else "bin/python")
-    run([str(python), "-m", "pip", "install", "--no-index", "--find-links", str(wheelhouse), str(wheel)], temp_root, clean_env)
-    run([str(python), str(wrappers[0]), "--help"], destination, clean_env)
-    return {"package": path.name, "entry": str(skill_files[0].relative_to(destination)), "wrapper": str(wrappers[0].relative_to(destination)), "runtime_data": True, "status": "pass"}
+    python = install_extracted(destination, venv, wheelhouse, clean_env)
+    prefix_run = run([str(python), "-c", "import sys; print(sys.prefix)"], destination, clean_env)
+    installed_root = Path(prefix_run.stdout.strip()) / "share" / "yao-geo"
+    installed_registry = installed_root / "registry" / "skills.yaml"
+    installed_skill = installed_root / "SKILL.md"
+    if not installed_registry.is_file() or not installed_skill.is_file():
+        raise ValueError(f"installed runtime data is missing for {path.name}: {installed_root}")
+    wrappers = {wrapper.name: wrapper for wrapper in installed_root.glob("scripts/run_*.py")}
+    if set(wrappers) != expected_wrappers:
+        raise ValueError(f"installed provider wrappers missing in {path.name}: {sorted(wrappers)}")
+    fixtures = {
+        "geo-discover": destination / "install-discover.json",
+        "geo-diagnose": destination / "install-diagnose.json",
+        "geo-content": destination / "install-content.json",
+    }
+    fixtures["geo-discover"].write_text(json.dumps({"protocol_version":"1.0.0","brief_id":"zip-install","subject":"Synthetic ZIP install","locale":"zh-CN","seed_queries":["拓词"],"audiences":["tester"],"scenarios":["install"],"competitors":[],"evidence":[]}), encoding="utf-8")
+    fixtures["geo-diagnose"].write_text(json.dumps({"subject":"Synthetic ZIP install","scope":"brand","evidence":[{"evidence_id":"zip-install","claim":"Synthetic evidence for install smoke.","source_uri":"https://example.invalid/install"}]}), encoding="utf-8")
+    fixtures["geo-content"].write_text(json.dumps({"mode":"explainer","topic":"Synthetic ZIP install","evidence":[],"desired_formats":["markdown","json","html"]}), encoding="utf-8")
+    runs = destination / "install-runs"
+    routed = {
+        "geo-discover": ("Discover AI search questions", "run_discover.py"),
+        "geo-diagnose": ("Audit this website", "run_diagnose.py"),
+        "geo-content": ("Write an explainer", "run_content.py"),
+    }
+    resolved_entries = []
+    provider_executions = []
+    for skill_id, (route_text, wrapper_name) in routed.items():
+        route_run = run([str(python), str(wrappers["run_route.py"]), "--text", route_text], destination, clean_env)
+        route_result = json.loads(route_run.stdout)
+        entry = installed_root / route_result["entry"]
+        if route_result["skill_id"] != skill_id or not entry.is_file():
+            raise ValueError(f"route entry resolution failed for {path.name}: {route_result}")
+        entry_text = entry.read_text(encoding="utf-8")
+        entry_references = set(re.findall(r"(?:references|scripts)/[A-Za-z0-9_.\-/]+", entry_text))
+        missing_entry_references = sorted(relative for relative in entry_references if not (installed_root / relative).is_file())
+        if missing_entry_references:
+            raise ValueError(f"routed entry references missing resources for {path.name}: {missing_entry_references}")
+        provider_run = run([str(python), str(wrappers[wrapper_name]), "--input", str(fixtures[skill_id]), "--output", str(runs)], destination, clean_env)
+        provider_result = json.loads(provider_run.stdout)
+        if provider_result.get("status") not in {"completed", "completed-with-warnings"}:
+            raise ValueError(f"provider wrapper execution failed for {path.name}: {provider_result}")
+        resolved_entries.append(route_result["entry"])
+        provider_executions.append(skill_id)
+    return {"package": path.name, "installed_from": ".", "entries": resolved_entries, "resolved_entry": True, "installed_share_resolved": True, "provider_executions": provider_executions, "runtime_data": True, "status": "pass"}
 
 
 def main() -> int:
@@ -116,12 +176,17 @@ def main() -> int:
     packages = sorted(path for path in DIST.glob("*.zip") if path.name != source.name)
     with tempfile.TemporaryDirectory(prefix="yao-geo-install-") as raw:
         temp_root = Path(raw)
-        source_result, wheelhouse, wheel = source_smoke(source, temp_root)
-        structural = [structural_smoke(path, temp_root, wheelhouse, wheel) for path in packages]
+        clean_env = os.environ.copy()
+        clean_env.pop("PYTHONPATH", None)
+        clean_env["PIP_DISABLE_PIP_VERSION_CHECK"] = "1"
+        wheelhouse = temp_root / "wheelhouse"
+        prepare_wheelhouse(wheelhouse, clean_env)
+        source_result = source_smoke(source, temp_root, wheelhouse)
+        structural = [structural_smoke(path, temp_root, wheelhouse) for path in packages]
     report = {"status": "pass", "target": "all", "source": source_result, "structural_packages": structural, "scratch_retained": False}
     REPORTS.mkdir(exist_ok=True)
     (REPORTS / "install-simulation.json").write_text(json.dumps(report, indent=2) + "\n", encoding="utf-8")
-    lines = ["# Install Simulation", "", "Status: **pass**", "", f"Fresh wheel/CLI smoke: {', '.join(source_result['cli_smokes'])}.", f"Fresh isolated ZIP wrapper smokes with declared dependencies: {len(structural)}.", "Temporary install roots were removed."]
+    lines = ["# Install Simulation", "", "Status: **pass**", "", f"Fresh source install and CLI smokes: {', '.join(source_result['cli_smokes'])}.", f"Fresh per-ZIP `pip install .`, route-entry resolution, and provider executions: {len(structural)}.", "Temporary install roots were removed."]
     (REPORTS / "install-simulation.md").write_text("\n\n".join(lines) + "\n", encoding="utf-8")
     print(json.dumps({"status": "pass", "source_cli_smokes": len(source_result["cli_smokes"]), "structural_packages": len(structural)}, indent=2))
     return 0

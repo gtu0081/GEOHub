@@ -1,6 +1,7 @@
 PYTHON := $(if $(wildcard .venv/bin/python),.venv/bin/python,python3)
+PYTHON314 ?= python3.14
 
-.PHONY: install test eval verify package package-verify install-smoke ci clean
+.PHONY: install test eval verify package package-verify install-smoke python314-smoke ci clean
 
 install:
 	$(PYTHON) -m pip install -e '.[dev]'
@@ -23,6 +24,10 @@ package-verify: package
 
 install-smoke: package-verify
 	$(PYTHON) scripts/install_simulation.py --target all
+
+python314-smoke:
+	$(PYTHON314) -m pytest tests/test_router.py tests/test_library_integration.py
+	$(PYTHON314) scripts/run_evals.py
 
 ci: verify test eval package-verify install-smoke
 

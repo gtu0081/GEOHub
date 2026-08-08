@@ -1,6 +1,6 @@
 ---
 name: geo-discover
-description: Discover evidence-aware GEO questions, query rewrites, intent clusters, and prioritized content opportunities from a structured brief. Use for AI search intent mining, question expansion, query research, FAQ discovery, and GEO topic discovery in Chinese or English.
+description: Discover evidence-aware GEO questions, query rewrites, intent clusters, and prioritized content opportunities from a structured brief. Use for AI search intent mining, question or keyword expansion, query research, FAQ discovery, 拓词, and GEO topic discovery in Chinese or English.
 ---
 
 # GEO Discover

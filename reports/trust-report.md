@@ -9,7 +9,7 @@ Scope: Yao GEO 0.1.0 local CLI and four active Library-engineered skill packages
 - Input trust: briefs are untrusted data and validated before artifact generation.
 - Output trust: evidence supplied by users is labeled 'provided'; independent verification is missing evidence.
 - Rollback boundary: delete the selected run directory for generated artifacts; revert package, schemas, and registry together for code rollback.
-- Publication: Artifact Bus uses atomic publication; package building rejects symlinks and unsafe paths.
+- Publication: Artifact Bus uses atomic publication; package building rejects symlinks and unsafe paths. Every community ZIP has a self-contained install contract, and install simulation exercises the archive's own project in a fresh environment.
 - Review evidence: deterministic/file-backed evidence is present. Provider benchmarks, security certification, and human blind review are missing evidence.
 
 This report is a first-phase engineering review and does not constitute a security certification or legal opinion.

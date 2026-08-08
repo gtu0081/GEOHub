@@ -103,6 +103,9 @@ def route(text: str, registry_path: Path | None = None) -> dict[str, Any]:
         "suggestion": suggestion,
         "alternatives": alternatives,
     }
+    if not runnable:
+        result["required_inputs"] = list(selected["required_inputs"])
+        result["closest_v0_artifact"] = selected["closest_v0_artifact"]
     if workflow is not None and runnable:
         result["workflow"] = workflow
         result["reason"] = f"Matched exact multi-intent recipe {workflow['id']}."

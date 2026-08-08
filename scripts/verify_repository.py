@@ -3,10 +3,12 @@ from __future__ import annotations
 
 import json
 import sys
+import tomllib
+from datetime import date
 from pathlib import Path
 
 import yaml
-from jsonschema import Draft202012Validator
+from jsonschema import Draft202012Validator, FormatChecker
 
 ROOT = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(ROOT / "src"))
@@ -39,6 +41,13 @@ def main() -> int:
     for skill_id in ("geo", "geo-discover", "geo-diagnose", "geo-content"):
         if registered[skill_id]["status"] != "active":
             fail(f"{skill_id} must be active")
+    for skill in registry["skills"]:
+        if skill["status"] != "active" and not all(skill.get(key) for key in ("nearest_active", "required_inputs", "closest_v0_artifact")):
+            fail(f"{skill['id']} planned route metadata is incomplete")
+
+    project = tomllib.loads((ROOT / "pyproject.toml").read_text(encoding="utf-8"))
+    if project["project"].get("requires-python") != ">=3.11,<3.15":
+        fail("supported Python range must be >=3.11,<3.15")
 
     required_files = {
         "geo": ("SKILL.md", "manifest.json", "agents/interface.yaml", "references/routing-contract.md", "scripts/run_route.py", "evals/trigger_cases.json", "evals/semantic_config.json", "evals/output/cases.jsonl", "reports/output_quality_scorecard.md", "reports/trust-report.md", "reports/skill-ir.json"),
@@ -190,10 +199,18 @@ def main() -> int:
             fail(f"machine-local path found in report: {report_path.relative_to(ROOT)}")
 
     meta_gate = json.loads((ROOT / "reports" / "yao-meta-gates.json").read_text(encoding="utf-8"))
-    if meta_gate.get("status") != "pass" or meta_gate.get("failed_commands") != 0:
+    meta_schema = json.loads((ROOT / "reports" / "yao-meta-gates.schema.json").read_text(encoding="utf-8"))
+    if list(Draft202012Validator(meta_schema).iter_errors(meta_gate)):
+        fail("recorded yao-meta gate report violates its schema")
+    if meta_gate.get("status") not in {"pass", "pass-with-waivers"} or meta_gate.get("failed_commands") != 0 or meta_gate.get("release_blocking"):
         fail("recorded yao-meta gate report is not green")
-    if any(item.get("exit_code") != 0 for item in meta_gate.get("commands", [])):
+    if any(item.get("exit_code") != 0 or item.get("structured_status") == "fail" for item in meta_gate.get("commands", [])):
         fail("recorded yao-meta command failure found")
+    waiver = json.loads((ROOT / "reports" / "review-waivers.json").read_text(encoding="utf-8"))
+    waiver_schema = json.loads((ROOT / "reports" / "review-waivers.schema.json").read_text(encoding="utf-8"))
+    waiver_errors = list(Draft202012Validator(waiver_schema, format_checker=FormatChecker()).iter_errors(waiver))
+    if waiver_errors or any(date.fromisoformat(item["expires_on"]) < date.today() for item in waiver.get("waivers", [])):
+        fail("review waiver ledger is invalid or expired")
 
     print("repository verification passed")
     return 0

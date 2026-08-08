@@ -3,7 +3,7 @@
   "target": "all",
   "source": {
     "package": "yao-geo-source-0.1.0.zip",
-    "wheel": "yao_geo-0.1.0-py3-none-any.whl",
+    "installed_from": ".",
     "cli_smokes": [
       "route",
       "discover",
@@ -15,50 +15,127 @@
   "structural_packages": [
     {
       "package": "geo-community-0.1.0.zip",
-      "entry": "SKILL.md",
-      "wrapper": "scripts/run_route.py",
+      "installed_from": ".",
+      "entries": [
+        "references/providers/geo-discover.md",
+        "references/providers/geo-diagnose.md",
+        "references/providers/geo-content.md"
+      ],
+      "resolved_entry": true,
+      "installed_share_resolved": true,
+      "provider_executions": [
+        "geo-discover",
+        "geo-diagnose",
+        "geo-content"
+      ],
       "runtime_data": true,
       "status": "pass"
     },
     {
       "package": "geo-content-community-0.1.0.zip",
-      "entry": "SKILL.md",
-      "wrapper": "scripts/run_content.py",
+      "installed_from": ".",
+      "entries": [
+        "references/providers/geo-discover.md",
+        "references/providers/geo-diagnose.md",
+        "SKILL.md"
+      ],
+      "resolved_entry": true,
+      "installed_share_resolved": true,
+      "provider_executions": [
+        "geo-discover",
+        "geo-diagnose",
+        "geo-content"
+      ],
       "runtime_data": true,
       "status": "pass"
     },
     {
       "package": "geo-diagnose-community-0.1.0.zip",
-      "entry": "SKILL.md",
-      "wrapper": "scripts/run_diagnose.py",
+      "installed_from": ".",
+      "entries": [
+        "references/providers/geo-discover.md",
+        "SKILL.md",
+        "references/providers/geo-content.md"
+      ],
+      "resolved_entry": true,
+      "installed_share_resolved": true,
+      "provider_executions": [
+        "geo-discover",
+        "geo-diagnose",
+        "geo-content"
+      ],
       "runtime_data": true,
       "status": "pass"
     },
     {
       "package": "geo-discover-community-0.1.0.zip",
-      "entry": "SKILL.md",
-      "wrapper": "scripts/run_discover.py",
+      "installed_from": ".",
+      "entries": [
+        "SKILL.md",
+        "references/providers/geo-diagnose.md",
+        "references/providers/geo-content.md"
+      ],
+      "resolved_entry": true,
+      "installed_share_resolved": true,
+      "provider_executions": [
+        "geo-discover",
+        "geo-diagnose",
+        "geo-content"
+      ],
       "runtime_data": true,
       "status": "pass"
     },
     {
       "package": "yao-geo-claude-community-0.1.0.zip",
-      "entry": "SKILL.md",
-      "wrapper": "scripts/run_route.py",
+      "installed_from": ".",
+      "entries": [
+        "references/providers/geo-discover.md",
+        "references/providers/geo-diagnose.md",
+        "references/providers/geo-content.md"
+      ],
+      "resolved_entry": true,
+      "installed_share_resolved": true,
+      "provider_executions": [
+        "geo-discover",
+        "geo-diagnose",
+        "geo-content"
+      ],
       "runtime_data": true,
       "status": "pass"
     },
     {
       "package": "yao-geo-codex-community-0.1.0.zip",
-      "entry": "SKILL.md",
-      "wrapper": "scripts/run_route.py",
+      "installed_from": ".",
+      "entries": [
+        "references/providers/geo-discover.md",
+        "references/providers/geo-diagnose.md",
+        "references/providers/geo-content.md"
+      ],
+      "resolved_entry": true,
+      "installed_share_resolved": true,
+      "provider_executions": [
+        "geo-discover",
+        "geo-diagnose",
+        "geo-content"
+      ],
       "runtime_data": true,
       "status": "pass"
     },
     {
       "package": "yao-geo-unified-community-0.1.0.zip",
-      "entry": "SKILL.md",
-      "wrapper": "scripts/run_route.py",
+      "installed_from": ".",
+      "entries": [
+        "references/providers/geo-discover.md",
+        "references/providers/geo-diagnose.md",
+        "references/providers/geo-content.md"
+      ],
+      "resolved_entry": true,
+      "installed_share_resolved": true,
+      "provider_executions": [
+        "geo-discover",
+        "geo-diagnose",
+        "geo-content"
+      ],
       "runtime_data": true,
       "status": "pass"
     }

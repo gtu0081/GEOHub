@@ -42,13 +42,23 @@ def load_registry(path: Path | None = None) -> dict[str, Any]:
             continue
         relative = Path(entry)
         expected = Path("skills") / skill["id"] / "SKILL.md"
-        if relative.is_absolute() or ".." in relative.parts or relative != expected:
+        packaged = Path("references") / "providers" / f"{skill['id']}.md"
+        allowed = {expected, packaged, Path("SKILL.md")}
+        if relative.is_absolute() or ".." in relative.parts or relative not in allowed:
             raise RegistryError(
-                f"Invalid registry: entry for {skill['id']} must be {expected.as_posix()}"
+                f"Invalid registry: entry for {skill['id']} must be {expected.as_posix()} or a packaged entry"
             )
         resolved = (root / relative).resolve()
         if root_resolved not in resolved.parents or not resolved.is_file():
             raise RegistryError(f"Invalid registry: unsafe or missing entry for {skill['id']}: {entry}")
+        if relative != expected:
+            try:
+                parts = resolved.read_text(encoding="utf-8").split("---", 2)
+                frontmatter = yaml.safe_load(parts[1]) if len(parts) == 3 else None
+            except (OSError, yaml.YAMLError) as exc:
+                raise RegistryError(f"Invalid registry: unreadable packaged entry for {skill['id']}") from exc
+            if not isinstance(frontmatter, dict) or frontmatter.get("name") != skill["id"]:
+                raise RegistryError(f"Invalid registry: packaged entry identity mismatch for {skill['id']}")
 
     geo_routes = [skill for skill in skills if skill["id"] == "geo"]
     if len(geo_routes) != 1 or geo_routes[0]["status"] != "active" or not geo_routes[0]["entry"]:
