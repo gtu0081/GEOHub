@@ -14,6 +14,10 @@ OUTPUT = ROOT / "dist" / f"yao-geo-{VERSION}.zip"
 
 
 def trusted_files(root: Path) -> list[Path]:
+    root_mode = root.lstat().st_mode
+    if root.is_symlink() or not stat.S_ISDIR(root_mode):
+        raise ValueError(f"package root must be a regular directory: {root}")
+    root_resolved = root.resolve()
     result = subprocess.run(
         ["git", "ls-files", "-z", "--cached"],
         cwd=root,
@@ -27,10 +31,20 @@ def trusted_files(root: Path) -> list[Path]:
         relative = Path(os.fsdecode(raw_path))
         if relative.is_absolute() or ".." in relative.parts:
             raise ValueError(f"unsafe tracked path: {relative}")
+        for parent in reversed(relative.parents):
+            if parent == Path("."):
+                continue
+            parent_path = root / parent
+            parent_mode = parent_path.lstat().st_mode
+            if parent_path.is_symlink() or not stat.S_ISDIR(parent_mode):
+                raise ValueError(f"tracked package parent must be a regular directory: {parent}")
         path = root / relative
         mode = path.lstat().st_mode
         if path.is_symlink() or not stat.S_ISREG(mode):
             raise ValueError(f"tracked package entry must be a regular file: {relative}")
+        resolved = path.resolve()
+        if root_resolved not in resolved.parents:
+            raise ValueError(f"tracked package entry escapes package root: {relative}")
         files.append(relative)
     return sorted(files, key=lambda path: path.as_posix())
 

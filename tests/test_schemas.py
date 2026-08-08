@@ -266,3 +266,25 @@ def test_package_rejects_tracked_symlink(tmp_path):
     _git(repo, "add", "external-link")
     with pytest.raises(ValueError, match="regular file"):
         trusted_files(repo)
+
+
+def test_package_rejects_tracked_file_beneath_external_parent_symlink(tmp_path):
+    repo = tmp_path / "repo"
+    repo.mkdir()
+    _git(repo, "init", "-b", "main")
+    (repo / "VERSION").write_text("0.1.0\n", encoding="utf-8")
+    nested = repo / "nested"
+    nested.mkdir()
+    (nested / "file.txt").write_text("trusted\n", encoding="utf-8")
+    _git(repo, "add", "VERSION", "nested/file.txt")
+
+    nested.rename(repo / "original-nested")
+    outside = tmp_path / "outside"
+    outside.mkdir()
+    (outside / "file.txt").write_text("external secret\n", encoding="utf-8")
+    nested.symlink_to(outside, target_is_directory=True)
+    archive = tmp_path / "package.zip"
+
+    with pytest.raises(ValueError, match="parent must be a regular directory"):
+        build_archive(repo, archive)
+    assert not archive.exists()
