@@ -342,6 +342,42 @@ def test_bare_bu_uses_registered_planned_action_before_active_scope(text, skill_
 @pytest.mark.parametrize(
     "text,skill_id",
     (
+        ("不再分发只写文章", "geo-content"),
+        ("不再发布只写文章", "geo-content"),
+        ("不再监测只诊断网站", "geo-diagnose"),
+        ("不再衡量只诊断网站", "geo-diagnose"),
+        ("不再制定策略只诊断网站", "geo-diagnose"),
+        ("不 分发只写文章", "geo-content"),
+        ("不 监测只诊断网站", "geo-diagnose"),
+    ),
+)
+def test_bare_bu_absorbs_spacing_and_internal_zai_before_registered_action(
+    text,
+    skill_id,
+):
+    result = route(text)
+    assert result["skill_id"] == skill_id
+    assert result["runnable"] is True
+    assert "workflow" not in result
+
+
+@pytest.mark.parametrize(
+    "text,skill_id",
+    (
+        ("不发布，再写文章", "geo-content"),
+        ("不制定策略，再诊断网站", "geo-diagnose"),
+    ),
+)
+def test_zai_after_negated_action_starts_a_positive_sequence_scope(text, skill_id):
+    result = route(text)
+    assert result["skill_id"] == skill_id
+    assert result["runnable"] is True
+    assert "workflow" not in result
+
+
+@pytest.mark.parametrize(
+    "text,skill_id",
+    (
         ("Don't want strategy; audit the website", "geo-diagnose"),
         ("No strategy, then audit the website", "geo-diagnose"),
         ("Don't monitor; write article", "geo-content"),
