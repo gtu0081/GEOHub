@@ -167,6 +167,7 @@ def test_non_source_packages_have_self_contained_install_and_route_entries():
 def test_install_simulation_uses_each_extracted_package_and_real_provider_execution():
     installer = load_script("install_simulation")
     assert list(inspect.signature(installer.structural_smoke).parameters) == ["path", "temp_root", "wheelhouse"]
+    assert "Path(raw).resolve()" not in inspect.getsource(installer.main)
     source = inspect.getsource(installer.structural_smoke)
     assert "install_extracted(destination" in source
     assert 'wrappers["run_route.py"]' in source

@@ -8,6 +8,8 @@ The registry is the single capability source. Resolution preserves the existing 
 - When both exact recipes are explicitly requested in discovery-first order, return composed workflow `brand-baseline-lite+content-campaign`: `discover` fans out to `diagnose` and `content`. Preserve both recipe IDs in `recipes`.
 - A planned route is never runnable. It returns the nearest active stage in the same work domain, plus `required_inputs` and `closest_v0_artifact`: strategy → discover, knowledge/publish → content, measure → diagnose.
 - Unknown language falls back to the active `geo` capability selector.
+- Route input is limited to 8,000 characters and 16,384 UTF-8 bytes. Oversized input fails with a deterministic validation error.
+- Clause boundaries and negation scopes are parsed once per request and reused across every registered intent. Bare `no`, `not`, `skip`, `avoid`, `跳过`, and `避免` govern only their clause; lexical forms such as `not only`, `no-code`, and `no.1` remain positive.
 - A workflow step has exactly `id`, `skill_id`, and `depends_on`; dependencies refer only to earlier step IDs.
 
 Resolvers must not infer a workflow from generic GEO wording, negated stage language, a reversed stage order, or two modes within one skill.

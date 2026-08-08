@@ -14,7 +14,7 @@ The skills are Library-engineered packages while product behavior remains **Expe
 - `geo-content`: creates evidence-lined titles, explainers, comparisons, rankings, page blueprints, refinements, and article-friendly artifacts as JSON, Markdown, and standalone HTML; DOCX/PDF are optional render layers.
 - strategy, knowledge, publish, and measure: visible roadmap routes with `planned` status.
 
-The resolver keeps single-intent routing minimal and exposes two exact multi-stage DAGs: `brand-baseline-lite` (discover → diagnose) and `content-campaign` (discover → content). A planned route is never executed; it returns the closest active suggestion, required inputs, and closest v0 artifact. See `skills/RESOLVER.md` and `docs/architecture.md`.
+The resolver keeps single-intent routing minimal and exposes two exact multi-stage DAGs: `brand-baseline-lite` (discover → diagnose) and `content-campaign` (discover → content). A planned route is never executed; it returns the closest active suggestion, required inputs, and closest v0 artifact. Route requests are bounded to 8,000 characters and 16,384 UTF-8 bytes. See `skills/RESOLVER.md` and `docs/architecture.md`.
 
 No connector, platform sampling, search volume, ranking, or conversion data is inferred. Missing evidence remains explicit in generated artifacts.
 

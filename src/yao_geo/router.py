@@ -1,6 +1,8 @@
 from __future__ import annotations
 
 import re
+from bisect import bisect_right
+from dataclasses import dataclass
 from pathlib import Path
 from typing import Any
 
@@ -9,44 +11,48 @@ from .registry import load_registry
 
 _NEGATION_RE = re.compile(
     r"(?:\b(?:do\s+not|don['’]?t|dont|must\s+not|should\s+not|cannot|can['’]?t|cant|"
-    r"never|without|no\s+(?:need|desire|wish))\b|"
+    r"never|without|skip|avoid|no\s+(?:need|desire|wish))\b|"
+    r"\bnot\b(?!\s+only\b)|\bno\b(?![-.]?\w)|"
     r"(?:请勿|不需要|不要|无需|无须|不能|不可|别|禁止|拒绝|不想|不必|不准|切勿|"
-    r"不做|不进行|不创建|不生成|不开展|勿|"
+    r"不做|不进行|不创建|不生成|不开展|跳过|避免|勿|"
     r"不(?=(?:诊断|审计|拓词|挖掘|研究|写|创建|生成|做|进行|开展|发布|测量|抓取))))"
 )
 _HARD_CLAUSE_RE = re.compile(r"[;；。.!?！？]")
 _CLAUSE_BOUNDARY_RE = re.compile(
     r"(?:[;；。.!?！？]|(?:,\s*)?\b(?:but|instead|however)(?:\s+please)?\b|"
     r",\s*(?:only|just)\b|(?:，\s*)?(?:但是|但|改为|转而)(?:请)?|"
-    r"，\s*(?:只|仅|请)|(?:请|只)\s*$)"
+    r"，\s*(?:只|仅|请)|(?:请|只)(?=(?:诊断|审计|拓词|挖掘|研究|写|创建|生成|做|进行|开展|发布|测量|抓取)))"
 )
+_WORKFLOW_CONNECTOR_RE = re.compile(
+    r"(?:\b(?:and|then|plus|followed by|but|instead|however)\b|"
+    r"[,&+;，；、]|再|然后|还要|还需|并且|但是|但|改为|转而|并|和|加|及)"
+)
+_NEGATION_FILLER_RE = re.compile(
+    r"\b(?:under|any|circumstances|at|all|ever|in|way|please|just|only|really|want|"
+    r"interested|rather)\b|(?:无论如何|在任何情况下|任何形式|都|仅仅|只是)"
+)
+MAX_ROUTE_CHARACTERS = 8_000
+MAX_ROUTE_UTF8_BYTES = 16_384
+
+
+@dataclass(frozen=True)
+class ClauseScope:
+    start: int
+    end: int
+    negation_starts: tuple[int, ...]
 
 
 def _normalize(text: str) -> str:
     return re.sub(r"\s+", " ", text.casefold().strip())
 
 
-def _contains_registered_intent(text: str, all_intents: tuple[str, ...]) -> bool:
-    return any(phrase and phrase in text for phrase in all_intents)
-
-
-def _negated_scope_has_object(text: str, all_intents: tuple[str, ...]) -> bool:
-    if _contains_registered_intent(text, all_intents):
-        return True
-    remainder = re.sub(
-        r"\b(?:under\s+any\s+circumstances|at\s+all|ever|in\s+any\s+way|please|just|only|really)\b|"
-        r"(?:无论如何|在任何情况下|任何形式|都|仅仅|只是)",
-        " ",
-        text,
-    )
-    return bool(re.search(r"[a-z\u3400-\u9fff]", remainder))
-
-
 def _connector_starts_scope(
     text: str,
     boundary: re.Match[str],
     scope_start: int,
-    all_intents: tuple[str, ...],
+    negation_spans: tuple[tuple[int, int], ...],
+    negation_starts: tuple[int, ...],
+    object_prefix: tuple[int, ...],
 ) -> bool:
     token = boundary.group().strip(" ,，").casefold()
     right = text[boundary.end() :].lstrip()
@@ -56,84 +62,120 @@ def _connector_starts_scope(
         and right.startswith((",", "，"))
     ):
         return False
-    scope = text[scope_start : boundary.start()]
-    negations = list(_NEGATION_RE.finditer(scope))
-    if not negations:
+    negation_index = bisect_right(negation_starts, boundary.start() - 1) - 1
+    if negation_index < 0 or negation_spans[negation_index][0] < scope_start:
         return True
-    after_negation = scope[negations[-1].end() :]
-    return _negated_scope_has_object(after_negation, all_intents)
+    after_negation = negation_spans[negation_index][1]
+    return object_prefix[boundary.start()] > object_prefix[after_negation]
+
+
+def _parse_clause_scopes(text: str) -> tuple[ClauseScope, ...]:
+    negation_matches = tuple(_NEGATION_RE.finditer(text))
+    negation_spans = tuple(match.span() for match in negation_matches)
+    negation_starts = tuple(span[0] for span in negation_spans)
+    ignored = bytearray(len(text))
+    for match in (*negation_matches, *_NEGATION_FILLER_RE.finditer(text)):
+        ignored[match.start() : match.end()] = b"\x01" * (match.end() - match.start())
+    prefix = [0]
+    for index, character in enumerate(text):
+        prefix.append(prefix[-1] + int(character.isalpha() and not ignored[index]))
+    object_prefix = tuple(prefix)
+    boundaries: list[int] = [0]
+    scope_start = 0
+    for boundary in _CLAUSE_BOUNDARY_RE.finditer(text):
+        if _HARD_CLAUSE_RE.fullmatch(boundary.group()) or _connector_starts_scope(
+            text,
+            boundary,
+            scope_start,
+            negation_spans,
+            negation_starts,
+            object_prefix,
+        ):
+            scope_start = boundary.end()
+            boundaries.append(scope_start)
+    boundaries.append(len(text) + 1)
+    scopes = []
+    for start, end in zip(boundaries, boundaries[1:]):
+        left = bisect_right(negation_starts, start - 1)
+        right = bisect_right(negation_starts, end - 1)
+        negations = negation_starts[left:right]
+        scopes.append(ClauseScope(start=start, end=end, negation_starts=negations))
+    return tuple(scopes)
 
 
 def _positive_intent_spans(
     text: str,
     intent: str,
-    all_intents: tuple[str, ...] = (),
+    scopes: tuple[ClauseScope, ...],
 ) -> list[tuple[int, int]]:
     phrase = _normalize(intent)
+    scope_starts = tuple(scope.start for scope in scopes)
     spans = []
     for match in re.finditer(re.escape(phrase), text):
-        prefix = text[: match.start()]
-        boundaries = []
-        scope_start = 0
-        for boundary in _CLAUSE_BOUNDARY_RE.finditer(prefix):
-            if _HARD_CLAUSE_RE.fullmatch(boundary.group()) or _connector_starts_scope(
-                prefix,
-                boundary,
-                scope_start,
-                all_intents,
-            ):
-                boundaries.append(boundary)
-                scope_start = boundary.end()
-        clause_prefix = prefix[boundaries[-1].end() :] if boundaries else prefix
-        negated = _NEGATION_RE.search(clause_prefix) or re.search(r"不\s*$", clause_prefix)
-        if not negated:
+        scope = scopes[bisect_right(scope_starts, match.start()) - 1]
+        if not any(start < match.start() for start in scope.negation_starts):
             spans.append(match.span())
     return spans
 
 
-def _intent_score(text: str, intents: list[str], all_intents: tuple[str, ...]) -> int:
+def _analyze_skill_intents(
+    text: str,
+    intents: list[str],
+    scopes: tuple[ClauseScope, ...],
+) -> tuple[int, list[tuple[int, int]]]:
     score = 0
+    skill_spans: list[tuple[int, int]] = []
     for intent in intents:
         phrase = _normalize(intent)
-        if phrase and _positive_intent_spans(text, phrase, all_intents):
+        spans = _positive_intent_spans(text, phrase, scopes) if phrase else []
+        if spans:
             score += max(1, len(phrase))
-    return score
+            skill_spans.extend(spans)
+    return score, skill_spans
 
 
 def _workflow_matches(
-    text: str,
     recipe: dict[str, Any],
-    by_id: dict[str, dict[str, Any]],
-    all_intents: tuple[str, ...],
+    spans_by_skill: dict[str, list[tuple[int, int]]],
+    connector_spans: tuple[tuple[int, int], ...],
 ) -> bool:
     first_id, second_id = recipe["required_skills"]
-    first_spans = [span for intent in by_id[first_id]["intents"] for span in _positive_intent_spans(text, intent, all_intents)]
-    second_spans = [span for intent in by_id[second_id]["intents"] for span in _positive_intent_spans(text, intent, all_intents)]
-    connector = re.compile(r"(?:\b(?:and|then|plus|followed by)\b|[,&+;，；、]|再|然后|还要|还需|并且|并|和|加|及)")
-    return any(left[0] < right[0] and connector.search(text[left[1] : right[0]]) for left in first_spans for right in second_spans)
+    first_ends = sorted(span[1] for span in spans_by_skill[first_id])
+    second_starts = sorted(span[0] for span in spans_by_skill[second_id])
+    if not first_ends or not second_starts:
+        return False
+    return any(
+        bisect_right(first_ends, connector_start) > 0
+        and bisect_right(second_starts, connector_end - 1) < len(second_starts)
+        for connector_start, connector_end in connector_spans
+    )
 
 
 def route(text: str, registry_path: Path | None = None) -> dict[str, Any]:
     """Select the best registry route and expose its implementation status."""
+    if len(text) > MAX_ROUTE_CHARACTERS or len(text.encode("utf-8")) > MAX_ROUTE_UTF8_BYTES:
+        raise ValueError(
+            "Route text exceeds 8000 characters or 16384 UTF-8 bytes"
+        )
     normalized = _normalize(text)
     if not normalized:
         raise ValueError("Route text must not be empty")
 
     registry = load_registry(registry_path)
-    all_intents = tuple(
-        _normalize(intent)
+    scopes = _parse_clause_scopes(normalized)
+    analyses = {
+        skill["id"]: _analyze_skill_intents(normalized, skill["intents"], scopes)
         for skill in registry["skills"]
-        for intent in skill["intents"]
-        if _normalize(intent)
-    )
+    }
     ranked = [
-        (_intent_score(normalized, skill["intents"], all_intents), index, skill)
+        (analyses[skill["id"]][0], index, skill)
         for index, skill in enumerate(registry["skills"])
     ]
     scores = {skill["id"]: score for score, _, skill in ranked}
-    by_id = {skill["id"]: skill for skill in registry["skills"]}
+    spans_by_skill = {skill_id: analysis[1] for skill_id, analysis in analyses.items()}
+    connector_spans = tuple(match.span() for match in _WORKFLOW_CONNECTOR_RE.finditer(normalized))
     active_stage_matches = {skill_id for skill_id in ("geo-discover", "geo-diagnose", "geo-content") if scores.get(skill_id, 0) > 0}
-    matched_recipes = [recipe for recipe in registry["workflows"] if set(recipe["required_skills"]) <= active_stage_matches and _workflow_matches(normalized, recipe, by_id, all_intents)]
+    matched_recipes = [recipe for recipe in registry["workflows"] if set(recipe["required_skills"]) <= active_stage_matches and _workflow_matches(recipe, spans_by_skill, connector_spans)]
     workflow = None
     if len(matched_recipes) == 1 and active_stage_matches == set(matched_recipes[0]["required_skills"]):
         workflow = {"id": matched_recipes[0]["id"], "steps": [dict(step) for step in matched_recipes[0]["steps"]]}

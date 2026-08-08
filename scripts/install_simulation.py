@@ -175,7 +175,7 @@ def main() -> int:
     source = DIST / f"yao-geo-source-{VERSION}.zip"
     packages = sorted(path for path in DIST.glob("*.zip") if path.name != source.name)
     with tempfile.TemporaryDirectory(prefix="yao-geo-install-") as raw:
-        temp_root = Path(raw).resolve()
+        temp_root = Path(raw)
         clean_env = os.environ.copy()
         clean_env.pop("PYTHONPATH", None)
         clean_env["PIP_DISABLE_PIP_VERSION_CHECK"] = "1"

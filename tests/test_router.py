@@ -1,3 +1,6 @@
+import pytest
+
+import yao_geo.router as router_module
 from yao_geo.router import route
 
 
@@ -264,6 +267,97 @@ def test_chinese_bu_directly_governing_action_remains_negative():
         transition = route(text)
         assert transition["skill_id"] == "geo-diagnose"
         assert "workflow" not in transition
+
+
+def test_bare_negation_verbs_and_lexical_exceptions_are_clause_local():
+    negated = (
+        "No keyword research",
+        "Not audit the website",
+        "Skip content creation",
+        "Avoid keyword research and audit the website",
+        "跳过拓词并诊断网站",
+        "避免写文章",
+    )
+    for text in negated:
+        result = route(text)
+        assert result["skill_id"] == "geo"
+        assert "workflow" not in result
+
+    positive = (
+        ("Not only keyword research but audit the website", "geo-discover", "brand-baseline-lite"),
+        ("Run a no-code website audit", "geo-diagnose", None),
+        ("Write a no.1 ranking article", "geo-content", None),
+        ("No keyword research, just audit the website", "geo-diagnose", None),
+    )
+    for text, skill_id, workflow_id in positive:
+        result = route(text)
+        assert result["skill_id"] == skill_id
+        assert result.get("workflow", {}).get("id") == workflow_id
+
+
+def test_standalone_negation_applies_only_to_its_workflow_stage():
+    cases = (
+        ("No keyword research; audit the website", "geo-diagnose"),
+        ("Discover questions; no content generation", "geo-discover"),
+        ("I'm not interested in keyword research; write article", "geo-content"),
+        ("I'd rather not create content; audit the website", "geo-diagnose"),
+    )
+    for text, skill_id in cases:
+        result = route(text)
+        assert result["skill_id"] == skill_id
+        assert "workflow" not in result
+
+
+def test_route_preparses_clause_boundaries_once_for_1k_and_2k_inputs(monkeypatch):
+    original_boundary = router_module._CLAUSE_BOUNDARY_RE
+    original_negation = router_module._NEGATION_RE
+    boundary_calls = 0
+    negation_calls = 0
+
+    class CountingBoundaryPattern:
+        def finditer(self, text):
+            nonlocal boundary_calls
+            boundary_calls += 1
+            return original_boundary.finditer(text)
+
+    class CountingNegationPattern:
+        def finditer(self, text):
+            nonlocal negation_calls
+            negation_calls += 1
+            return original_negation.finditer(text)
+
+    monkeypatch.setattr(router_module, "_CLAUSE_BOUNDARY_RE", CountingBoundaryPattern())
+    monkeypatch.setattr(router_module, "_NEGATION_RE", CountingNegationPattern())
+    for target_length in (1_000, 2_000):
+        text = ("keyword research and audit the website; " * 100)[:target_length]
+        before = (boundary_calls, negation_calls)
+        route(text)
+        assert boundary_calls - before[0] == 1
+        assert negation_calls - before[1] == 1
+
+
+def test_route_rejects_excessive_character_and_utf8_byte_lengths():
+    with pytest.raises(ValueError, match="8000 characters|16384 UTF-8 bytes"):
+        route("a" * 8_001)
+    with pytest.raises(ValueError, match="8000 characters|16384 UTF-8 bytes"):
+        route("诊" * 6_000)
+
+
+def test_workflow_connector_scan_is_single_pass_for_dense_in_limit_input(monkeypatch):
+    original = router_module._WORKFLOW_CONNECTOR_RE
+    calls = 0
+
+    class CountingWorkflowPattern:
+        def finditer(self, text):
+            nonlocal calls
+            calls += 1
+            return original.finditer(text)
+
+    monkeypatch.setattr(router_module, "_WORKFLOW_CONNECTOR_RE", CountingWorkflowPattern())
+    text = ("keyword research " * 240) + ("website audit " * 240)
+    result = route(text)
+    assert calls == 1
+    assert "workflow" not in result
 
 
 def test_bare_chinese_request_marker_starts_positive_clause():

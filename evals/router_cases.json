@@ -880,5 +880,83 @@
     "text": "不拓词只诊断网站",
     "category": "adversarial",
     "expected": {"skill_id": "geo-diagnose", "workflow_id": null, "runnable": true}
+  },
+  {
+    "id": "r102",
+    "text": "No keyword research",
+    "category": "adversarial",
+    "expected": {"skill_id": "geo", "workflow_id": null, "runnable": true}
+  },
+  {
+    "id": "r103",
+    "text": "Not audit the website",
+    "category": "adversarial",
+    "expected": {"skill_id": "geo", "workflow_id": null, "runnable": true}
+  },
+  {
+    "id": "r104",
+    "text": "Skip content creation",
+    "category": "adversarial",
+    "expected": {"skill_id": "geo", "workflow_id": null, "runnable": true}
+  },
+  {
+    "id": "r105",
+    "text": "Avoid keyword research and audit the website",
+    "category": "adversarial",
+    "expected": {"skill_id": "geo", "workflow_id": null, "runnable": true}
+  },
+  {
+    "id": "r106",
+    "text": "跳过拓词并诊断网站",
+    "category": "adversarial",
+    "expected": {"skill_id": "geo", "workflow_id": null, "runnable": true}
+  },
+  {
+    "id": "r107",
+    "text": "避免写文章",
+    "category": "adversarial",
+    "expected": {"skill_id": "geo", "workflow_id": null, "runnable": true}
+  },
+  {
+    "id": "r108",
+    "text": "Not only keyword research but audit the website",
+    "category": "mixed",
+    "expected": {"skill_id": "geo-discover", "workflow_id": "brand-baseline-lite", "runnable": true}
+  },
+  {
+    "id": "r109",
+    "text": "Run a no-code website audit",
+    "category": "adversarial",
+    "expected": {"skill_id": "geo-diagnose", "workflow_id": null, "runnable": true}
+  },
+  {
+    "id": "r110",
+    "text": "Write a no.1 ranking article",
+    "category": "adversarial",
+    "expected": {"skill_id": "geo-content", "workflow_id": null, "runnable": true}
+  },
+  {
+    "id": "r111",
+    "text": "No keyword research; audit the website",
+    "category": "adversarial",
+    "expected": {"skill_id": "geo-diagnose", "workflow_id": null, "runnable": true}
+  },
+  {
+    "id": "r112",
+    "text": "Discover questions; no content generation",
+    "category": "adversarial",
+    "expected": {"skill_id": "geo-discover", "workflow_id": null, "runnable": true}
+  },
+  {
+    "id": "r113",
+    "text": "I'm not interested in keyword research; write article",
+    "category": "adversarial",
+    "expected": {"skill_id": "geo-content", "workflow_id": null, "runnable": true}
+  },
+  {
+    "id": "r114",
+    "text": "I'd rather not create content; audit the website",
+    "category": "adversarial",
+    "expected": {"skill_id": "geo-diagnose", "workflow_id": null, "runnable": true}
   }
 ]

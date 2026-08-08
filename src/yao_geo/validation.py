@@ -15,6 +15,29 @@ class ArtifactValidationError(ValueError):
     """Raised when an artifact does not satisfy its protocol schema."""
 
 
+def _trusted_absolute_components(candidate: Path) -> tuple[str, ...]:
+    components = candidate.parts[1:]
+    if not components or components[0] != "var":
+        return components
+    alias = Path("/var")
+    target = Path("/private/var")
+    try:
+        alias_stat = os.lstat(alias)
+        target_stat = os.lstat(target)
+        link_target = os.readlink(alias)
+    except OSError:
+        return components
+    lexical_target = Path("/") / link_target if not Path(link_target).is_absolute() else Path(link_target)
+    if (
+        stat.S_ISLNK(alias_stat.st_mode)
+        and stat.S_ISDIR(target_stat.st_mode)
+        and not stat.S_ISLNK(target_stat.st_mode)
+        and os.path.normpath(lexical_target) == str(target)
+    ):
+        return ("private", "var", *components[1:])
+    return components
+
+
 def read_bounded_regular_file(path: Path, *, max_bytes: int, field: str) -> bytes:
     """Read one lexical path through no-follow directory/file descriptors."""
     candidate = Path(path)
@@ -26,7 +49,7 @@ def read_bounded_regular_file(path: Path, *, max_bytes: int, field: str) -> byte
     try:
         if candidate.is_absolute():
             current = os.open(candidate.anchor, directory_flags)
-            components = candidate.parts[1:]
+            components = _trusted_absolute_components(candidate)
         else:
             current = os.open(".", directory_flags)
             components = candidate.parts

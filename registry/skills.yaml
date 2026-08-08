@@ -38,7 +38,7 @@ skills:
     active_placeholder: false
     entry: skills/geo-content/SKILL.md
     summary: Offline evidence-lined content generation across seven bounded modes.
-    intents: [content, draft, title, headline, explainer, explanation, comparison, ranking, page blueprint, content refine, article-friendly, 内容生产, 内容优化, 写文章, 生成文章, 文章生成, 标题, 科普, 解释, 对比, 榜单, 排名, 页面蓝图, 文章友好]
+    intents: [content, draft, write article, title, headline, explainer, explanation, comparison, ranking, page blueprint, content refine, article-friendly, 内容生产, 内容优化, 写文章, 生成文章, 文章生成, 标题, 科普, 解释, 对比, 榜单, 排名, 页面蓝图, 文章友好]
     outputs: [content-spec, content, markdown, json, html, docx, pdf, evidence-ledger, quality-report, run-manifest]
   - id: geo-strategy
     status: planned
