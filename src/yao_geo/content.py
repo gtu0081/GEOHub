@@ -32,22 +32,21 @@ MODES = {
 }
 FORMATS = {"markdown", "json", "html", "docx", "pdf"}
 DEFAULT_FORMATS = ["markdown", "json", "html"]
-ABSOLUTE_TERMS = (
-    "最好",
-    "第一",
-    "最新",
-    "最强",
-    "唯一",
-    "权威",
-    "保证",
-    "best",
-    "#1",
-    "top1",
-    "top 1",
-    "no.1",
-    "latest",
-    "authoritative",
-    "guaranteed",
+UNSUPPORTED_TITLE_PATTERNS = tuple(
+    re.compile(pattern, re.IGNORECASE)
+    for pattern in (
+        r"(?:19|20)\d{2}年?",
+        r"100\s*[%％]\s*(?:有效)?",
+        r"今年|今日|当下|当前|实时|刚刚",
+        r"绝对有效|终极|顶级|完美|唯一|万能|无敌|首选|行业领先",
+        r"最好|第一|最新|最强|权威|保证",
+        r"\b(?:today|now|real[ -]?time|up[ -]?to[ -]?date)\b",
+        r"\b(?:absolute(?:ly)? effective|ultimate|top(?:\s*1|[ -]?tier)?|perfect|unique|only)\b",
+        r"\b(?:universal|all[ -]?purpose|unbeatable|invincible|preferred)\b",
+        r"\b(?:first choice|industry[ -]?leading)\b",
+        r"\b(?:best|first|latest|newest|most recent|authoritative|guarantee(?:s|d)?)\b",
+        r"(?:#\s*1|\btop\s*1\b|\bno\.\s*1\b)",
+    )
 )
 Clock = Callable[[], datetime]
 
@@ -343,10 +342,17 @@ def _factual_claims(brief: dict[str, Any]) -> list[dict[str, Any]]:
 
 def _clean_title_topic(topic: str) -> str:
     cleaned = topic
-    for term in ABSOLUTE_TERMS:
-        cleaned = re.sub(re.escape(term), "", cleaned, flags=re.IGNORECASE)
-    cleaned = re.sub(r"20\d{2}年?", "", cleaned)
+    for pattern in UNSUPPORTED_TITLE_PATTERNS:
+        cleaned = pattern.sub("", cleaned)
     return re.sub(r"\s+", " ", cleaned).strip(" ：:-") or "主题"
+
+
+def _validate_title_candidate(title: str) -> None:
+    for pattern in UNSUPPORTED_TITLE_PATTERNS:
+        if pattern.search(title):
+            raise ValueError(
+                f"generated title contains an unsupported compliance pattern: {pattern.pattern}"
+            )
 
 
 def _title_candidates(brief: dict[str, Any]) -> list[dict[str, Any]]:
@@ -361,7 +367,7 @@ def _title_candidates(brief: dict[str, Any]) -> list[dict[str, Any]]:
     ]
     evidence_score = 100 if brief.get("evidence") else 40
     compliance_score = 95 if brief.get("compliance_notes") else 100
-    return [
+    candidates = [
         {
             "title": title,
             "pattern": pattern,
@@ -372,6 +378,9 @@ def _title_candidates(brief: dict[str, Any]) -> list[dict[str, Any]]:
         }
         for index, (title, pattern, intent, scenario) in enumerate(patterns)
     ]
+    for candidate in candidates:
+        _validate_title_candidate(candidate["title"])
+    return candidates
 
 
 def _source_claims(source_text: str | None) -> list[dict[str, str]]:
@@ -381,26 +390,53 @@ def _source_claims(source_text: str | None) -> list[dict[str, str]]:
     return [{"text": part, "status": "unverified"} for part in candidates[:20]]
 
 
-def _ranking_rows(brief: dict[str, Any], entities: list[str]) -> list[dict[str, Any]]:
-    criteria: dict[str, float] = {}
-    method = brief.get("evaluation_method")
-    if isinstance(method, dict):
-        criteria = {item["name"].casefold(): item["weight"] for item in method.get("criteria", [])}
+def _ranking_score_cells(
+    brief: dict[str, Any], entities: list[str]
+) -> tuple[dict[tuple[str, str], list[dict[str, Any]]], set[str]]:
+    entity_names = {entity.casefold() for entity in entities}
+    cells: dict[tuple[str, str], list[dict[str, Any]]] = {}
+    missing_dimension_entities: set[str] = set()
+    for item in brief.get("evidence", []):
+        entity = item.get("entity", "").casefold()
+        if entity not in entity_names or "score" not in item:
+            continue
+        if "dimension" not in item:
+            missing_dimension_entities.add(entity)
+            continue
+        key = (entity, item["dimension"].casefold())
+        cells.setdefault(key, []).append(item)
+    for (entity, dimension), records in cells.items():
+        scores = {float(item["score"]) for item in records}
+        if len(scores) > 1:
+            raise ValueError(
+                f"ranking has conflicting duplicate scores for {entity} × {dimension}"
+            )
+    return cells, missing_dimension_entities
+
+
+def _ranking_rows(
+    entities: list[str],
+    dimensions: list[tuple[str, float]],
+    cells: dict[tuple[str, str], list[dict[str, Any]]],
+) -> list[dict[str, Any]]:
     rows = []
     for entity in entities:
-        matching = [
-            item
-            for item in brief.get("evidence", [])
-            if item.get("entity", "").casefold() == entity.casefold()
-            and "score" in item
-            and (not criteria or item.get("dimension", "").casefold() in criteria)
-        ]
-        weighted = []
-        for item in matching:
-            weight = criteria.get(item.get("dimension", "").casefold(), 1.0)
-            weighted.append((float(item["score"]), weight))
-        score = sum(value * weight for value, weight in weighted) / sum(weight for _, weight in weighted)
-        rows.append({"entity": entity, "score": round(score, 4), "evidence_ids": [item["label"] for item in matching]})
+        weighted: list[tuple[float, float]] = []
+        evidence_ids: list[str] = []
+        for dimension, weight in dimensions:
+            records = cells[(entity.casefold(), dimension.casefold())]
+            weighted.append((float(records[0]["score"]), weight))
+            evidence_ids.extend(item["label"] for item in records)
+        score = sum(value * weight for value, weight in weighted) / sum(
+            weight for _, weight in weighted
+        )
+        rows.append(
+            {
+                "entity": entity,
+                "score": round(score, 4),
+                "evidence_ids": sorted(evidence_ids),
+            }
+        )
     rows.sort(key=lambda item: (-item["score"], item["entity"].casefold()))
     for index, row in enumerate(rows):
         row["rank"] = index + 1
@@ -437,18 +473,37 @@ def _build_content(brief: dict[str, Any], run_id: str, source_text: str | None) 
     elif mode == "comparison":
         if len(entities) < 2:
             raise ValueError("comparison mode requires at least two entities")
-        gaps = [entity for entity in entities if not evidence_by_entity[entity]]
+        missing_dimension_entities = [
+            entity
+            for entity in entities
+            if any("dimension" not in item for item in evidence_by_entity[entity])
+        ]
         dimension_sets = [
-            {item.get("dimension", "已提供证据") for item in evidence_by_entity[entity]}
+            {item["dimension"] for item in evidence_by_entity[entity] if "dimension" in item}
             for entity in entities
         ]
         comparable_dimensions = set.intersection(*dimension_sets) if dimension_sets else set()
-        if gaps:
+        all_dimensions = set.union(*dimension_sets) if dimension_sets else set()
+        comparison_gaps = [
+            f"补充 {entity} × {dimension} 的同口径证据"
+            for dimension in sorted(all_dimensions)
+            for entity, dimensions in zip(entities, dimension_sets)
+            if dimension not in dimensions
+        ]
+        comparison_gaps.extend(
+            f"补充 {entity} × <明确 dimension> 的证据标注"
+            for entity in missing_dimension_entities
+        )
+        if not all_dimensions:
+            comparison_gaps.extend(
+                f"补充 {entity} × <共同 dimension> 的同口径证据"
+                for entity, dimensions in zip(entities, dimension_sets)
+                if not dimensions and entity not in missing_dimension_entities
+            )
+        comparison_blocked = not comparable_dimensions or bool(missing_dimension_entities)
+        if comparison_blocked:
             status = "blocked-by-evidence"
-            supplement_requests.extend(f"为 {entity} 补充同口径证据" for entity in gaps)
-        elif not comparable_dimensions:
-            status = "blocked-by-evidence"
-            supplement_requests.append("补充所有实体共有的同口径比较维度")
+            supplement_requests.extend(comparison_gaps)
         dimensions = sorted(comparable_dimensions)
         mode_data = {
             "comparison": {
@@ -460,13 +515,13 @@ def _build_content(brief: dict[str, Any], run_id: str, source_text: str | None) 
                         "evidence_ids": [
                             item["label"]
                             for item in evidence_by_entity[entity]
-                            if item.get("dimension", "已提供证据") in comparable_dimensions
+                            if item.get("dimension") in comparable_dimensions
                         ],
                     }
                     for entity in entities
                 ],
                 "verdict": None,
-                "gap_plan": supplement_requests,
+                "gap_plan": comparison_gaps if comparison_blocked else [],
                 "neutrality": "No winner is declared; compare only evidence-backed dimensions.",
             }
         }
@@ -474,34 +529,67 @@ def _build_content(brief: dict[str, Any], run_id: str, source_text: str | None) 
         if len(entities) < 2:
             raise ValueError("ranking mode requires at least two entities")
         method = brief.get("evaluation_method")
-        method_dimensions = (
-            {item["name"].casefold() for item in method.get("criteria", [])}
-            if isinstance(method, dict)
-            else set()
-        )
-        def eligible_scores(entity: str) -> list[dict[str, Any]]:
-            return [
-                item
-                for item in evidence_by_entity[entity]
-                if "score" in item
-                and (
-                    not method_dimensions
-                    or item.get("dimension", "").casefold() in method_dimensions
-                )
+        score_cells, missing_dimension_entities = _ranking_score_cells(brief, entities)
+        ranking_gaps: list[str] = []
+        dimensions: list[tuple[str, float]] = []
+        if isinstance(method, dict):
+            dimensions = [
+                (item["name"], float(item["weight"]))
+                for item in method.get("criteria", [])
             ]
-        eligible = bool(method) and all(
-            eligible_scores(entity) for entity in entities
+            if not dimensions:
+                ranking_gaps.append("补充 evaluation_method.criteria 及明确权重")
+            for dimension, _weight in dimensions:
+                for entity in entities:
+                    if (entity.casefold(), dimension.casefold()) not in score_cells:
+                        ranking_gaps.append(
+                            f"补充 {entity} × {dimension} 的 evidence-backed numeric score"
+                        )
+        elif isinstance(method, str):
+            dimension_sets = [
+                {
+                    dimension
+                    for entity_name, dimension in score_cells
+                    if entity_name == entity.casefold()
+                }
+                for entity in entities
+            ]
+            all_dimensions = set.union(*dimension_sets) if dimension_sets else set()
+            if not all_dimensions:
+                ranking_gaps.append("补充至少一个所有实体共有的非空 dimension 评分")
+            for dimension in sorted(all_dimensions):
+                for entity, entity_dimensions in zip(entities, dimension_sets):
+                    if dimension not in entity_dimensions:
+                        ranking_gaps.append(
+                            f"补充 {entity} × {dimension} 的 evidence-backed numeric score"
+                        )
+            if dimension_sets and all(
+                entity_dimensions == dimension_sets[0]
+                for entity_dimensions in dimension_sets[1:]
+            ) and dimension_sets[0]:
+                display_dimensions = {
+                    item["dimension"].casefold(): item["dimension"]
+                    for item in brief.get("evidence", [])
+                    if "dimension" in item and "score" in item
+                }
+                dimensions = [
+                    (display_dimensions[dimension], 1.0)
+                    for dimension in sorted(dimension_sets[0])
+                ]
+        else:
+            ranking_gaps.append("补充明确的 evaluation_method、权重或评分口径")
+        ranking_gaps.extend(
+            f"补充 {entity} × <明确 dimension> 的评分标注"
+            for entity in entities
+            if entity.casefold() in missing_dimension_entities
         )
+        eligible = bool(method) and bool(dimensions) and not ranking_gaps
         if eligible:
-            rows = _ranking_rows(brief, entities)
+            rows = _ranking_rows(entities, dimensions, score_cells)
         else:
             status = "blocked-by-evidence"
             rows = []
-            if not method:
-                supplement_requests.append("补充明确的 evaluation_method、权重或评分口径")
-            for entity in entities:
-                if not eligible_scores(entity):
-                    supplement_requests.append(f"为 {entity} 补充 evidence-backed score")
+            supplement_requests.extend(ranking_gaps)
         mode_data = {
             "ranking": {
                 "evaluation_method": method,
@@ -593,10 +681,14 @@ def _validate_content(content: dict[str, Any], evidence_ids: set[str]) -> None:
 def _content_spec(brief: dict[str, Any], content: dict[str, Any]) -> dict[str, Any]:
     query_ids = brief.get("query_ids") or [_stable_id("qry", brief["topic"], brief["mode"])]
     spec_status = "blocked-by-evidence" if content["status"] == "blocked-by-evidence" else ("ready" if content["status"] == "ready" else "draft")
+    spec_title = brief["topic"]
+    if brief["mode"] == "title":
+        spec_title = content["mode_data"]["title_candidates"][0]["title"]
+        _validate_title_candidate(spec_title)
     return {
         "protocol_version": PROTOCOL_VERSION,
         "spec_id": _stable_id("spec", content["run_id"], brief["mode"]),
-        "title": brief["topic"],
+        "title": spec_title,
         "target_query_ids": query_ids,
         "required_evidence_ids": [item["label"] for item in brief.get("evidence", [])],
         "sections": content["sections"],

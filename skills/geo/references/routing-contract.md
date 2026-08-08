@@ -11,4 +11,6 @@ Routing uses normalized phrase matching. A broad or unmatched GEO request falls 
 
 The router may suggest 'geo-discover' when a downstream route is unavailable. A suggestion is not an assertion that discovery fulfills the unavailable stage.
 
-'geo-diagnose' is active for evidence-lined brand, site, and page diagnosis. Chinese and English requests that name a brand, website/site, or page diagnosis or audit route to it. 'geo-content' remains pending.
+`geo-discover`, `geo-diagnose`, and `geo-content` are active alongside the `geo` umbrella router. Discovery covers intent and query research; diagnosis covers evidence-lined brand, site, and page audits; content covers title, explainer, comparison, ranking, page-blueprint, refine, and article-friendly requests in Chinese and English.
+
+`geo-strategy`, `geo-knowledge`, `geo-publish`, and `geo-measure` remain planned roadmap routes with no runnable entry.

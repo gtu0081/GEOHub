@@ -7,7 +7,12 @@ import pytest
 
 from yao_geo.artifact_bus import ArtifactBus
 from yao_geo.cli import main
-from yao_geo.content import MAX_INPUT_BYTES, content, validate_content_brief
+from yao_geo.content import (
+    MAX_INPUT_BYTES,
+    UNSUPPORTED_TITLE_PATTERNS,
+    content,
+    validate_content_brief,
+)
 
 
 def _write(tmp_path: Path, payload: dict, name: str = "brief.json") -> Path:
@@ -26,7 +31,8 @@ def _read(path: Path) -> dict:
 
 
 def test_title_candidates_are_pattern_varied_and_compliant(tmp_path):
-    _, run = _run(tmp_path, {"mode": "title", "topic": "2026 最新最好 AI 搜索"})
+    original_topic = "2026 最新最好 AI 搜索"
+    _, run = _run(tmp_path, {"mode": "title", "topic": original_topic})
     artifact = _read(run / "content.json")
     candidates = artifact["mode_data"]["title_candidates"]
     assert len(candidates) >= 5
@@ -35,6 +41,31 @@ def test_title_candidates_are_pattern_varied_and_compliant(tmp_path):
     for forbidden in ("最好", "最新", "best", "latest", "2026"):
         assert forbidden not in rendered
     assert all(set(item["scores"]) == {"intent", "scenario", "evidence", "compliance"} for item in candidates)
+    spec_title = _read(run / "content-spec.json")["title"]
+    assert spec_title == candidates[0]["title"]
+    assert spec_title != original_topic
+
+
+@pytest.mark.parametrize(
+    "topic",
+    (
+        "100%有效的终极方案",
+        "100％有效的顶级首选",
+        "完美唯一万能无敌方案",
+        "行业领先且绝对有效",
+        "The ultimate 100% guaranteed industry-leading first choice",
+    ),
+)
+def test_title_candidates_remove_every_unsupported_compliance_pattern(tmp_path, topic):
+    _, run = _run(tmp_path, {"mode": "title", "topic": topic})
+    candidates = _read(run / "content.json")["mode_data"]["title_candidates"]
+    for candidate in candidates:
+        assert all(
+            pattern.search(candidate["title"]) is None
+            for pattern in UNSUPPORTED_TITLE_PATTERNS
+        )
+    spec_title = _read(run / "content-spec.json")["title"]
+    assert spec_title == candidates[0]["title"]
 
 
 def test_explainer_has_required_structure_and_lineage(tmp_path):
@@ -78,6 +109,31 @@ def test_comparison_blocks_without_evidence_and_stays_neutral_with_evidence(tmp_
     assert ready["mode_data"]["comparison"]["verdict"] is None
 
 
+def test_comparison_blocks_missing_or_different_dimension_evidence(tmp_path):
+    cases = (
+        [
+            {"label": "a", "claim": "A 有属性", "source_uri": "https://example.com/a", "entity": "A"},
+            {"label": "b", "claim": "B 有属性", "source_uri": "https://example.com/b", "entity": "B"},
+        ],
+        [
+            {"label": "a", "claim": "A 有质量证据", "source_uri": "https://example.com/a", "entity": "A", "dimension": "质量"},
+            {"label": "b", "claim": "B 有价格证据", "source_uri": "https://example.com/b", "entity": "B", "dimension": "价格"},
+        ],
+    )
+    for index, evidence in enumerate(cases):
+        _, run = _run(
+            tmp_path,
+            {"mode": "comparison", "topic": "不同口径", "entities": ["A", "B"], "evidence": evidence},
+            f"comparison-gap-{index}",
+        )
+        comparison = _read(run / "content.json")["mode_data"]["comparison"]
+        assert _read(run / "content.json")["status"] == "blocked-by-evidence"
+        assert comparison["dimensions"] == []
+        assert comparison["verdict"] is None
+        assert comparison["gap_plan"]
+        assert all("×" in gap for gap in comparison["gap_plan"])
+
+
 def test_ranking_requires_method_and_evidence_backed_scores(tmp_path):
     _, blocked_run = _run(tmp_path, {"mode": "ranking", "topic": "工具榜单", "entities": ["A", "B"]}, "blocked")
     blocked = _read(blocked_run / "content.json")
@@ -102,6 +158,71 @@ def test_ranking_requires_method_and_evidence_backed_scores(tmp_path):
     rows = _read(ready_run / "content.json")["mode_data"]["ranking"]["rows"]
     assert [(row["rank"], row["entity"]) for row in rows] == [(1, "B"), (2, "A")]
     assert all(row["evidence_ids"] for row in rows)
+
+
+def test_ranking_criteria_requires_complete_entity_dimension_matrix(tmp_path):
+    _, run = _run(
+        tmp_path,
+        {
+            "mode": "ranking",
+            "topic": "完整矩阵",
+            "entities": ["A", "B"],
+            "evaluation_method": {
+                "name": "质量价格评分",
+                "criteria": [
+                    {"name": "质量", "weight": 2},
+                    {"name": "价格", "weight": 1},
+                ],
+            },
+            "evidence": [
+                {"label": "a-quality", "claim": "A 质量 80", "source_uri": "https://example.com/aq", "entity": "A", "dimension": "质量", "score": 80},
+                {"label": "a-price", "claim": "A 价格 70", "source_uri": "https://example.com/ap", "entity": "A", "dimension": "价格", "score": 70},
+                {"label": "b-quality", "claim": "B 质量 90", "source_uri": "https://example.com/bq", "entity": "B", "dimension": "质量", "score": 90},
+            ],
+        },
+    )
+    artifact = _read(run / "content.json")
+    assert artifact["status"] == "blocked-by-evidence"
+    assert artifact["mode_data"]["ranking"]["rows"] == []
+    assert any("B × 价格" in item for item in artifact["supplement_requests"])
+    assert "TOP1" not in (run / "content.md").read_text(encoding="utf-8")
+
+
+def test_ranking_string_method_requires_identical_explicit_dimension_sets(tmp_path):
+    _, run = _run(
+        tmp_path,
+        {
+            "mode": "ranking",
+            "topic": "字符串方法",
+            "entities": ["A", "B"],
+            "evaluation_method": "同口径平均分",
+            "evidence": [
+                {"label": "a-quality", "claim": "A 质量 80", "source_uri": "https://example.com/aq", "entity": "A", "dimension": "质量", "score": 80},
+                {"label": "a-price", "claim": "A 价格 70", "source_uri": "https://example.com/ap", "entity": "A", "dimension": "价格", "score": 70},
+                {"label": "b-quality", "claim": "B 质量 90", "source_uri": "https://example.com/bq", "entity": "B", "dimension": "质量", "score": 90},
+            ],
+        },
+    )
+    artifact = _read(run / "content.json")
+    assert artifact["status"] == "blocked-by-evidence"
+    assert artifact["mode_data"]["ranking"]["rows"] == []
+    assert any("B × 价格" in item for item in artifact["supplement_requests"])
+
+
+def test_ranking_rejects_conflicting_duplicate_entity_dimension_scores(tmp_path):
+    brief = {
+        "mode": "ranking",
+        "topic": "冲突评分",
+        "entities": ["A", "B"],
+        "evaluation_method": "同口径平均分",
+        "evidence": [
+            {"label": "a-1", "claim": "A 质量 80", "source_uri": "https://example.com/a1", "entity": "A", "dimension": "质量", "score": 80},
+            {"label": "a-2", "claim": "A 质量 70", "source_uri": "https://example.com/a2", "entity": "A", "dimension": "质量", "score": 70},
+            {"label": "b", "claim": "B 质量 90", "source_uri": "https://example.com/b", "entity": "B", "dimension": "质量", "score": 90},
+        ],
+    }
+    with pytest.raises(ValueError, match="conflicting duplicate scores"):
+        content(_write(tmp_path, brief), tmp_path / "runs")
 
 
 def test_page_blueprint_contains_semantic_html_and_evidence_consistent_schema(tmp_path):
