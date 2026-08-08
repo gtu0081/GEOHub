@@ -1204,5 +1204,83 @@
     "text": "No content then publish and website audit",
     "category": "mixed",
     "expected": {"skill_id": "geo-publish", "workflow_id": null, "runnable": false}
+  },
+  {
+    "id": "r156",
+    "text": "不制定策略只诊断网站",
+    "category": "adversarial",
+    "expected": {"skill_id": "geo-diagnose", "workflow_id": null, "runnable": true}
+  },
+  {
+    "id": "r157",
+    "text": "不构建知识库只写文章",
+    "category": "adversarial",
+    "expected": {"skill_id": "geo-content", "workflow_id": null, "runnable": true}
+  },
+  {
+    "id": "r158",
+    "text": "不发布只写文章",
+    "category": "adversarial",
+    "expected": {"skill_id": "geo-content", "workflow_id": null, "runnable": true}
+  },
+  {
+    "id": "r159",
+    "text": "不分发只写文章",
+    "category": "adversarial",
+    "expected": {"skill_id": "geo-content", "workflow_id": null, "runnable": true}
+  },
+  {
+    "id": "r160",
+    "text": "不监测只诊断网站",
+    "category": "adversarial",
+    "expected": {"skill_id": "geo-diagnose", "workflow_id": null, "runnable": true}
+  },
+  {
+    "id": "r161",
+    "text": "不衡量只诊断网站",
+    "category": "adversarial",
+    "expected": {"skill_id": "geo-diagnose", "workflow_id": null, "runnable": true}
+  },
+  {
+    "id": "r162",
+    "text": "Don't want strategy; audit the website",
+    "category": "adversarial",
+    "expected": {"skill_id": "geo-diagnose", "workflow_id": null, "runnable": true}
+  },
+  {
+    "id": "r163",
+    "text": "No strategy, then audit the website",
+    "category": "adversarial",
+    "expected": {"skill_id": "geo-diagnose", "workflow_id": null, "runnable": true}
+  },
+  {
+    "id": "r164",
+    "text": "Don't monitor; write article",
+    "category": "adversarial",
+    "expected": {"skill_id": "geo-content", "workflow_id": null, "runnable": true}
+  },
+  {
+    "id": "r165",
+    "text": "No monitor, then write article",
+    "category": "adversarial",
+    "expected": {"skill_id": "geo-content", "workflow_id": null, "runnable": true}
+  },
+  {
+    "id": "r166",
+    "text": "Don't publish; write article",
+    "category": "adversarial",
+    "expected": {"skill_id": "geo-content", "workflow_id": null, "runnable": true}
+  },
+  {
+    "id": "r167",
+    "text": "No publish, then keyword research",
+    "category": "adversarial",
+    "expected": {"skill_id": "geo-discover", "workflow_id": null, "runnable": true}
+  },
+  {
+    "id": "r168",
+    "text": "制定策略只诊断网站",
+    "category": "mixed",
+    "expected": {"skill_id": "geo-strategy", "workflow_id": null, "runnable": false}
   }
 ]

@@ -1,6 +1,10 @@
+from copy import deepcopy
+
 import pytest
+import yaml
 
 import yao_geo.router as router_module
+from yao_geo.paths import repository_root
 from yao_geo.registry import load_registry
 from yao_geo.router import build_action_phrase_index, route
 
@@ -317,6 +321,79 @@ def test_chinese_bu_directly_governing_action_remains_negative():
         assert "workflow" not in transition
 
 
+@pytest.mark.parametrize(
+    "text,skill_id",
+    (
+        ("不制定策略只诊断网站", "geo-diagnose"),
+        ("不构建知识库只写文章", "geo-content"),
+        ("不发布只写文章", "geo-content"),
+        ("不分发只写文章", "geo-content"),
+        ("不监测只诊断网站", "geo-diagnose"),
+        ("不衡量只诊断网站", "geo-diagnose"),
+    ),
+)
+def test_bare_bu_uses_registered_planned_action_before_active_scope(text, skill_id):
+    result = route(text)
+    assert result["skill_id"] == skill_id
+    assert result["runnable"] is True
+    assert "workflow" not in result
+
+
+@pytest.mark.parametrize(
+    "text,skill_id",
+    (
+        ("Don't want strategy; audit the website", "geo-diagnose"),
+        ("No strategy, then audit the website", "geo-diagnose"),
+        ("Don't monitor; write article", "geo-content"),
+        ("No monitor, then write article", "geo-content"),
+        ("Don't publish; write article", "geo-content"),
+        ("No publish, then keyword research", "geo-discover"),
+    ),
+)
+def test_english_planned_negation_keeps_the_active_scope(text, skill_id):
+    result = route(text)
+    assert result["skill_id"] == skill_id
+    assert result["runnable"] is True
+    assert "workflow" not in result
+
+
+def test_positive_planned_intent_still_has_non_runnable_precedence():
+    result = route("制定策略只诊断网站")
+    assert result["skill_id"] == "geo-strategy"
+    assert result["status"] == "planned"
+    assert result["runnable"] is False
+
+
+def test_new_registry_planned_intent_automatically_participates_in_bare_bu_scope(
+    tmp_path,
+):
+    registry = deepcopy(load_registry())
+    next(skill for skill in registry["skills"] if skill["id"] == "geo-strategy")[
+        "intents"
+    ].append("校准路线")
+    registry_root = tmp_path / "registry"
+    registry_root.mkdir()
+    schema_source = repository_root() / "registry" / "skills.schema.json"
+    (registry_root / "skills.schema.json").write_text(
+        schema_source.read_text(encoding="utf-8"),
+        encoding="utf-8",
+    )
+    for skill in registry["skills"]:
+        if skill["entry"]:
+            entry = tmp_path / skill["entry"]
+            entry.parent.mkdir(parents=True, exist_ok=True)
+            entry.write_text("# test entry\n", encoding="utf-8")
+    registry_path = registry_root / "skills.yaml"
+    registry_path.write_text(
+        yaml.safe_dump(registry, allow_unicode=True),
+        encoding="utf-8",
+    )
+
+    result = route("不校准路线只诊断网站", registry_path)
+    assert result["skill_id"] == "geo-diagnose"
+    assert result["runnable"] is True
+
+
 def test_bare_negation_verbs_and_lexical_exceptions_are_clause_local():
     negated = (
         "No keyword research",
@@ -359,8 +436,10 @@ def test_standalone_negation_applies_only_to_its_workflow_stage():
 def test_route_preparses_clause_boundaries_once_for_1k_and_2k_inputs(monkeypatch):
     original_boundary = router_module._CLAUSE_BOUNDARY_RE
     original_negation = router_module._NEGATION_RE
+    original_bare_zh = router_module._BARE_ZH_NEGATION_RE
     boundary_calls = 0
     negation_calls = 0
+    bare_zh_calls = 0
 
     class CountingBoundaryPattern:
         def finditer(self, text):
@@ -374,14 +453,22 @@ def test_route_preparses_clause_boundaries_once_for_1k_and_2k_inputs(monkeypatch
             negation_calls += 1
             return original_negation.finditer(text)
 
+    class CountingBareZhPattern:
+        def finditer(self, text):
+            nonlocal bare_zh_calls
+            bare_zh_calls += 1
+            return original_bare_zh.finditer(text)
+
     monkeypatch.setattr(router_module, "_CLAUSE_BOUNDARY_RE", CountingBoundaryPattern())
     monkeypatch.setattr(router_module, "_NEGATION_RE", CountingNegationPattern())
+    monkeypatch.setattr(router_module, "_BARE_ZH_NEGATION_RE", CountingBareZhPattern())
     for target_length in (1_000, 2_000):
         text = ("keyword research and audit the website; " * 100)[:target_length]
-        before = (boundary_calls, negation_calls)
+        before = (boundary_calls, negation_calls, bare_zh_calls)
         route(text)
         assert boundary_calls - before[0] == 1
         assert negation_calls - before[1] == 1
+        assert bare_zh_calls - before[2] == 1
 
 
 def test_route_rejects_excessive_character_and_utf8_byte_lengths():

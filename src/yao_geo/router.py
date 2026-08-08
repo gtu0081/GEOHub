@@ -14,9 +14,9 @@ _NEGATION_RE = re.compile(
     r"never|without|skip|avoid|no\s+(?:need|desire|wish))\b|"
     r"\bnot\b(?!\s+only\b)|\bno\b(?![-.]?\w)|"
     r"(?:请勿|不需要|不要|无需|无须|不能|不可|别|禁止|拒绝|不想|不必|不准|切勿|"
-    r"不做|不进行|不创建|不生成|不开展|跳过|避免|勿|"
-    r"不(?=(?:诊断|审计|拓词|挖掘|研究|写|创建|生成|做|进行|开展|发布|测量|抓取))))"
+    r"不做|不进行|不创建|不生成|不开展|跳过|避免|勿))"
 )
+_BARE_ZH_NEGATION_RE = re.compile("不")
 _HARD_CLAUSE_RE = re.compile(r"[;；。.!?！？]")
 _CLAUSE_BOUNDARY_RE = re.compile(
     r"(?:[;；。.!?！？]|(?:,\s*)?\b(?:but|instead|however)(?:\s+please)?\b|"
@@ -46,8 +46,14 @@ _ACTION_VERB_PREFIXES = frozenset(
         "产出",
         "创建",
         "制作",
+        "制定",
         "写",
+        "分发",
+        "发布",
         "生成",
+        "监测",
+        "构建",
+        "衡量",
         "输出",
     }
 )
@@ -132,12 +138,29 @@ def _parse_clause_scopes(
     text: str,
     action_index: ActionPhraseIndex,
 ) -> tuple[ClauseScope, ...]:
-    negation_matches = tuple(_NEGATION_RE.finditer(text))
-    negation_spans = tuple(match.span() for match in negation_matches)
+    static_negation_spans = tuple(match.span() for match in _NEGATION_RE.finditer(text))
+    bare_negation_spans: list[tuple[int, int]] = []
+    static_index = 0
+    for match in _BARE_ZH_NEGATION_RE.finditer(text):
+        while (
+            static_index < len(static_negation_spans)
+            and static_negation_spans[static_index][1] <= match.start()
+        ):
+            static_index += 1
+        if (
+            static_index < len(static_negation_spans)
+            and static_negation_spans[static_index][0] <= match.start()
+            < static_negation_spans[static_index][1]
+        ):
+            continue
+        if action_index.start_pattern.match(text, match.end()) is not None:
+            bare_negation_spans.append(match.span())
+    negation_spans = tuple(sorted((*static_negation_spans, *bare_negation_spans)))
     negation_starts = tuple(span[0] for span in negation_spans)
     ignored = bytearray(len(text))
-    for match in (*negation_matches, *_NEGATION_FILLER_RE.finditer(text)):
-        ignored[match.start() : match.end()] = b"\x01" * (match.end() - match.start())
+    filler_spans = tuple(match.span() for match in _NEGATION_FILLER_RE.finditer(text))
+    for start, end in (*negation_spans, *filler_spans):
+        ignored[start:end] = b"\x01" * (end - start)
     prefix = [0]
     for index, character in enumerate(text):
         prefix.append(prefix[-1] + int(character.isalpha() and not ignored[index]))
