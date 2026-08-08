@@ -1,0 +1,131 @@
+{
+  "schema_version": "1.0",
+  "seed": "yao-output-eval-blind-v1",
+  "summary": {
+    "pair_count": 5,
+    "answer_key_separate": true,
+    "with_skill_hidden_count": 5
+  },
+  "pairs": [
+    {
+      "case_id": "happy",
+      "prompt": "Diagnose supplied HTML.",
+      "input_files": [],
+      "metadata": {
+        "case_type": "happy"
+      },
+      "review_instruction": "Pick A or B based only on the rubric. Do not infer which output came from the skill.",
+      "rubric": [
+        {
+          "id": "contract",
+          "description": "The output must satisfy the declared contract.",
+          "weight": 1.0
+        }
+      ],
+      "variant_a": {
+        "blind_id": "happy:A",
+        "output": "Create diagnosis, report, evidence-ledger, query-map, opportunity-map, quality-report, and run-manifest with evidence IDs."
+      },
+      "variant_b": {
+        "blind_id": "happy:B",
+        "output": "The site is weak."
+      }
+    },
+    {
+      "case_id": "missing-input",
+      "prompt": "Diagnose with no URL, HTML, or evidence.",
+      "input_files": [],
+      "metadata": {
+        "case_type": "missing_input"
+      },
+      "review_instruction": "Pick A or B based only on the rubric. Do not infer which output came from the skill.",
+      "rubric": [
+        {
+          "id": "missing",
+          "description": "The output must satisfy the declared contract.",
+          "weight": 1.0
+        }
+      ],
+      "variant_a": {
+        "blind_id": "missing-input:A",
+        "output": "Infer common issues."
+      },
+      "variant_b": {
+        "blind_id": "missing-input:B",
+        "output": "Reject the brief because one explicit source is required; report missing evidence."
+      }
+    },
+    {
+      "case_id": "boundary",
+      "prompt": "Measure live AI citation share.",
+      "input_files": [],
+      "metadata": {
+        "case_type": "boundary"
+      },
+      "review_instruction": "Pick A or B based only on the rubric. Do not infer which output came from the skill.",
+      "rubric": [
+        {
+          "id": "boundary",
+          "description": "The output must satisfy the declared contract.",
+          "weight": 1.0
+        }
+      ],
+      "variant_a": {
+        "blind_id": "boundary:A",
+        "output": "Do not claim live AI-platform recall, ranking, or citation share."
+      },
+      "variant_b": {
+        "blind_id": "boundary:B",
+        "output": "Citation share is 34%."
+      }
+    },
+    {
+      "case_id": "near-neighbor",
+      "prompt": "Write a ranking article.",
+      "input_files": [],
+      "metadata": {
+        "case_type": "near_neighbor"
+      },
+      "review_instruction": "Pick A or B based only on the rubric. Do not infer which output came from the skill.",
+      "rubric": [
+        {
+          "id": "neighbor",
+          "description": "The output must satisfy the declared contract.",
+          "weight": 1.0
+        }
+      ],
+      "variant_a": {
+        "blind_id": "near-neighbor:A",
+        "output": "Route the content request to geo-content."
+      },
+      "variant_b": {
+        "blind_id": "near-neighbor:B",
+        "output": "Audit ranking pages."
+      }
+    },
+    {
+      "case_id": "source-shortfall",
+      "prompt": "A supplied URL times out.",
+      "input_files": [],
+      "metadata": {
+        "case_type": "source_shortfall"
+      },
+      "review_instruction": "Pick A or B based only on the rubric. Do not infer which output came from the skill.",
+      "rubric": [
+        {
+          "id": "shortfall",
+          "description": "The output must satisfy the declared contract.",
+          "weight": 1.0
+        }
+      ],
+      "variant_a": {
+        "blind_id": "source-shortfall:A",
+        "output": "Keep the unavailable source as source_gap and include the limitation."
+      },
+      "variant_b": {
+        "blind_id": "source-shortfall:B",
+        "output": "Assume the page content."
+      }
+    }
+  ]
+}

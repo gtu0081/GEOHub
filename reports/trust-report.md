@@ -1,13 +1,15 @@
 # Trust Report
 
-Scope: Yao GEO 0.1.0 local CLI and two skill packages.
+Scope: Yao GEO 0.1.0 local CLI and four active Library-engineered skill packages.
 
-- Permissions: local file reads and writes only; the output path is user-selected.
-- Network: no runtime network calls.
+- Permissions: router read-only; active executors read explicit inputs and write the user-selected runs root.
+- Network: discovery and content are offline. Diagnosis permits only explicit public canonical HTTP(S) sources behind SSRF, redirect, content-type, size, timeout, and file-descriptor gates.
 - Secrets: no secret ingestion or storage contract.
 - Dependencies: PyYAML and jsonschema, declared in 'pyproject.toml'.
 - Input trust: briefs are untrusted data and validated before artifact generation.
 - Output trust: evidence supplied by users is labeled 'provided'; independent verification is missing evidence.
 - Rollback boundary: delete the selected run directory for generated artifacts; revert package, schemas, and registry together for code rollback.
+- Publication: Artifact Bus uses atomic publication; package building rejects symlinks and unsafe paths.
+- Review evidence: deterministic/file-backed evidence is present. Provider benchmarks, security certification, and human blind review are missing evidence.
 
 This report is a first-phase engineering review and does not constitute a security certification or legal opinion.

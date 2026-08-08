@@ -1,0 +1,337 @@
+{
+  "ok": true,
+  "cases": "skills/geo-diagnose/evals/output/cases.jsonl",
+  "summary": {
+    "case_count": 5,
+    "file_backed_case_count": 0,
+    "near_neighbor_case_count": 1,
+    "boundary_case_count": 1,
+    "baseline_pass_rate": 0.0,
+    "with_skill_pass_rate": 100.0,
+    "delta": 100.0,
+    "regression_count": 0,
+    "gate_pass": true,
+    "failure_taxonomy": [],
+    "blind_pair_count": 5
+  },
+  "results": [
+    {
+      "id": "happy",
+      "prompt": "Diagnose supplied HTML.",
+      "input_files": [],
+      "metadata": {
+        "case_type": "happy"
+      },
+      "baseline": {
+        "score": 0.0,
+        "passed_count": 0,
+        "failed_count": 1,
+        "checks": [
+          {
+            "id": "contract",
+            "description": "The output must satisfy the declared contract.",
+            "weight": 1.0,
+            "failure_type": "assertion_failed",
+            "passed": false,
+            "missing": [
+              "diagnosis",
+              "evidence-ledger",
+              "evidence IDs"
+            ],
+            "present_forbidden": []
+          }
+        ],
+        "failed": [
+          {
+            "id": "contract",
+            "description": "The output must satisfy the declared contract.",
+            "weight": 1.0,
+            "failure_type": "assertion_failed",
+            "passed": false,
+            "missing": [
+              "diagnosis",
+              "evidence-ledger",
+              "evidence IDs"
+            ],
+            "present_forbidden": []
+          }
+        ]
+      },
+      "with_skill": {
+        "score": 100.0,
+        "passed_count": 1,
+        "failed_count": 0,
+        "checks": [
+          {
+            "id": "contract",
+            "description": "The output must satisfy the declared contract.",
+            "weight": 1.0,
+            "failure_type": "assertion_failed",
+            "passed": true,
+            "missing": [],
+            "present_forbidden": []
+          }
+        ],
+        "failed": []
+      },
+      "delta": 100.0,
+      "winner": "with_skill",
+      "failure_taxonomy": []
+    },
+    {
+      "id": "missing-input",
+      "prompt": "Diagnose with no URL, HTML, or evidence.",
+      "input_files": [],
+      "metadata": {
+        "case_type": "missing_input"
+      },
+      "baseline": {
+        "score": 0.0,
+        "passed_count": 0,
+        "failed_count": 1,
+        "checks": [
+          {
+            "id": "missing",
+            "description": "The output must satisfy the declared contract.",
+            "weight": 1.0,
+            "failure_type": "assertion_failed",
+            "passed": false,
+            "missing": [
+              "Reject",
+              "explicit source",
+              "missing evidence"
+            ],
+            "present_forbidden": []
+          }
+        ],
+        "failed": [
+          {
+            "id": "missing",
+            "description": "The output must satisfy the declared contract.",
+            "weight": 1.0,
+            "failure_type": "assertion_failed",
+            "passed": false,
+            "missing": [
+              "Reject",
+              "explicit source",
+              "missing evidence"
+            ],
+            "present_forbidden": []
+          }
+        ]
+      },
+      "with_skill": {
+        "score": 100.0,
+        "passed_count": 1,
+        "failed_count": 0,
+        "checks": [
+          {
+            "id": "missing",
+            "description": "The output must satisfy the declared contract.",
+            "weight": 1.0,
+            "failure_type": "assertion_failed",
+            "passed": true,
+            "missing": [],
+            "present_forbidden": []
+          }
+        ],
+        "failed": []
+      },
+      "delta": 100.0,
+      "winner": "with_skill",
+      "failure_taxonomy": []
+    },
+    {
+      "id": "boundary",
+      "prompt": "Measure live AI citation share.",
+      "input_files": [],
+      "metadata": {
+        "case_type": "boundary"
+      },
+      "baseline": {
+        "score": 0.0,
+        "passed_count": 0,
+        "failed_count": 1,
+        "checks": [
+          {
+            "id": "boundary",
+            "description": "The output must satisfy the declared contract.",
+            "weight": 1.0,
+            "failure_type": "assertion_failed",
+            "passed": false,
+            "missing": [
+              "Do not claim"
+            ],
+            "present_forbidden": []
+          }
+        ],
+        "failed": [
+          {
+            "id": "boundary",
+            "description": "The output must satisfy the declared contract.",
+            "weight": 1.0,
+            "failure_type": "assertion_failed",
+            "passed": false,
+            "missing": [
+              "Do not claim"
+            ],
+            "present_forbidden": []
+          }
+        ]
+      },
+      "with_skill": {
+        "score": 100.0,
+        "passed_count": 1,
+        "failed_count": 0,
+        "checks": [
+          {
+            "id": "boundary",
+            "description": "The output must satisfy the declared contract.",
+            "weight": 1.0,
+            "failure_type": "assertion_failed",
+            "passed": true,
+            "missing": [],
+            "present_forbidden": []
+          }
+        ],
+        "failed": []
+      },
+      "delta": 100.0,
+      "winner": "with_skill",
+      "failure_taxonomy": []
+    },
+    {
+      "id": "near-neighbor",
+      "prompt": "Write a ranking article.",
+      "input_files": [],
+      "metadata": {
+        "case_type": "near_neighbor"
+      },
+      "baseline": {
+        "score": 0.0,
+        "passed_count": 0,
+        "failed_count": 1,
+        "checks": [
+          {
+            "id": "neighbor",
+            "description": "The output must satisfy the declared contract.",
+            "weight": 1.0,
+            "failure_type": "assertion_failed",
+            "passed": false,
+            "missing": [
+              "geo-content"
+            ],
+            "present_forbidden": []
+          }
+        ],
+        "failed": [
+          {
+            "id": "neighbor",
+            "description": "The output must satisfy the declared contract.",
+            "weight": 1.0,
+            "failure_type": "assertion_failed",
+            "passed": false,
+            "missing": [
+              "geo-content"
+            ],
+            "present_forbidden": []
+          }
+        ]
+      },
+      "with_skill": {
+        "score": 100.0,
+        "passed_count": 1,
+        "failed_count": 0,
+        "checks": [
+          {
+            "id": "neighbor",
+            "description": "The output must satisfy the declared contract.",
+            "weight": 1.0,
+            "failure_type": "assertion_failed",
+            "passed": true,
+            "missing": [],
+            "present_forbidden": []
+          }
+        ],
+        "failed": []
+      },
+      "delta": 100.0,
+      "winner": "with_skill",
+      "failure_taxonomy": []
+    },
+    {
+      "id": "source-shortfall",
+      "prompt": "A supplied URL times out.",
+      "input_files": [],
+      "metadata": {
+        "case_type": "source_shortfall"
+      },
+      "baseline": {
+        "score": 0.0,
+        "passed_count": 0,
+        "failed_count": 1,
+        "checks": [
+          {
+            "id": "shortfall",
+            "description": "The output must satisfy the declared contract.",
+            "weight": 1.0,
+            "failure_type": "assertion_failed",
+            "passed": false,
+            "missing": [
+              "source_gap",
+              "limitation"
+            ],
+            "present_forbidden": []
+          }
+        ],
+        "failed": [
+          {
+            "id": "shortfall",
+            "description": "The output must satisfy the declared contract.",
+            "weight": 1.0,
+            "failure_type": "assertion_failed",
+            "passed": false,
+            "missing": [
+              "source_gap",
+              "limitation"
+            ],
+            "present_forbidden": []
+          }
+        ]
+      },
+      "with_skill": {
+        "score": 100.0,
+        "passed_count": 1,
+        "failed_count": 0,
+        "checks": [
+          {
+            "id": "shortfall",
+            "description": "The output must satisfy the declared contract.",
+            "weight": 1.0,
+            "failure_type": "assertion_failed",
+            "passed": true,
+            "missing": [],
+            "present_forbidden": []
+          }
+        ],
+        "failed": []
+      },
+      "delta": 100.0,
+      "winner": "with_skill",
+      "failure_taxonomy": []
+    }
+  ],
+  "failures": [],
+  "blind_review": {
+    "pack": "reports/yao-meta/geo-diagnose-blind-pack.json",
+    "answer_key": "reports/yao-meta/geo-diagnose-blind-answer-key.json",
+    "pair_count": 5
+  },
+  "artifacts": {
+    "json": "reports/yao-meta/geo-diagnose-output-eval.json",
+    "markdown": "reports/yao-meta/geo-diagnose-output-eval.md",
+    "blind_review_pack_json": "reports/yao-meta/geo-diagnose-blind-pack.json",
+    "blind_review_pack_md": "reports/yao-meta/geo-diagnose-blind-pack.md",
+    "blind_answer_key_json": "reports/yao-meta/geo-diagnose-blind-answer-key.json"
+  }
+}

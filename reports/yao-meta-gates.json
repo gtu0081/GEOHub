@@ -1,0 +1,972 @@
+{
+  "status": "pass",
+  "commands": [
+    {
+      "skill_id": "geo",
+      "command": [
+        ".venv/bin/python",
+        "<yao-meta-root>/scripts/yao.py",
+        "validate",
+        "skills/geo",
+        "--require-manifest"
+      ],
+      "exit_code": 0,
+      "status": "pass",
+      "stdout_tail": "_score\": 80,\n          \"declared_maturity_minimum\": 85,\n          \"computed_governance_band\": \"production\",\n          \"computed_maturity_tier\": \"production\",\n          \"score_breakdown\": {\n            \"metadata_integrity\": 20,\n            \"ownership_and_review\": 20,\n            \"boundary_and_eval\": 15,\n            \"operational_assets\": 20,\n            \"maintenance_evidence\": 5\n          }\n        }\n      }\n    },\n    {\n      \"command\": \"resource_boundary_check.py skills/geo\",\n      \"ok\": true,\n      \"returncode\": 0,\n      \"payload\": {\n        \"ok\": true,\n        \"failures\": [],\n        \"warnings\": [],\n        \"stats\": {\n          \"context_budget_tier\": \"production\",\n          \"context_budget_limit\": 1000,\n          \"skill_body_tokens\": 274,\n          \"other_text_tokens\": 1899,\n          \"estimated_initial_load_tokens\": 492,\n          \"estimated_total_text_tokens\": 2173,\n          \"deferred_resource_tokens\": 640,\n          \"deferred_resource_warn_threshold\": 120000,\n          \"deferred_resource_dirs\": [\n            {\n              \"path\": \"references\",\n              \"estimated_tokens\": 371,\n              \"file_count\": 1\n            },\n            {\n              \"path\": \"evals\",\n              \"estimated_tokens\": 169,\n              \"file_count\": 2\n            },\n            {\n              \"path\": \"scripts\",\n              \"estimated_tokens\": 100,\n              \"file_count\": 1\n            }\n          ],\n          \"large_deferred_resource_dirs\": [],\n          \"deferred_resource_governance\": {\n            \"status\": \"not-required\",\n            \"large_dir_count\": 0,\n            \"governed_large_dir_count\": 0,\n            \"directories\": [],\n            \"summary\": \"No large deferred resource directory exceeds the per-dir threshold.\"\n          },\n          \"relevant_file_count\": 11,\n          \"unused_resource_dirs\": [],\n          \"quality_signal_points\": 115,\n          \"quality_density\": 233.7\n        }\n      }\n    }\n  ]\n}\n",
+      "stderr_tail": ""
+    },
+    {
+      "skill_id": "geo",
+      "command": [
+        ".venv/bin/python",
+        "<yao-meta-root>/scripts/trigger_eval.py",
+        "--description",
+        "Route GEO and generative engine optimization requests to an available Yao GEO capability. Use for broad GEO requests, workflow selection, capability checks, or requests spanning discovery, brand/site/page diagnosis, content, strategy, knowledge, publishing, and measurement.",
+        "--cases",
+        "skills/geo/evals/trigger_cases.json",
+        "--semantic-config",
+        "skills/geo/evals/semantic_config.json",
+        "--threshold",
+        "0.2"
+      ],
+      "exit_code": 0,
+      "status": "pass",
+      "stdout_tail": "       ],\n          \"semantic_coverage\": 0.0,\n          \"support_score\": 0,\n          \"lexical_support\": 0.0,\n          \"negative_penalty\": 1.0,\n          \"coverage_boost\": 0.0,\n          \"concept_evidence\": {\n            \"positive\": {},\n            \"negative\": {\n              \"unrelated\": [\n                \"poem\"\n              ]\n            }\n          }\n        }\n      }\n    ],\n    \"near_neighbor\": [\n      {\n        \"prompt\": \"Discover AI search questions\",\n        \"family\": \"default\",\n        \"score\": 0.0,\n        \"predicted_trigger\": false,\n        \"expected_trigger\": false,\n        \"passed\": true,\n        \"score_detail\": {\n          \"mode\": \"semantic-intent\",\n          \"desired_positive_concepts\": [\n            \"owned\"\n          ],\n          \"matched_desired_concepts\": [],\n          \"extra_positive_concepts\": [],\n          \"matched_negative_concepts\": [],\n          \"exclusive_negative_concepts\": [],\n          \"semantic_coverage\": 0.0,\n          \"support_score\": 0,\n          \"lexical_support\": 0.0,\n          \"negative_penalty\": 0,\n          \"coverage_boost\": 0.0,\n          \"concept_evidence\": {\n            \"positive\": {},\n            \"negative\": {}\n          }\n        }\n      },\n      {\n        \"prompt\": \"Audit this page\",\n        \"family\": \"default\",\n        \"score\": 0.027,\n        \"predicted_trigger\": false,\n        \"expected_trigger\": false,\n        \"passed\": true,\n        \"score_detail\": {\n          \"mode\": \"semantic-intent\",\n          \"desired_positive_concepts\": [\n            \"owned\"\n          ],\n          \"matched_desired_concepts\": [],\n          \"extra_positive_concepts\": [],\n          \"matched_negative_concepts\": [],\n          \"exclusive_negative_concepts\": [],\n          \"semantic_coverage\": 0.0,\n          \"support_score\": 0,\n          \"lexical_support\": 0.333,\n          \"negative_penalty\": 0,\n          \"coverage_boost\": 0.0,\n          \"concept_evidence\": {\n            \"positive\": {},\n            \"negative\": {}\n          }\n        }\n      }\n    ]\n  }\n}\n",
+      "stderr_tail": ""
+    },
+    {
+      "skill_id": "geo",
+      "command": [
+        ".venv/bin/python",
+        "<yao-meta-root>/scripts/yao.py",
+        "skill-ir",
+        "skills/geo",
+        "--output-json",
+        "skills/geo/reports/skill-ir.json"
+      ],
+      "exit_code": 0,
+      "status": "pass",
+      "stdout_tail": "{\n  \"ok\": true,\n  \"schema\": \"<yao-meta-root>/skill-ir/schema.json\",\n  \"skill_dir\": \"skills/geo\",\n  \"artifacts\": {\n    \"json\": \"skills/geo/reports/skill-ir.json\"\n  },\n  \"summary\": {\n    \"name\": \"geo\",\n    \"maturity\": \"library\",\n    \"target_count\": 3,\n    \"trigger_samples\": 2,\n    \"resource_count\": 3\n  },\n  \"failures\": []\n}\n",
+      "stderr_tail": ""
+    },
+    {
+      "skill_id": "geo",
+      "command": [
+        ".venv/bin/python",
+        "<yao-meta-root>/scripts/yao.py",
+        "skill-ir",
+        "skills/geo",
+        "--output-json",
+        "reports/yao-meta/geo-skill-ir.json"
+      ],
+      "exit_code": 0,
+      "status": "pass",
+      "stdout_tail": "{\n  \"ok\": true,\n  \"schema\": \"<yao-meta-root>/skill-ir/schema.json\",\n  \"skill_dir\": \"skills/geo\",\n  \"artifacts\": {\n    \"json\": \"reports/yao-meta/geo-skill-ir.json\"\n  },\n  \"summary\": {\n    \"name\": \"geo\",\n    \"maturity\": \"library\",\n    \"target_count\": 3,\n    \"trigger_samples\": 2,\n    \"resource_count\": 3\n  },\n  \"failures\": []\n}\n",
+      "stderr_tail": ""
+    },
+    {
+      "skill_id": "geo",
+      "command": [
+        ".venv/bin/python",
+        "<yao-meta-root>/scripts/yao.py",
+        "output-eval",
+        "--cases",
+        "skills/geo/evals/output/cases.jsonl",
+        "--output-json",
+        "reports/yao-meta/geo-output-eval.json",
+        "--output-md",
+        "reports/yao-meta/geo-output-eval.md",
+        "--blind-pack-json",
+        "reports/yao-meta/geo-blind-pack.json",
+        "--blind-pack-md",
+        "reports/yao-meta/geo-blind-pack.md",
+        "--blind-answer-key-json",
+        "reports/yao-meta/geo-blind-answer-key.json"
+      ],
+      "exit_code": 0,
+      "status": "pass",
+      "stdout_tail": "       \"missing\": [\n              \"geo\",\n              \"no specific stage\"\n            ],\n            \"present_forbidden\": []\n          }\n        ],\n        \"failed\": [\n          {\n            \"id\": \"unknown\",\n            \"description\": \"The output must satisfy the declared contract.\",\n            \"weight\": 1.0,\n            \"failure_type\": \"assertion_failed\",\n            \"passed\": false,\n            \"missing\": [\n              \"geo\",\n              \"no specific stage\"\n            ],\n            \"present_forbidden\": []\n          }\n        ]\n      },\n      \"with_skill\": {\n        \"score\": 100.0,\n        \"passed_count\": 1,\n        \"failed_count\": 0,\n        \"checks\": [\n          {\n            \"id\": \"unknown\",\n            \"description\": \"The output must satisfy the declared contract.\",\n            \"weight\": 1.0,\n            \"failure_type\": \"assertion_failed\",\n            \"passed\": true,\n            \"missing\": [],\n            \"present_forbidden\": []\n          }\n        ],\n        \"failed\": []\n      },\n      \"delta\": 100.0,\n      \"winner\": \"with_skill\",\n      \"failure_taxonomy\": []\n    }\n  ],\n  \"failures\": [],\n  \"blind_review\": {\n    \"pack\": \"reports/yao-meta/geo-blind-pack.json\",\n    \"answer_key\": \"reports/yao-meta/geo-blind-answer-key.json\",\n    \"pair_count\": 5\n  },\n  \"artifacts\": {\n    \"json\": \"reports/yao-meta/geo-output-eval.json\",\n    \"markdown\": \"reports/yao-meta/geo-output-eval.md\",\n    \"blind_review_pack_json\": \"reports/yao-meta/geo-blind-pack.json\",\n    \"blind_review_pack_md\": \"reports/yao-meta/geo-blind-pack.md\",\n    \"blind_answer_key_json\": \"reports/yao-meta/geo-blind-answer-key.json\"\n  }\n}\n",
+      "stderr_tail": ""
+    },
+    {
+      "skill_id": "geo",
+      "command": [
+        ".venv/bin/python",
+        "<yao-meta-root>/scripts/yao.py",
+        "trust",
+        "skills/geo",
+        "--output-json",
+        "reports/yao-meta/geo-trust.json",
+        "--output-md",
+        "reports/yao-meta/geo-trust.md"
+      ],
+      "exit_code": 0,
+      "status": "pass",
+      "stdout_tail": "ets\": [],\n  \"scripts\": [\n    {\n      \"path\": \"scripts/run_route.py\",\n      \"interface\": \"cli\",\n      \"interface_declared\": false,\n      \"interface_reason\": \"Default CLI classification; add SCRIPT_INTERFACE for internal modules.\",\n      \"has_argparse\": false,\n      \"has_main_guard\": true,\n      \"uses_input\": false,\n      \"uses_network\": false,\n      \"uses_file_write\": false,\n      \"uses_subprocess\": false,\n      \"network_urls\": [],\n      \"network_hosts\": []\n    }\n  ],\n  \"dependencies\": {\n    \"present\": [],\n    \"pinned\": [],\n    \"unpinned\": []\n  },\n  \"network_policy\": {\n    \"present\": false,\n    \"path\": \"security/network_policy.json\",\n    \"schema_version\": \"\",\n    \"network_script_count\": 0,\n    \"covered_scripts\": [],\n    \"missing_scripts\": [],\n    \"mismatches\": [],\n    \"default_policy\": {}\n  },\n  \"help_smoke\": {\n    \"enabled\": true,\n    \"timeout_seconds\": 5.0,\n    \"candidate_count\": 0,\n    \"checked_count\": 0,\n    \"passed_count\": 0,\n    \"failed_count\": 0,\n    \"skipped_count\": 1,\n    \"failed_scripts\": [],\n    \"results\": [],\n    \"skipped\": [\n      {\n        \"path\": \"scripts/run_route.py\",\n        \"reason\": \"missing argparse/help surface\"\n      }\n    ]\n  },\n  \"permission_governance\": {\n    \"present\": false,\n    \"path\": \"security/permission_policy.json\",\n    \"schema_version\": \"\",\n    \"reviewed_at\": \"\",\n    \"required_capabilities\": [],\n    \"approved_capabilities\": [],\n    \"missing_capabilities\": [],\n    \"invalid_capabilities\": [],\n    \"expired_capabilities\": [],\n    \"approval_count\": 0,\n    \"required_count\": 0,\n    \"missing_count\": 0,\n    \"invalid_count\": 0,\n    \"expired_count\": 0,\n    \"approvals\": []\n  },\n  \"trust_metadata\": {\n    \"source_tier\": \"local\",\n    \"remote_inline_execution\": \"forbid\",\n    \"remote_metadata_policy\": \"allow-metadata-only\"\n  },\n  \"artifacts\": {\n    \"json\": \"reports/yao-meta/geo-trust.json\",\n    \"markdown\": \"reports/yao-meta/geo-trust.md\"\n  }\n}\n",
+      "stderr_tail": ""
+    },
+    {
+      "skill_id": "geo",
+      "command": [
+        ".venv/bin/python",
+        "<yao-meta-root>/scripts/yao.py",
+        "review-studio",
+        "skills/geo",
+        "--output-json",
+        "reports/yao-meta/geo-review-studio.json",
+        "--output-html",
+        "reports/yao-meta/geo-review-studio.html"
+      ],
+      "exit_code": 0,
+      "status": "pass",
+      "stdout_tail": "compatibility\": \"reports/python_compatibility.md\",\n    \"architecture_maintainability\": \"reports/architecture_maintainability.md\",\n    \"permission_policy\": \"security/permission_policy.md\",\n    \"runtime_permissions\": \"reports/runtime_permission_probes.md\",\n    \"skill_atlas\": \"reports/skill_atlas.html\",\n    \"compiled_targets\": \"reports/compiled_targets.md\",\n    \"adoption_drift\": \"reports/adoption_drift_report.md\",\n    \"review_waivers\": \"reports/review_waivers.md\",\n    \"review_annotations\": \"reports/review_annotations.md\",\n    \"adaptation_proposals\": \"reports/adaptation_proposals.md\",\n    \"adaptation_approval_ledger\": \"reports/adaptation_approval_ledger.json\",\n    \"adaptation_regression\": \"reports/adaptation_regression_report.md\",\n    \"world_class_evidence_plan\": \"reports/world_class_evidence_plan.md\",\n    \"world_class_evidence_ledger\": \"reports/world_class_evidence_ledger.md\",\n    \"world_class_evidence_intake\": \"reports/world_class_evidence_intake.md\",\n    \"world_class_evidence_preflight\": \"reports/world_class_evidence_preflight.md\",\n    \"world_class_evidence_preflight_html\": \"reports/world_class_evidence_preflight.html\",\n    \"world_class_submission_review\": \"reports/world_class_submission_review.md\",\n    \"world_class_operator_runbook\": \"reports/world_class_operator_runbook.md\",\n    \"world_class_operator_runbook_html\": \"reports/world_class_operator_runbook.html\",\n    \"world_class_claim_guard\": \"reports/world_class_claim_guard.md\",\n    \"registry_audit\": \"reports/registry_audit.md\",\n    \"package_verification\": \"reports/package_verification.md\",\n    \"install_simulation\": \"reports/install_simulation.md\",\n    \"upgrade_check\": \"reports/upgrade_check.md\",\n    \"migration\": \"docs/migration-v2.md\",\n    \"skill_ir\": \"reports/skill-ir.json\"\n  },\n  \"artifacts\": {\n    \"html\": \"reports/yao-meta/geo-review-studio.html\",\n    \"json\": \"reports/yao-meta/geo-review-studio.json\"\n  }\n}\n",
+      "stderr_tail": ""
+    },
+    {
+      "skill_id": "geo",
+      "command": [
+        ".venv/bin/python",
+        "<yao-meta-root>/scripts/yao.py",
+        "compile-skill",
+        "skills/geo",
+        "--target",
+        "generic",
+        "--output-json",
+        "reports/yao-meta/geo-compiled-generic.json",
+        "--output-md",
+        "reports/yao-meta/geo-compiled-generic.md"
+      ],
+      "exit_code": 0,
+      "status": "pass",
+      "stdout_tail": "target\": \"generic\",\n        \"adapter_mode\": \"agent-skills-compatible\",\n        \"generated_files\": [\n          \"targets/generic/adapter.json\"\n        ],\n        \"metadata_mapping\": {\n          \"display_name\": \"targets/generic/adapter.json::display_name\",\n          \"default_prompt\": \"targets/generic/adapter.json::default_prompt\",\n          \"activation\": \"targets/generic/adapter.json::activation_mode\",\n          \"execution\": \"targets/generic/adapter.json::execution_context\",\n          \"trust\": \"targets/generic/adapter.json::trust_level\",\n          \"permissions\": \"targets/generic/adapter.json::target_permission_contract\",\n          \"degradation\": \"targets/generic/adapter.json::degradation_strategy\"\n        },\n        \"preserved_semantics\": [\n          \"trigger\",\n          \"workflow-counts\",\n          \"resources\",\n          \"eval-plan\",\n          \"risk\",\n          \"governance\",\n          \"runtime\",\n          \"trust\",\n          \"permissions\"\n        ],\n        \"degradation_strategy\": \"neutral-source\",\n        \"permission_representation\": \"targets/generic/adapter.json::target_permission_contract\",\n        \"native_surface\": \"Agent Skills compatible neutral package\",\n        \"activation_policy\": \"Use SKILL.md name and description; consumers decide automatic or manual activation.\",\n        \"resource_strategy\": \"Preserve references, scripts, assets, evals, reports, and adapter metadata as relative package resources.\",\n        \"script_strategy\": \"Expose script and permission metadata for downstream clients or installers to enforce.\",\n        \"permission_enforcement\": \"consumer-enforced-or-metadata-only\"\n      },\n      \"unsupported_features\": [],\n      \"warnings\": [],\n      \"failures\": []\n    }\n  ],\n  \"failures\": [],\n  \"warnings\": [],\n  \"artifacts\": {\n    \"json\": \"reports/yao-meta/geo-compiled-generic.json\",\n    \"markdown\": \"reports/yao-meta/geo-compiled-generic.md\"\n  }\n}\n",
+      "stderr_tail": ""
+    },
+    {
+      "skill_id": "geo",
+      "command": [
+        ".venv/bin/python",
+        "<yao-meta-root>/scripts/yao.py",
+        "conformance",
+        "skills/geo",
+        "--target",
+        "generic",
+        "--output-json",
+        "reports/yao-meta/geo-conformance-generic.json",
+        "--output-md",
+        "reports/yao-meta/geo-conformance-generic.md"
+      ],
+      "exit_code": 0,
+      "status": "pass",
+      "stdout_tail": "{\n  \"ok\": true,\n  \"skill\": \"geo\",\n  \"targets\": [\n    {\n      \"target\": \"generic\",\n      \"status\": \"pass\",\n      \"checks\": [\n        \"SKILL.md exists\",\n        \"frontmatter name exists\",\n        \"frontmatter description exists\",\n        \"description length <= 1024\",\n        \"name is runtime-safe\",\n        \"manifest.name exists\",\n        \"manifest.version exists\",\n        \"manifest.owner exists\",\n        \"manifest.status exists\",\n        \"manifest.maturity_tier exists\",\n        \"manifest.review_cadence exists\",\n        \"manifest declares generic\",\n        \"interface.display_name exists\",\n        \"interface.short_description exists\",\n        \"interface.default_prompt exists\",\n        \"adapter target declares generic\",\n        \"activation mode exists\",\n        \"execution context exists\",\n        \"execution shell exists\",\n        \"trust source tier exists\",\n        \"generic degradation note exists\",\n        \"Skill IR schema_version is 2.0.0\",\n        \"Skill IR name matches frontmatter\",\n        \"Skill IR description matches frontmatter\",\n        \"references resource resolves: references/routing-contract.md\",\n        \"scripts resource resolves: scripts/run_route.py\",\n        \"reports resource resolves: reports/output_quality_scorecard.md\"\n      ],\n      \"failures\": [],\n      \"warnings\": []\n    }\n  ],\n  \"summary\": {\n    \"target_count\": 1,\n    \"pass_count\": 1,\n    \"fail_count\": 0\n  },\n  \"artifacts\": {\n    \"json\": \"reports/yao-meta/geo-conformance-generic.json\",\n    \"markdown\": \"reports/yao-meta/geo-conformance-generic.md\"\n  }\n}\n",
+      "stderr_tail": ""
+    },
+    {
+      "skill_id": "geo",
+      "command": [
+        ".venv/bin/python",
+        "<yao-meta-root>/scripts/yao.py",
+        "compile-skill",
+        "skills/geo",
+        "--target",
+        "openai",
+        "--output-json",
+        "reports/yao-meta/geo-compiled-openai.json",
+        "--output-md",
+        "reports/yao-meta/geo-compiled-openai.md"
+      ],
+      "exit_code": 0,
+      "status": "pass",
+      "stdout_tail": "pt\",\n          \"activation\": \"targets/openai/agents/openai.yaml::compatibility.activation_mode\",\n          \"execution\": \"targets/openai/agents/openai.yaml::compatibility.execution_context\",\n          \"trust\": \"targets/openai/agents/openai.yaml::compatibility.trust_level\",\n          \"permissions\": \"targets/openai/agents/openai.yaml::compatibility.permission_contract\",\n          \"degradation\": \"targets/openai/agents/openai.yaml::compatibility.degradation_strategy\"\n        },\n        \"preserved_semantics\": [\n          \"trigger\",\n          \"workflow-counts\",\n          \"resources\",\n          \"eval-plan\",\n          \"risk\",\n          \"governance\",\n          \"runtime\",\n          \"trust\",\n          \"permissions\"\n        ],\n        \"degradation_strategy\": \"metadata-adapter\",\n        \"permission_representation\": \"targets/openai/agents/openai.yaml::compatibility.permission_contract plus adapter.json\",\n        \"native_surface\": \"OpenAI-style interface metadata plus neutral Agent Skills source\",\n        \"activation_policy\": \"Use frontmatter description for catalog routing and targets/openai/agents/openai.yaml for display name, default prompt, and compatibility metadata.\",\n        \"resource_strategy\": \"Ship the neutral source tree and expose OpenAI-facing interface metadata as a generated companion file.\",\n        \"script_strategy\": \"Keep scripts as local package resources; expose help-smoke and permission metadata for reviewer approval before execution.\",\n        \"permission_enforcement\": \"metadata-only\"\n      },\n      \"unsupported_features\": [\n        \"client-native script permission prompts are represented as permission contract metadata\"\n      ],\n      \"warnings\": [],\n      \"failures\": []\n    }\n  ],\n  \"failures\": [],\n  \"warnings\": [],\n  \"artifacts\": {\n    \"json\": \"reports/yao-meta/geo-compiled-openai.json\",\n    \"markdown\": \"reports/yao-meta/geo-compiled-openai.md\"\n  }\n}\n",
+      "stderr_tail": ""
+    },
+    {
+      "skill_id": "geo",
+      "command": [
+        ".venv/bin/python",
+        "<yao-meta-root>/scripts/yao.py",
+        "conformance",
+        "skills/geo",
+        "--target",
+        "openai",
+        "--output-json",
+        "reports/yao-meta/geo-conformance-openai.json",
+        "--output-md",
+        "reports/yao-meta/geo-conformance-openai.md"
+      ],
+      "exit_code": 0,
+      "status": "pass",
+      "stdout_tail": "{\n  \"ok\": true,\n  \"skill\": \"geo\",\n  \"targets\": [\n    {\n      \"target\": \"openai\",\n      \"status\": \"pass\",\n      \"checks\": [\n        \"SKILL.md exists\",\n        \"frontmatter name exists\",\n        \"frontmatter description exists\",\n        \"description length <= 1024\",\n        \"name is runtime-safe\",\n        \"manifest.name exists\",\n        \"manifest.version exists\",\n        \"manifest.owner exists\",\n        \"manifest.status exists\",\n        \"manifest.maturity_tier exists\",\n        \"manifest.review_cadence exists\",\n        \"manifest declares openai\",\n        \"interface.display_name exists\",\n        \"interface.short_description exists\",\n        \"interface.default_prompt exists\",\n        \"adapter target declares openai\",\n        \"activation mode exists\",\n        \"execution context exists\",\n        \"execution shell exists\",\n        \"trust source tier exists\",\n        \"openai degradation note exists\",\n        \"Skill IR schema_version is 2.0.0\",\n        \"Skill IR name matches frontmatter\",\n        \"Skill IR description matches frontmatter\",\n        \"references resource resolves: references/routing-contract.md\",\n        \"scripts resource resolves: scripts/run_route.py\",\n        \"reports resource resolves: reports/output_quality_scorecard.md\"\n      ],\n      \"failures\": [],\n      \"warnings\": []\n    }\n  ],\n  \"summary\": {\n    \"target_count\": 1,\n    \"pass_count\": 1,\n    \"fail_count\": 0\n  },\n  \"artifacts\": {\n    \"json\": \"reports/yao-meta/geo-conformance-openai.json\",\n    \"markdown\": \"reports/yao-meta/geo-conformance-openai.md\"\n  }\n}\n",
+      "stderr_tail": ""
+    },
+    {
+      "skill_id": "geo",
+      "command": [
+        ".venv/bin/python",
+        "<yao-meta-root>/scripts/yao.py",
+        "compile-skill",
+        "skills/geo",
+        "--target",
+        "claude",
+        "--output-json",
+        "reports/yao-meta/geo-compiled-claude.json",
+        "--output-md",
+        "reports/yao-meta/geo-compiled-claude.md"
+      ],
+      "exit_code": 0,
+      "status": "pass",
+      "stdout_tail": "\"\n        ],\n        \"metadata_mapping\": {\n          \"display_name\": \"targets/claude/adapter.json::display_name\",\n          \"default_prompt\": \"targets/claude/adapter.json::default_prompt\",\n          \"activation\": \"targets/claude/adapter.json::activation_mode\",\n          \"execution\": \"targets/claude/adapter.json::execution_context\",\n          \"trust\": \"targets/claude/adapter.json::trust_level\",\n          \"permissions\": \"targets/claude/adapter.json::target_permission_contract\",\n          \"degradation\": \"targets/claude/adapter.json::degradation_strategy\"\n        },\n        \"preserved_semantics\": [\n          \"trigger\",\n          \"workflow-counts\",\n          \"resources\",\n          \"eval-plan\",\n          \"risk\",\n          \"governance\",\n          \"runtime\",\n          \"trust\",\n          \"permissions\"\n        ],\n        \"degradation_strategy\": \"neutral-source-plus-adapter\",\n        \"permission_representation\": \"targets/claude/adapter.json::target_permission_contract and README notes\",\n        \"native_surface\": \"Claude-compatible neutral source folder with adapter notes\",\n        \"activation_policy\": \"Use SKILL.md frontmatter description as the primary activation contract and adapter.json for review metadata.\",\n        \"resource_strategy\": \"Preserve the source tree directly; write target notes in targets/claude/README.md.\",\n        \"script_strategy\": \"Scripts remain local package resources and must be reviewed through trust and permission reports before use.\",\n        \"permission_enforcement\": \"metadata-fallback\"\n      },\n      \"unsupported_features\": [\n        \"vendor-native metadata fields are carried as adapter JSON and README notes\"\n      ],\n      \"warnings\": [],\n      \"failures\": []\n    }\n  ],\n  \"failures\": [],\n  \"warnings\": [],\n  \"artifacts\": {\n    \"json\": \"reports/yao-meta/geo-compiled-claude.json\",\n    \"markdown\": \"reports/yao-meta/geo-compiled-claude.md\"\n  }\n}\n",
+      "stderr_tail": ""
+    },
+    {
+      "skill_id": "geo",
+      "command": [
+        ".venv/bin/python",
+        "<yao-meta-root>/scripts/yao.py",
+        "conformance",
+        "skills/geo",
+        "--target",
+        "claude",
+        "--output-json",
+        "reports/yao-meta/geo-conformance-claude.json",
+        "--output-md",
+        "reports/yao-meta/geo-conformance-claude.md"
+      ],
+      "exit_code": 0,
+      "status": "pass",
+      "stdout_tail": "{\n  \"ok\": true,\n  \"skill\": \"geo\",\n  \"targets\": [\n    {\n      \"target\": \"claude\",\n      \"status\": \"pass\",\n      \"checks\": [\n        \"SKILL.md exists\",\n        \"frontmatter name exists\",\n        \"frontmatter description exists\",\n        \"description length <= 1024\",\n        \"name is runtime-safe\",\n        \"manifest.name exists\",\n        \"manifest.version exists\",\n        \"manifest.owner exists\",\n        \"manifest.status exists\",\n        \"manifest.maturity_tier exists\",\n        \"manifest.review_cadence exists\",\n        \"manifest declares claude\",\n        \"interface.display_name exists\",\n        \"interface.short_description exists\",\n        \"interface.default_prompt exists\",\n        \"adapter target declares claude\",\n        \"activation mode exists\",\n        \"execution context exists\",\n        \"execution shell exists\",\n        \"trust source tier exists\",\n        \"claude degradation note exists\",\n        \"Skill IR schema_version is 2.0.0\",\n        \"Skill IR name matches frontmatter\",\n        \"Skill IR description matches frontmatter\",\n        \"references resource resolves: references/routing-contract.md\",\n        \"scripts resource resolves: scripts/run_route.py\",\n        \"reports resource resolves: reports/output_quality_scorecard.md\"\n      ],\n      \"failures\": [],\n      \"warnings\": []\n    }\n  ],\n  \"summary\": {\n    \"target_count\": 1,\n    \"pass_count\": 1,\n    \"fail_count\": 0\n  },\n  \"artifacts\": {\n    \"json\": \"reports/yao-meta/geo-conformance-claude.json\",\n    \"markdown\": \"reports/yao-meta/geo-conformance-claude.md\"\n  }\n}\n",
+      "stderr_tail": ""
+    },
+    {
+      "skill_id": "geo-discover",
+      "command": [
+        ".venv/bin/python",
+        "<yao-meta-root>/scripts/yao.py",
+        "validate",
+        "skills/geo-discover",
+        "--require-manifest"
+      ],
+      "exit_code": 0,
+      "status": "pass",
+      "stdout_tail": "80,\n          \"declared_maturity_minimum\": 85,\n          \"computed_governance_band\": \"production\",\n          \"computed_maturity_tier\": \"production\",\n          \"score_breakdown\": {\n            \"metadata_integrity\": 20,\n            \"ownership_and_review\": 20,\n            \"boundary_and_eval\": 15,\n            \"operational_assets\": 20,\n            \"maintenance_evidence\": 5\n          }\n        }\n      }\n    },\n    {\n      \"command\": \"resource_boundary_check.py skills/geo-discover\",\n      \"ok\": true,\n      \"returncode\": 0,\n      \"payload\": {\n        \"ok\": true,\n        \"failures\": [],\n        \"warnings\": [],\n        \"stats\": {\n          \"context_budget_tier\": \"production\",\n          \"context_budget_limit\": 1000,\n          \"skill_body_tokens\": 318,\n          \"other_text_tokens\": 2010,\n          \"estimated_initial_load_tokens\": 572,\n          \"estimated_total_text_tokens\": 2328,\n          \"deferred_resource_tokens\": 685,\n          \"deferred_resource_warn_threshold\": 120000,\n          \"deferred_resource_dirs\": [\n            {\n              \"path\": \"references\",\n              \"estimated_tokens\": 399,\n              \"file_count\": 2\n            },\n            {\n              \"path\": \"evals\",\n              \"estimated_tokens\": 178,\n              \"file_count\": 2\n            },\n            {\n              \"path\": \"scripts\",\n              \"estimated_tokens\": 108,\n              \"file_count\": 1\n            }\n          ],\n          \"large_deferred_resource_dirs\": [],\n          \"deferred_resource_governance\": {\n            \"status\": \"not-required\",\n            \"large_dir_count\": 0,\n            \"governed_large_dir_count\": 0,\n            \"directories\": [],\n            \"summary\": \"No large deferred resource directory exceeds the per-dir threshold.\"\n          },\n          \"relevant_file_count\": 13,\n          \"unused_resource_dirs\": [],\n          \"quality_signal_points\": 115,\n          \"quality_density\": 201.0\n        }\n      }\n    }\n  ]\n}\n",
+      "stderr_tail": ""
+    },
+    {
+      "skill_id": "geo-discover",
+      "command": [
+        ".venv/bin/python",
+        "<yao-meta-root>/scripts/trigger_eval.py",
+        "--description",
+        "Discover evidence-aware GEO questions, query rewrites, intent clusters, and prioritized content opportunities from a structured brief. Use for AI search intent mining, question expansion, query research, FAQ discovery, and GEO topic discovery in Chinese or English.",
+        "--cases",
+        "skills/geo-discover/evals/trigger_cases.json",
+        "--semantic-config",
+        "skills/geo-discover/evals/semantic_config.json",
+        "--threshold",
+        "0.2"
+      ],
+      "exit_code": 0,
+      "status": "pass",
+      "stdout_tail": "          \"audit\"\n              ]\n            }\n          }\n        }\n      }\n    ],\n    \"near_neighbor\": [\n      {\n        \"prompt\": \"Write an explainer\",\n        \"family\": \"default\",\n        \"score\": 0.0,\n        \"predicted_trigger\": false,\n        \"expected_trigger\": false,\n        \"passed\": true,\n        \"score_detail\": {\n          \"mode\": \"semantic-intent\",\n          \"desired_positive_concepts\": [\n            \"owned\"\n          ],\n          \"matched_desired_concepts\": [],\n          \"extra_positive_concepts\": [],\n          \"matched_negative_concepts\": [\n            \"neighbor\"\n          ],\n          \"exclusive_negative_concepts\": [\n            \"neighbor\"\n          ],\n          \"semantic_coverage\": 0.0,\n          \"support_score\": 0,\n          \"lexical_support\": 0.0,\n          \"negative_penalty\": 1.0,\n          \"coverage_boost\": 0.0,\n          \"concept_evidence\": {\n            \"positive\": {},\n            \"negative\": {\n              \"neighbor\": [\n                \"explainer\"\n              ]\n            }\n          }\n        }\n      },\n      {\n        \"prompt\": \"Build a GEO roadmap\",\n        \"family\": \"default\",\n        \"score\": 0.0,\n        \"predicted_trigger\": false,\n        \"expected_trigger\": false,\n        \"passed\": true,\n        \"score_detail\": {\n          \"mode\": \"semantic-intent\",\n          \"desired_positive_concepts\": [\n            \"owned\"\n          ],\n          \"matched_desired_concepts\": [],\n          \"extra_positive_concepts\": [],\n          \"matched_negative_concepts\": [\n            \"neighbor\"\n          ],\n          \"exclusive_negative_concepts\": [\n            \"neighbor\"\n          ],\n          \"semantic_coverage\": 0.0,\n          \"support_score\": 0,\n          \"lexical_support\": 0.5,\n          \"negative_penalty\": 1.0,\n          \"coverage_boost\": 0.0,\n          \"concept_evidence\": {\n            \"positive\": {},\n            \"negative\": {\n              \"neighbor\": [\n                \"roadmap\"\n              ]\n            }\n          }\n        }\n      }\n    ]\n  }\n}\n",
+      "stderr_tail": ""
+    },
+    {
+      "skill_id": "geo-discover",
+      "command": [
+        ".venv/bin/python",
+        "<yao-meta-root>/scripts/yao.py",
+        "skill-ir",
+        "skills/geo-discover",
+        "--output-json",
+        "skills/geo-discover/reports/skill-ir.json"
+      ],
+      "exit_code": 0,
+      "status": "pass",
+      "stdout_tail": "{\n  \"ok\": true,\n  \"schema\": \"<yao-meta-root>/skill-ir/schema.json\",\n  \"skill_dir\": \"skills/geo-discover\",\n  \"artifacts\": {\n    \"json\": \"skills/geo-discover/reports/skill-ir.json\"\n  },\n  \"summary\": {\n    \"name\": \"geo-discover\",\n    \"maturity\": \"library\",\n    \"target_count\": 3,\n    \"trigger_samples\": 2,\n    \"resource_count\": 4\n  },\n  \"failures\": []\n}\n",
+      "stderr_tail": ""
+    },
+    {
+      "skill_id": "geo-discover",
+      "command": [
+        ".venv/bin/python",
+        "<yao-meta-root>/scripts/yao.py",
+        "skill-ir",
+        "skills/geo-discover",
+        "--output-json",
+        "reports/yao-meta/geo-discover-skill-ir.json"
+      ],
+      "exit_code": 0,
+      "status": "pass",
+      "stdout_tail": "{\n  \"ok\": true,\n  \"schema\": \"<yao-meta-root>/skill-ir/schema.json\",\n  \"skill_dir\": \"skills/geo-discover\",\n  \"artifacts\": {\n    \"json\": \"reports/yao-meta/geo-discover-skill-ir.json\"\n  },\n  \"summary\": {\n    \"name\": \"geo-discover\",\n    \"maturity\": \"library\",\n    \"target_count\": 3,\n    \"trigger_samples\": 2,\n    \"resource_count\": 4\n  },\n  \"failures\": []\n}\n",
+      "stderr_tail": ""
+    },
+    {
+      "skill_id": "geo-discover",
+      "command": [
+        ".venv/bin/python",
+        "<yao-meta-root>/scripts/yao.py",
+        "output-eval",
+        "--cases",
+        "skills/geo-discover/evals/output/cases.jsonl",
+        "--output-json",
+        "reports/yao-meta/geo-discover-output-eval.json",
+        "--output-md",
+        "reports/yao-meta/geo-discover-output-eval.md",
+        "--blind-pack-json",
+        "reports/yao-meta/geo-discover-blind-pack.json",
+        "--blind-pack-md",
+        "reports/yao-meta/geo-discover-blind-pack.md",
+        "--blind-answer-key-json",
+        "reports/yao-meta/geo-discover-blind-answer-key.json"
+      ],
+      "exit_code": 0,
+      "status": "pass",
+      "stdout_tail": "\"\n            ],\n            \"present_forbidden\": []\n          }\n        ],\n        \"failed\": [\n          {\n            \"id\": \"shortfall\",\n            \"description\": \"The output must satisfy the declared contract.\",\n            \"weight\": 1.0,\n            \"failure_type\": \"assertion_failed\",\n            \"passed\": false,\n            \"missing\": [\n              \"source_gap\",\n              \"missing evidence\"\n            ],\n            \"present_forbidden\": []\n          }\n        ]\n      },\n      \"with_skill\": {\n        \"score\": 100.0,\n        \"passed_count\": 1,\n        \"failed_count\": 0,\n        \"checks\": [\n          {\n            \"id\": \"shortfall\",\n            \"description\": \"The output must satisfy the declared contract.\",\n            \"weight\": 1.0,\n            \"failure_type\": \"assertion_failed\",\n            \"passed\": true,\n            \"missing\": [],\n            \"present_forbidden\": []\n          }\n        ],\n        \"failed\": []\n      },\n      \"delta\": 100.0,\n      \"winner\": \"with_skill\",\n      \"failure_taxonomy\": []\n    }\n  ],\n  \"failures\": [],\n  \"blind_review\": {\n    \"pack\": \"reports/yao-meta/geo-discover-blind-pack.json\",\n    \"answer_key\": \"reports/yao-meta/geo-discover-blind-answer-key.json\",\n    \"pair_count\": 5\n  },\n  \"artifacts\": {\n    \"json\": \"reports/yao-meta/geo-discover-output-eval.json\",\n    \"markdown\": \"reports/yao-meta/geo-discover-output-eval.md\",\n    \"blind_review_pack_json\": \"reports/yao-meta/geo-discover-blind-pack.json\",\n    \"blind_review_pack_md\": \"reports/yao-meta/geo-discover-blind-pack.md\",\n    \"blind_answer_key_json\": \"reports/yao-meta/geo-discover-blind-answer-key.json\"\n  }\n}\n",
+      "stderr_tail": ""
+    },
+    {
+      "skill_id": "geo-discover",
+      "command": [
+        ".venv/bin/python",
+        "<yao-meta-root>/scripts/yao.py",
+        "trust",
+        "skills/geo-discover",
+        "--output-json",
+        "reports/yao-meta/geo-discover-trust.json",
+        "--output-md",
+        "reports/yao-meta/geo-discover-trust.md"
+      ],
+      "exit_code": 0,
+      "status": "pass",
+      "stdout_tail": "\n    {\n      \"path\": \"scripts/run_discover.py\",\n      \"interface\": \"cli\",\n      \"interface_declared\": false,\n      \"interface_reason\": \"Default CLI classification; add SCRIPT_INTERFACE for internal modules.\",\n      \"has_argparse\": false,\n      \"has_main_guard\": true,\n      \"uses_input\": false,\n      \"uses_network\": false,\n      \"uses_file_write\": false,\n      \"uses_subprocess\": false,\n      \"network_urls\": [],\n      \"network_hosts\": []\n    }\n  ],\n  \"dependencies\": {\n    \"present\": [],\n    \"pinned\": [],\n    \"unpinned\": []\n  },\n  \"network_policy\": {\n    \"present\": false,\n    \"path\": \"security/network_policy.json\",\n    \"schema_version\": \"\",\n    \"network_script_count\": 0,\n    \"covered_scripts\": [],\n    \"missing_scripts\": [],\n    \"mismatches\": [],\n    \"default_policy\": {}\n  },\n  \"help_smoke\": {\n    \"enabled\": true,\n    \"timeout_seconds\": 5.0,\n    \"candidate_count\": 0,\n    \"checked_count\": 0,\n    \"passed_count\": 0,\n    \"failed_count\": 0,\n    \"skipped_count\": 1,\n    \"failed_scripts\": [],\n    \"results\": [],\n    \"skipped\": [\n      {\n        \"path\": \"scripts/run_discover.py\",\n        \"reason\": \"missing argparse/help surface\"\n      }\n    ]\n  },\n  \"permission_governance\": {\n    \"present\": false,\n    \"path\": \"security/permission_policy.json\",\n    \"schema_version\": \"\",\n    \"reviewed_at\": \"\",\n    \"required_capabilities\": [],\n    \"approved_capabilities\": [],\n    \"missing_capabilities\": [],\n    \"invalid_capabilities\": [],\n    \"expired_capabilities\": [],\n    \"approval_count\": 0,\n    \"required_count\": 0,\n    \"missing_count\": 0,\n    \"invalid_count\": 0,\n    \"expired_count\": 0,\n    \"approvals\": []\n  },\n  \"trust_metadata\": {\n    \"source_tier\": \"local\",\n    \"remote_inline_execution\": \"forbid\",\n    \"remote_metadata_policy\": \"allow-metadata-only\"\n  },\n  \"artifacts\": {\n    \"json\": \"reports/yao-meta/geo-discover-trust.json\",\n    \"markdown\": \"reports/yao-meta/geo-discover-trust.md\"\n  }\n}\n",
+      "stderr_tail": ""
+    },
+    {
+      "skill_id": "geo-discover",
+      "command": [
+        ".venv/bin/python",
+        "<yao-meta-root>/scripts/yao.py",
+        "review-studio",
+        "skills/geo-discover",
+        "--output-json",
+        "reports/yao-meta/geo-discover-review-studio.json",
+        "--output-html",
+        "reports/yao-meta/geo-discover-review-studio.html"
+      ],
+      "exit_code": 0,
+      "status": "pass",
+      "stdout_tail": "eports/python_compatibility.md\",\n    \"architecture_maintainability\": \"reports/architecture_maintainability.md\",\n    \"permission_policy\": \"security/permission_policy.md\",\n    \"runtime_permissions\": \"reports/runtime_permission_probes.md\",\n    \"skill_atlas\": \"reports/skill_atlas.html\",\n    \"compiled_targets\": \"reports/compiled_targets.md\",\n    \"adoption_drift\": \"reports/adoption_drift_report.md\",\n    \"review_waivers\": \"reports/review_waivers.md\",\n    \"review_annotations\": \"reports/review_annotations.md\",\n    \"adaptation_proposals\": \"reports/adaptation_proposals.md\",\n    \"adaptation_approval_ledger\": \"reports/adaptation_approval_ledger.json\",\n    \"adaptation_regression\": \"reports/adaptation_regression_report.md\",\n    \"world_class_evidence_plan\": \"reports/world_class_evidence_plan.md\",\n    \"world_class_evidence_ledger\": \"reports/world_class_evidence_ledger.md\",\n    \"world_class_evidence_intake\": \"reports/world_class_evidence_intake.md\",\n    \"world_class_evidence_preflight\": \"reports/world_class_evidence_preflight.md\",\n    \"world_class_evidence_preflight_html\": \"reports/world_class_evidence_preflight.html\",\n    \"world_class_submission_review\": \"reports/world_class_submission_review.md\",\n    \"world_class_operator_runbook\": \"reports/world_class_operator_runbook.md\",\n    \"world_class_operator_runbook_html\": \"reports/world_class_operator_runbook.html\",\n    \"world_class_claim_guard\": \"reports/world_class_claim_guard.md\",\n    \"registry_audit\": \"reports/registry_audit.md\",\n    \"package_verification\": \"reports/package_verification.md\",\n    \"install_simulation\": \"reports/install_simulation.md\",\n    \"upgrade_check\": \"reports/upgrade_check.md\",\n    \"migration\": \"docs/migration-v2.md\",\n    \"skill_ir\": \"reports/skill-ir.json\"\n  },\n  \"artifacts\": {\n    \"html\": \"reports/yao-meta/geo-discover-review-studio.html\",\n    \"json\": \"reports/yao-meta/geo-discover-review-studio.json\"\n  }\n}\n",
+      "stderr_tail": ""
+    },
+    {
+      "skill_id": "geo-discover",
+      "command": [
+        ".venv/bin/python",
+        "<yao-meta-root>/scripts/yao.py",
+        "compile-skill",
+        "skills/geo-discover",
+        "--target",
+        "generic",
+        "--output-json",
+        "reports/yao-meta/geo-discover-compiled-generic.json",
+        "--output-md",
+        "reports/yao-meta/geo-discover-compiled-generic.md"
+      ],
+      "exit_code": 0,
+      "status": "pass",
+      "stdout_tail": ",\n        \"adapter_mode\": \"agent-skills-compatible\",\n        \"generated_files\": [\n          \"targets/generic/adapter.json\"\n        ],\n        \"metadata_mapping\": {\n          \"display_name\": \"targets/generic/adapter.json::display_name\",\n          \"default_prompt\": \"targets/generic/adapter.json::default_prompt\",\n          \"activation\": \"targets/generic/adapter.json::activation_mode\",\n          \"execution\": \"targets/generic/adapter.json::execution_context\",\n          \"trust\": \"targets/generic/adapter.json::trust_level\",\n          \"permissions\": \"targets/generic/adapter.json::target_permission_contract\",\n          \"degradation\": \"targets/generic/adapter.json::degradation_strategy\"\n        },\n        \"preserved_semantics\": [\n          \"trigger\",\n          \"workflow-counts\",\n          \"resources\",\n          \"eval-plan\",\n          \"risk\",\n          \"governance\",\n          \"runtime\",\n          \"trust\",\n          \"permissions\"\n        ],\n        \"degradation_strategy\": \"neutral-source\",\n        \"permission_representation\": \"targets/generic/adapter.json::target_permission_contract\",\n        \"native_surface\": \"Agent Skills compatible neutral package\",\n        \"activation_policy\": \"Use SKILL.md name and description; consumers decide automatic or manual activation.\",\n        \"resource_strategy\": \"Preserve references, scripts, assets, evals, reports, and adapter metadata as relative package resources.\",\n        \"script_strategy\": \"Expose script and permission metadata for downstream clients or installers to enforce.\",\n        \"permission_enforcement\": \"consumer-enforced-or-metadata-only\"\n      },\n      \"unsupported_features\": [],\n      \"warnings\": [],\n      \"failures\": []\n    }\n  ],\n  \"failures\": [],\n  \"warnings\": [],\n  \"artifacts\": {\n    \"json\": \"reports/yao-meta/geo-discover-compiled-generic.json\",\n    \"markdown\": \"reports/yao-meta/geo-discover-compiled-generic.md\"\n  }\n}\n",
+      "stderr_tail": ""
+    },
+    {
+      "skill_id": "geo-discover",
+      "command": [
+        ".venv/bin/python",
+        "<yao-meta-root>/scripts/yao.py",
+        "conformance",
+        "skills/geo-discover",
+        "--target",
+        "generic",
+        "--output-json",
+        "reports/yao-meta/geo-discover-conformance-generic.json",
+        "--output-md",
+        "reports/yao-meta/geo-discover-conformance-generic.md"
+      ],
+      "exit_code": 0,
+      "status": "pass",
+      "stdout_tail": "{\n  \"ok\": true,\n  \"skill\": \"geo-discover\",\n  \"targets\": [\n    {\n      \"target\": \"generic\",\n      \"status\": \"pass\",\n      \"checks\": [\n        \"SKILL.md exists\",\n        \"frontmatter name exists\",\n        \"frontmatter description exists\",\n        \"description length <= 1024\",\n        \"name is runtime-safe\",\n        \"manifest.name exists\",\n        \"manifest.version exists\",\n        \"manifest.owner exists\",\n        \"manifest.status exists\",\n        \"manifest.maturity_tier exists\",\n        \"manifest.review_cadence exists\",\n        \"manifest declares generic\",\n        \"interface.display_name exists\",\n        \"interface.short_description exists\",\n        \"interface.default_prompt exists\",\n        \"adapter target declares generic\",\n        \"activation mode exists\",\n        \"execution context exists\",\n        \"execution shell exists\",\n        \"trust source tier exists\",\n        \"generic degradation note exists\",\n        \"Skill IR schema_version is 2.0.0\",\n        \"Skill IR name matches frontmatter\",\n        \"Skill IR description matches frontmatter\",\n        \"references resource resolves: references/discovery-method.md\",\n        \"references resource resolves: references/input-example.json\",\n        \"scripts resource resolves: scripts/run_discover.py\",\n        \"reports resource resolves: reports/output_quality_scorecard.md\"\n      ],\n      \"failures\": [],\n      \"warnings\": []\n    }\n  ],\n  \"summary\": {\n    \"target_count\": 1,\n    \"pass_count\": 1,\n    \"fail_count\": 0\n  },\n  \"artifacts\": {\n    \"json\": \"reports/yao-meta/geo-discover-conformance-generic.json\",\n    \"markdown\": \"reports/yao-meta/geo-discover-conformance-generic.md\"\n  }\n}\n",
+      "stderr_tail": ""
+    },
+    {
+      "skill_id": "geo-discover",
+      "command": [
+        ".venv/bin/python",
+        "<yao-meta-root>/scripts/yao.py",
+        "compile-skill",
+        "skills/geo-discover",
+        "--target",
+        "openai",
+        "--output-json",
+        "reports/yao-meta/geo-discover-compiled-openai.json",
+        "--output-md",
+        "reports/yao-meta/geo-discover-compiled-openai.md"
+      ],
+      "exit_code": 0,
+      "status": "pass",
+      "stdout_tail": "tivation\": \"targets/openai/agents/openai.yaml::compatibility.activation_mode\",\n          \"execution\": \"targets/openai/agents/openai.yaml::compatibility.execution_context\",\n          \"trust\": \"targets/openai/agents/openai.yaml::compatibility.trust_level\",\n          \"permissions\": \"targets/openai/agents/openai.yaml::compatibility.permission_contract\",\n          \"degradation\": \"targets/openai/agents/openai.yaml::compatibility.degradation_strategy\"\n        },\n        \"preserved_semantics\": [\n          \"trigger\",\n          \"workflow-counts\",\n          \"resources\",\n          \"eval-plan\",\n          \"risk\",\n          \"governance\",\n          \"runtime\",\n          \"trust\",\n          \"permissions\"\n        ],\n        \"degradation_strategy\": \"metadata-adapter\",\n        \"permission_representation\": \"targets/openai/agents/openai.yaml::compatibility.permission_contract plus adapter.json\",\n        \"native_surface\": \"OpenAI-style interface metadata plus neutral Agent Skills source\",\n        \"activation_policy\": \"Use frontmatter description for catalog routing and targets/openai/agents/openai.yaml for display name, default prompt, and compatibility metadata.\",\n        \"resource_strategy\": \"Ship the neutral source tree and expose OpenAI-facing interface metadata as a generated companion file.\",\n        \"script_strategy\": \"Keep scripts as local package resources; expose help-smoke and permission metadata for reviewer approval before execution.\",\n        \"permission_enforcement\": \"metadata-only\"\n      },\n      \"unsupported_features\": [\n        \"client-native script permission prompts are represented as permission contract metadata\"\n      ],\n      \"warnings\": [],\n      \"failures\": []\n    }\n  ],\n  \"failures\": [],\n  \"warnings\": [],\n  \"artifacts\": {\n    \"json\": \"reports/yao-meta/geo-discover-compiled-openai.json\",\n    \"markdown\": \"reports/yao-meta/geo-discover-compiled-openai.md\"\n  }\n}\n",
+      "stderr_tail": ""
+    },
+    {
+      "skill_id": "geo-discover",
+      "command": [
+        ".venv/bin/python",
+        "<yao-meta-root>/scripts/yao.py",
+        "conformance",
+        "skills/geo-discover",
+        "--target",
+        "openai",
+        "--output-json",
+        "reports/yao-meta/geo-discover-conformance-openai.json",
+        "--output-md",
+        "reports/yao-meta/geo-discover-conformance-openai.md"
+      ],
+      "exit_code": 0,
+      "status": "pass",
+      "stdout_tail": "{\n  \"ok\": true,\n  \"skill\": \"geo-discover\",\n  \"targets\": [\n    {\n      \"target\": \"openai\",\n      \"status\": \"pass\",\n      \"checks\": [\n        \"SKILL.md exists\",\n        \"frontmatter name exists\",\n        \"frontmatter description exists\",\n        \"description length <= 1024\",\n        \"name is runtime-safe\",\n        \"manifest.name exists\",\n        \"manifest.version exists\",\n        \"manifest.owner exists\",\n        \"manifest.status exists\",\n        \"manifest.maturity_tier exists\",\n        \"manifest.review_cadence exists\",\n        \"manifest declares openai\",\n        \"interface.display_name exists\",\n        \"interface.short_description exists\",\n        \"interface.default_prompt exists\",\n        \"adapter target declares openai\",\n        \"activation mode exists\",\n        \"execution context exists\",\n        \"execution shell exists\",\n        \"trust source tier exists\",\n        \"openai degradation note exists\",\n        \"Skill IR schema_version is 2.0.0\",\n        \"Skill IR name matches frontmatter\",\n        \"Skill IR description matches frontmatter\",\n        \"references resource resolves: references/discovery-method.md\",\n        \"references resource resolves: references/input-example.json\",\n        \"scripts resource resolves: scripts/run_discover.py\",\n        \"reports resource resolves: reports/output_quality_scorecard.md\"\n      ],\n      \"failures\": [],\n      \"warnings\": []\n    }\n  ],\n  \"summary\": {\n    \"target_count\": 1,\n    \"pass_count\": 1,\n    \"fail_count\": 0\n  },\n  \"artifacts\": {\n    \"json\": \"reports/yao-meta/geo-discover-conformance-openai.json\",\n    \"markdown\": \"reports/yao-meta/geo-discover-conformance-openai.md\"\n  }\n}\n",
+      "stderr_tail": ""
+    },
+    {
+      "skill_id": "geo-discover",
+      "command": [
+        ".venv/bin/python",
+        "<yao-meta-root>/scripts/yao.py",
+        "compile-skill",
+        "skills/geo-discover",
+        "--target",
+        "claude",
+        "--output-json",
+        "reports/yao-meta/geo-discover-compiled-claude.json",
+        "--output-md",
+        "reports/yao-meta/geo-discover-compiled-claude.md"
+      ],
+      "exit_code": 0,
+      "status": "pass",
+      "stdout_tail": "   \"metadata_mapping\": {\n          \"display_name\": \"targets/claude/adapter.json::display_name\",\n          \"default_prompt\": \"targets/claude/adapter.json::default_prompt\",\n          \"activation\": \"targets/claude/adapter.json::activation_mode\",\n          \"execution\": \"targets/claude/adapter.json::execution_context\",\n          \"trust\": \"targets/claude/adapter.json::trust_level\",\n          \"permissions\": \"targets/claude/adapter.json::target_permission_contract\",\n          \"degradation\": \"targets/claude/adapter.json::degradation_strategy\"\n        },\n        \"preserved_semantics\": [\n          \"trigger\",\n          \"workflow-counts\",\n          \"resources\",\n          \"eval-plan\",\n          \"risk\",\n          \"governance\",\n          \"runtime\",\n          \"trust\",\n          \"permissions\"\n        ],\n        \"degradation_strategy\": \"neutral-source-plus-adapter\",\n        \"permission_representation\": \"targets/claude/adapter.json::target_permission_contract and README notes\",\n        \"native_surface\": \"Claude-compatible neutral source folder with adapter notes\",\n        \"activation_policy\": \"Use SKILL.md frontmatter description as the primary activation contract and adapter.json for review metadata.\",\n        \"resource_strategy\": \"Preserve the source tree directly; write target notes in targets/claude/README.md.\",\n        \"script_strategy\": \"Scripts remain local package resources and must be reviewed through trust and permission reports before use.\",\n        \"permission_enforcement\": \"metadata-fallback\"\n      },\n      \"unsupported_features\": [\n        \"vendor-native metadata fields are carried as adapter JSON and README notes\"\n      ],\n      \"warnings\": [],\n      \"failures\": []\n    }\n  ],\n  \"failures\": [],\n  \"warnings\": [],\n  \"artifacts\": {\n    \"json\": \"reports/yao-meta/geo-discover-compiled-claude.json\",\n    \"markdown\": \"reports/yao-meta/geo-discover-compiled-claude.md\"\n  }\n}\n",
+      "stderr_tail": ""
+    },
+    {
+      "skill_id": "geo-discover",
+      "command": [
+        ".venv/bin/python",
+        "<yao-meta-root>/scripts/yao.py",
+        "conformance",
+        "skills/geo-discover",
+        "--target",
+        "claude",
+        "--output-json",
+        "reports/yao-meta/geo-discover-conformance-claude.json",
+        "--output-md",
+        "reports/yao-meta/geo-discover-conformance-claude.md"
+      ],
+      "exit_code": 0,
+      "status": "pass",
+      "stdout_tail": "{\n  \"ok\": true,\n  \"skill\": \"geo-discover\",\n  \"targets\": [\n    {\n      \"target\": \"claude\",\n      \"status\": \"pass\",\n      \"checks\": [\n        \"SKILL.md exists\",\n        \"frontmatter name exists\",\n        \"frontmatter description exists\",\n        \"description length <= 1024\",\n        \"name is runtime-safe\",\n        \"manifest.name exists\",\n        \"manifest.version exists\",\n        \"manifest.owner exists\",\n        \"manifest.status exists\",\n        \"manifest.maturity_tier exists\",\n        \"manifest.review_cadence exists\",\n        \"manifest declares claude\",\n        \"interface.display_name exists\",\n        \"interface.short_description exists\",\n        \"interface.default_prompt exists\",\n        \"adapter target declares claude\",\n        \"activation mode exists\",\n        \"execution context exists\",\n        \"execution shell exists\",\n        \"trust source tier exists\",\n        \"claude degradation note exists\",\n        \"Skill IR schema_version is 2.0.0\",\n        \"Skill IR name matches frontmatter\",\n        \"Skill IR description matches frontmatter\",\n        \"references resource resolves: references/discovery-method.md\",\n        \"references resource resolves: references/input-example.json\",\n        \"scripts resource resolves: scripts/run_discover.py\",\n        \"reports resource resolves: reports/output_quality_scorecard.md\"\n      ],\n      \"failures\": [],\n      \"warnings\": []\n    }\n  ],\n  \"summary\": {\n    \"target_count\": 1,\n    \"pass_count\": 1,\n    \"fail_count\": 0\n  },\n  \"artifacts\": {\n    \"json\": \"reports/yao-meta/geo-discover-conformance-claude.json\",\n    \"markdown\": \"reports/yao-meta/geo-discover-conformance-claude.md\"\n  }\n}\n",
+      "stderr_tail": ""
+    },
+    {
+      "skill_id": "geo-diagnose",
+      "command": [
+        ".venv/bin/python",
+        "<yao-meta-root>/scripts/yao.py",
+        "validate",
+        "skills/geo-diagnose",
+        "--require-manifest"
+      ],
+      "exit_code": 0,
+      "status": "pass",
+      "stdout_tail": ",\n          \"declared_maturity_minimum\": 85,\n          \"computed_governance_band\": \"production\",\n          \"computed_maturity_tier\": \"production\",\n          \"score_breakdown\": {\n            \"metadata_integrity\": 20,\n            \"ownership_and_review\": 20,\n            \"boundary_and_eval\": 15,\n            \"operational_assets\": 20,\n            \"maintenance_evidence\": 5\n          }\n        }\n      }\n    },\n    {\n      \"command\": \"resource_boundary_check.py skills/geo-diagnose\",\n      \"ok\": true,\n      \"returncode\": 0,\n      \"payload\": {\n        \"ok\": true,\n        \"failures\": [],\n        \"warnings\": [],\n        \"stats\": {\n          \"context_budget_tier\": \"production\",\n          \"context_budget_limit\": 1000,\n          \"skill_body_tokens\": 345,\n          \"other_text_tokens\": 3081,\n          \"estimated_initial_load_tokens\": 774,\n          \"estimated_total_text_tokens\": 3426,\n          \"deferred_resource_tokens\": 1520,\n          \"deferred_resource_warn_threshold\": 120000,\n          \"deferred_resource_dirs\": [\n            {\n              \"path\": \"references\",\n              \"estimated_tokens\": 1236,\n              \"file_count\": 2\n            },\n            {\n              \"path\": \"evals\",\n              \"estimated_tokens\": 179,\n              \"file_count\": 2\n            },\n            {\n              \"path\": \"scripts\",\n              \"estimated_tokens\": 105,\n              \"file_count\": 1\n            }\n          ],\n          \"large_deferred_resource_dirs\": [],\n          \"deferred_resource_governance\": {\n            \"status\": \"not-required\",\n            \"large_dir_count\": 0,\n            \"governed_large_dir_count\": 0,\n            \"directories\": [],\n            \"summary\": \"No large deferred resource directory exceeds the per-dir threshold.\"\n          },\n          \"relevant_file_count\": 12,\n          \"unused_resource_dirs\": [],\n          \"quality_signal_points\": 115,\n          \"quality_density\": 148.6\n        }\n      }\n    }\n  ]\n}\n",
+      "stderr_tail": ""
+    },
+    {
+      "skill_id": "geo-diagnose",
+      "command": [
+        ".venv/bin/python",
+        "<yao-meta-root>/scripts/trigger_eval.py",
+        "--description",
+        "Diagnose a brand, website, or page for evidence-backed GEO gaps and opportunities from user-supplied URLs, HTML, or evidence. Use for brand diagnosis, website or page audits, GEO gap analysis, and 品牌诊断、网站诊断、页面诊断. Excludes live AI-platform recall, ranking, and citation-share measurement.",
+        "--cases",
+        "skills/geo-diagnose/evals/trigger_cases.json",
+        "--semantic-config",
+        "skills/geo-diagnose/evals/semantic_config.json",
+        "--threshold",
+        "0.2"
+      ],
+      "exit_code": 0,
+      "status": "pass",
+      "stdout_tail": "}\n          }\n        }\n      }\n    ],\n    \"near_neighbor\": [\n      {\n        \"prompt\": \"Run query research for customer questions\",\n        \"family\": \"default\",\n        \"score\": 0.0,\n        \"predicted_trigger\": false,\n        \"expected_trigger\": false,\n        \"passed\": true,\n        \"score_detail\": {\n          \"mode\": \"semantic-intent\",\n          \"desired_positive_concepts\": [\n            \"owned\"\n          ],\n          \"matched_desired_concepts\": [],\n          \"extra_positive_concepts\": [],\n          \"matched_negative_concepts\": [\n            \"neighbor\"\n          ],\n          \"exclusive_negative_concepts\": [\n            \"neighbor\"\n          ],\n          \"semantic_coverage\": 0.0,\n          \"support_score\": 0,\n          \"lexical_support\": 0.167,\n          \"negative_penalty\": 1.0,\n          \"coverage_boost\": 0.0,\n          \"concept_evidence\": {\n            \"positive\": {},\n            \"negative\": {\n              \"neighbor\": [\n                \"query research\"\n              ]\n            }\n          }\n        }\n      },\n      {\n        \"prompt\": \"Measure live citation share\",\n        \"family\": \"default\",\n        \"score\": 0.0,\n        \"predicted_trigger\": false,\n        \"expected_trigger\": false,\n        \"passed\": true,\n        \"score_detail\": {\n          \"mode\": \"semantic-intent\",\n          \"desired_positive_concepts\": [\n            \"owned\"\n          ],\n          \"matched_desired_concepts\": [],\n          \"extra_positive_concepts\": [],\n          \"matched_negative_concepts\": [\n            \"neighbor\"\n          ],\n          \"exclusive_negative_concepts\": [\n            \"neighbor\"\n          ],\n          \"semantic_coverage\": 0.0,\n          \"support_score\": 0,\n          \"lexical_support\": 0.75,\n          \"negative_penalty\": 1.0,\n          \"coverage_boost\": 0.0,\n          \"concept_evidence\": {\n            \"positive\": {},\n            \"negative\": {\n              \"neighbor\": [\n                \"citation share\"\n              ]\n            }\n          }\n        }\n      }\n    ]\n  }\n}\n",
+      "stderr_tail": ""
+    },
+    {
+      "skill_id": "geo-diagnose",
+      "command": [
+        ".venv/bin/python",
+        "<yao-meta-root>/scripts/yao.py",
+        "skill-ir",
+        "skills/geo-diagnose",
+        "--output-json",
+        "skills/geo-diagnose/reports/skill-ir.json"
+      ],
+      "exit_code": 0,
+      "status": "pass",
+      "stdout_tail": "{\n  \"ok\": true,\n  \"schema\": \"<yao-meta-root>/skill-ir/schema.json\",\n  \"skill_dir\": \"skills/geo-diagnose\",\n  \"artifacts\": {\n    \"json\": \"skills/geo-diagnose/reports/skill-ir.json\"\n  },\n  \"summary\": {\n    \"name\": \"geo-diagnose\",\n    \"maturity\": \"library\",\n    \"target_count\": 3,\n    \"trigger_samples\": 2,\n    \"resource_count\": 4\n  },\n  \"failures\": []\n}\n",
+      "stderr_tail": ""
+    },
+    {
+      "skill_id": "geo-diagnose",
+      "command": [
+        ".venv/bin/python",
+        "<yao-meta-root>/scripts/yao.py",
+        "skill-ir",
+        "skills/geo-diagnose",
+        "--output-json",
+        "reports/yao-meta/geo-diagnose-skill-ir.json"
+      ],
+      "exit_code": 0,
+      "status": "pass",
+      "stdout_tail": "{\n  \"ok\": true,\n  \"schema\": \"<yao-meta-root>/skill-ir/schema.json\",\n  \"skill_dir\": \"skills/geo-diagnose\",\n  \"artifacts\": {\n    \"json\": \"reports/yao-meta/geo-diagnose-skill-ir.json\"\n  },\n  \"summary\": {\n    \"name\": \"geo-diagnose\",\n    \"maturity\": \"library\",\n    \"target_count\": 3,\n    \"trigger_samples\": 2,\n    \"resource_count\": 4\n  },\n  \"failures\": []\n}\n",
+      "stderr_tail": ""
+    },
+    {
+      "skill_id": "geo-diagnose",
+      "command": [
+        ".venv/bin/python",
+        "<yao-meta-root>/scripts/yao.py",
+        "output-eval",
+        "--cases",
+        "skills/geo-diagnose/evals/output/cases.jsonl",
+        "--output-json",
+        "reports/yao-meta/geo-diagnose-output-eval.json",
+        "--output-md",
+        "reports/yao-meta/geo-diagnose-output-eval.md",
+        "--blind-pack-json",
+        "reports/yao-meta/geo-diagnose-blind-pack.json",
+        "--blind-pack-md",
+        "reports/yao-meta/geo-diagnose-blind-pack.md",
+        "--blind-answer-key-json",
+        "reports/yao-meta/geo-diagnose-blind-answer-key.json"
+      ],
+      "exit_code": 0,
+      "status": "pass",
+      "stdout_tail": "tation\"\n            ],\n            \"present_forbidden\": []\n          }\n        ],\n        \"failed\": [\n          {\n            \"id\": \"shortfall\",\n            \"description\": \"The output must satisfy the declared contract.\",\n            \"weight\": 1.0,\n            \"failure_type\": \"assertion_failed\",\n            \"passed\": false,\n            \"missing\": [\n              \"source_gap\",\n              \"limitation\"\n            ],\n            \"present_forbidden\": []\n          }\n        ]\n      },\n      \"with_skill\": {\n        \"score\": 100.0,\n        \"passed_count\": 1,\n        \"failed_count\": 0,\n        \"checks\": [\n          {\n            \"id\": \"shortfall\",\n            \"description\": \"The output must satisfy the declared contract.\",\n            \"weight\": 1.0,\n            \"failure_type\": \"assertion_failed\",\n            \"passed\": true,\n            \"missing\": [],\n            \"present_forbidden\": []\n          }\n        ],\n        \"failed\": []\n      },\n      \"delta\": 100.0,\n      \"winner\": \"with_skill\",\n      \"failure_taxonomy\": []\n    }\n  ],\n  \"failures\": [],\n  \"blind_review\": {\n    \"pack\": \"reports/yao-meta/geo-diagnose-blind-pack.json\",\n    \"answer_key\": \"reports/yao-meta/geo-diagnose-blind-answer-key.json\",\n    \"pair_count\": 5\n  },\n  \"artifacts\": {\n    \"json\": \"reports/yao-meta/geo-diagnose-output-eval.json\",\n    \"markdown\": \"reports/yao-meta/geo-diagnose-output-eval.md\",\n    \"blind_review_pack_json\": \"reports/yao-meta/geo-diagnose-blind-pack.json\",\n    \"blind_review_pack_md\": \"reports/yao-meta/geo-diagnose-blind-pack.md\",\n    \"blind_answer_key_json\": \"reports/yao-meta/geo-diagnose-blind-answer-key.json\"\n  }\n}\n",
+      "stderr_tail": ""
+    },
+    {
+      "skill_id": "geo-diagnose",
+      "command": [
+        ".venv/bin/python",
+        "<yao-meta-root>/scripts/yao.py",
+        "trust",
+        "skills/geo-diagnose",
+        "--output-json",
+        "reports/yao-meta/geo-diagnose-trust.json",
+        "--output-md",
+        "reports/yao-meta/geo-diagnose-trust.md"
+      ],
+      "exit_code": 0,
+      "status": "pass",
+      "stdout_tail": "\n    {\n      \"path\": \"scripts/run_diagnose.py\",\n      \"interface\": \"cli\",\n      \"interface_declared\": false,\n      \"interface_reason\": \"Default CLI classification; add SCRIPT_INTERFACE for internal modules.\",\n      \"has_argparse\": false,\n      \"has_main_guard\": true,\n      \"uses_input\": false,\n      \"uses_network\": false,\n      \"uses_file_write\": false,\n      \"uses_subprocess\": false,\n      \"network_urls\": [],\n      \"network_hosts\": []\n    }\n  ],\n  \"dependencies\": {\n    \"present\": [],\n    \"pinned\": [],\n    \"unpinned\": []\n  },\n  \"network_policy\": {\n    \"present\": false,\n    \"path\": \"security/network_policy.json\",\n    \"schema_version\": \"\",\n    \"network_script_count\": 0,\n    \"covered_scripts\": [],\n    \"missing_scripts\": [],\n    \"mismatches\": [],\n    \"default_policy\": {}\n  },\n  \"help_smoke\": {\n    \"enabled\": true,\n    \"timeout_seconds\": 5.0,\n    \"candidate_count\": 0,\n    \"checked_count\": 0,\n    \"passed_count\": 0,\n    \"failed_count\": 0,\n    \"skipped_count\": 1,\n    \"failed_scripts\": [],\n    \"results\": [],\n    \"skipped\": [\n      {\n        \"path\": \"scripts/run_diagnose.py\",\n        \"reason\": \"missing argparse/help surface\"\n      }\n    ]\n  },\n  \"permission_governance\": {\n    \"present\": false,\n    \"path\": \"security/permission_policy.json\",\n    \"schema_version\": \"\",\n    \"reviewed_at\": \"\",\n    \"required_capabilities\": [],\n    \"approved_capabilities\": [],\n    \"missing_capabilities\": [],\n    \"invalid_capabilities\": [],\n    \"expired_capabilities\": [],\n    \"approval_count\": 0,\n    \"required_count\": 0,\n    \"missing_count\": 0,\n    \"invalid_count\": 0,\n    \"expired_count\": 0,\n    \"approvals\": []\n  },\n  \"trust_metadata\": {\n    \"source_tier\": \"local\",\n    \"remote_inline_execution\": \"forbid\",\n    \"remote_metadata_policy\": \"allow-metadata-only\"\n  },\n  \"artifacts\": {\n    \"json\": \"reports/yao-meta/geo-diagnose-trust.json\",\n    \"markdown\": \"reports/yao-meta/geo-diagnose-trust.md\"\n  }\n}\n",
+      "stderr_tail": ""
+    },
+    {
+      "skill_id": "geo-diagnose",
+      "command": [
+        ".venv/bin/python",
+        "<yao-meta-root>/scripts/yao.py",
+        "review-studio",
+        "skills/geo-diagnose",
+        "--output-json",
+        "reports/yao-meta/geo-diagnose-review-studio.json",
+        "--output-html",
+        "reports/yao-meta/geo-diagnose-review-studio.html"
+      ],
+      "exit_code": 0,
+      "status": "pass",
+      "stdout_tail": "eports/python_compatibility.md\",\n    \"architecture_maintainability\": \"reports/architecture_maintainability.md\",\n    \"permission_policy\": \"security/permission_policy.md\",\n    \"runtime_permissions\": \"reports/runtime_permission_probes.md\",\n    \"skill_atlas\": \"reports/skill_atlas.html\",\n    \"compiled_targets\": \"reports/compiled_targets.md\",\n    \"adoption_drift\": \"reports/adoption_drift_report.md\",\n    \"review_waivers\": \"reports/review_waivers.md\",\n    \"review_annotations\": \"reports/review_annotations.md\",\n    \"adaptation_proposals\": \"reports/adaptation_proposals.md\",\n    \"adaptation_approval_ledger\": \"reports/adaptation_approval_ledger.json\",\n    \"adaptation_regression\": \"reports/adaptation_regression_report.md\",\n    \"world_class_evidence_plan\": \"reports/world_class_evidence_plan.md\",\n    \"world_class_evidence_ledger\": \"reports/world_class_evidence_ledger.md\",\n    \"world_class_evidence_intake\": \"reports/world_class_evidence_intake.md\",\n    \"world_class_evidence_preflight\": \"reports/world_class_evidence_preflight.md\",\n    \"world_class_evidence_preflight_html\": \"reports/world_class_evidence_preflight.html\",\n    \"world_class_submission_review\": \"reports/world_class_submission_review.md\",\n    \"world_class_operator_runbook\": \"reports/world_class_operator_runbook.md\",\n    \"world_class_operator_runbook_html\": \"reports/world_class_operator_runbook.html\",\n    \"world_class_claim_guard\": \"reports/world_class_claim_guard.md\",\n    \"registry_audit\": \"reports/registry_audit.md\",\n    \"package_verification\": \"reports/package_verification.md\",\n    \"install_simulation\": \"reports/install_simulation.md\",\n    \"upgrade_check\": \"reports/upgrade_check.md\",\n    \"migration\": \"docs/migration-v2.md\",\n    \"skill_ir\": \"reports/skill-ir.json\"\n  },\n  \"artifacts\": {\n    \"html\": \"reports/yao-meta/geo-diagnose-review-studio.html\",\n    \"json\": \"reports/yao-meta/geo-diagnose-review-studio.json\"\n  }\n}\n",
+      "stderr_tail": ""
+    },
+    {
+      "skill_id": "geo-diagnose",
+      "command": [
+        ".venv/bin/python",
+        "<yao-meta-root>/scripts/yao.py",
+        "compile-skill",
+        "skills/geo-diagnose",
+        "--target",
+        "generic",
+        "--output-json",
+        "reports/yao-meta/geo-diagnose-compiled-generic.json",
+        "--output-md",
+        "reports/yao-meta/geo-diagnose-compiled-generic.md"
+      ],
+      "exit_code": 0,
+      "status": "pass",
+      "stdout_tail": ",\n        \"adapter_mode\": \"agent-skills-compatible\",\n        \"generated_files\": [\n          \"targets/generic/adapter.json\"\n        ],\n        \"metadata_mapping\": {\n          \"display_name\": \"targets/generic/adapter.json::display_name\",\n          \"default_prompt\": \"targets/generic/adapter.json::default_prompt\",\n          \"activation\": \"targets/generic/adapter.json::activation_mode\",\n          \"execution\": \"targets/generic/adapter.json::execution_context\",\n          \"trust\": \"targets/generic/adapter.json::trust_level\",\n          \"permissions\": \"targets/generic/adapter.json::target_permission_contract\",\n          \"degradation\": \"targets/generic/adapter.json::degradation_strategy\"\n        },\n        \"preserved_semantics\": [\n          \"trigger\",\n          \"workflow-counts\",\n          \"resources\",\n          \"eval-plan\",\n          \"risk\",\n          \"governance\",\n          \"runtime\",\n          \"trust\",\n          \"permissions\"\n        ],\n        \"degradation_strategy\": \"neutral-source\",\n        \"permission_representation\": \"targets/generic/adapter.json::target_permission_contract\",\n        \"native_surface\": \"Agent Skills compatible neutral package\",\n        \"activation_policy\": \"Use SKILL.md name and description; consumers decide automatic or manual activation.\",\n        \"resource_strategy\": \"Preserve references, scripts, assets, evals, reports, and adapter metadata as relative package resources.\",\n        \"script_strategy\": \"Expose script and permission metadata for downstream clients or installers to enforce.\",\n        \"permission_enforcement\": \"consumer-enforced-or-metadata-only\"\n      },\n      \"unsupported_features\": [],\n      \"warnings\": [],\n      \"failures\": []\n    }\n  ],\n  \"failures\": [],\n  \"warnings\": [],\n  \"artifacts\": {\n    \"json\": \"reports/yao-meta/geo-diagnose-compiled-generic.json\",\n    \"markdown\": \"reports/yao-meta/geo-diagnose-compiled-generic.md\"\n  }\n}\n",
+      "stderr_tail": ""
+    },
+    {
+      "skill_id": "geo-diagnose",
+      "command": [
+        ".venv/bin/python",
+        "<yao-meta-root>/scripts/yao.py",
+        "conformance",
+        "skills/geo-diagnose",
+        "--target",
+        "generic",
+        "--output-json",
+        "reports/yao-meta/geo-diagnose-conformance-generic.json",
+        "--output-md",
+        "reports/yao-meta/geo-diagnose-conformance-generic.md"
+      ],
+      "exit_code": 0,
+      "status": "pass",
+      "stdout_tail": "{\n  \"ok\": true,\n  \"skill\": \"geo-diagnose\",\n  \"targets\": [\n    {\n      \"target\": \"generic\",\n      \"status\": \"pass\",\n      \"checks\": [\n        \"SKILL.md exists\",\n        \"frontmatter name exists\",\n        \"frontmatter description exists\",\n        \"description length <= 1024\",\n        \"name is runtime-safe\",\n        \"manifest.name exists\",\n        \"manifest.version exists\",\n        \"manifest.owner exists\",\n        \"manifest.status exists\",\n        \"manifest.maturity_tier exists\",\n        \"manifest.review_cadence exists\",\n        \"manifest declares generic\",\n        \"interface.display_name exists\",\n        \"interface.short_description exists\",\n        \"interface.default_prompt exists\",\n        \"adapter target declares generic\",\n        \"activation mode exists\",\n        \"execution context exists\",\n        \"execution shell exists\",\n        \"trust source tier exists\",\n        \"generic degradation note exists\",\n        \"Skill IR schema_version is 2.0.0\",\n        \"Skill IR name matches frontmatter\",\n        \"Skill IR description matches frontmatter\",\n        \"references resource resolves: references/diagnosis-method.md\",\n        \"references resource resolves: references/input-example.json\",\n        \"scripts resource resolves: scripts/run_diagnose.py\",\n        \"reports resource resolves: reports/output_quality_scorecard.md\"\n      ],\n      \"failures\": [],\n      \"warnings\": []\n    }\n  ],\n  \"summary\": {\n    \"target_count\": 1,\n    \"pass_count\": 1,\n    \"fail_count\": 0\n  },\n  \"artifacts\": {\n    \"json\": \"reports/yao-meta/geo-diagnose-conformance-generic.json\",\n    \"markdown\": \"reports/yao-meta/geo-diagnose-conformance-generic.md\"\n  }\n}\n",
+      "stderr_tail": ""
+    },
+    {
+      "skill_id": "geo-diagnose",
+      "command": [
+        ".venv/bin/python",
+        "<yao-meta-root>/scripts/yao.py",
+        "compile-skill",
+        "skills/geo-diagnose",
+        "--target",
+        "openai",
+        "--output-json",
+        "reports/yao-meta/geo-diagnose-compiled-openai.json",
+        "--output-md",
+        "reports/yao-meta/geo-diagnose-compiled-openai.md"
+      ],
+      "exit_code": 0,
+      "status": "pass",
+      "stdout_tail": "tivation\": \"targets/openai/agents/openai.yaml::compatibility.activation_mode\",\n          \"execution\": \"targets/openai/agents/openai.yaml::compatibility.execution_context\",\n          \"trust\": \"targets/openai/agents/openai.yaml::compatibility.trust_level\",\n          \"permissions\": \"targets/openai/agents/openai.yaml::compatibility.permission_contract\",\n          \"degradation\": \"targets/openai/agents/openai.yaml::compatibility.degradation_strategy\"\n        },\n        \"preserved_semantics\": [\n          \"trigger\",\n          \"workflow-counts\",\n          \"resources\",\n          \"eval-plan\",\n          \"risk\",\n          \"governance\",\n          \"runtime\",\n          \"trust\",\n          \"permissions\"\n        ],\n        \"degradation_strategy\": \"metadata-adapter\",\n        \"permission_representation\": \"targets/openai/agents/openai.yaml::compatibility.permission_contract plus adapter.json\",\n        \"native_surface\": \"OpenAI-style interface metadata plus neutral Agent Skills source\",\n        \"activation_policy\": \"Use frontmatter description for catalog routing and targets/openai/agents/openai.yaml for display name, default prompt, and compatibility metadata.\",\n        \"resource_strategy\": \"Ship the neutral source tree and expose OpenAI-facing interface metadata as a generated companion file.\",\n        \"script_strategy\": \"Keep scripts as local package resources; expose help-smoke and permission metadata for reviewer approval before execution.\",\n        \"permission_enforcement\": \"metadata-only\"\n      },\n      \"unsupported_features\": [\n        \"client-native script permission prompts are represented as permission contract metadata\"\n      ],\n      \"warnings\": [],\n      \"failures\": []\n    }\n  ],\n  \"failures\": [],\n  \"warnings\": [],\n  \"artifacts\": {\n    \"json\": \"reports/yao-meta/geo-diagnose-compiled-openai.json\",\n    \"markdown\": \"reports/yao-meta/geo-diagnose-compiled-openai.md\"\n  }\n}\n",
+      "stderr_tail": ""
+    },
+    {
+      "skill_id": "geo-diagnose",
+      "command": [
+        ".venv/bin/python",
+        "<yao-meta-root>/scripts/yao.py",
+        "conformance",
+        "skills/geo-diagnose",
+        "--target",
+        "openai",
+        "--output-json",
+        "reports/yao-meta/geo-diagnose-conformance-openai.json",
+        "--output-md",
+        "reports/yao-meta/geo-diagnose-conformance-openai.md"
+      ],
+      "exit_code": 0,
+      "status": "pass",
+      "stdout_tail": "{\n  \"ok\": true,\n  \"skill\": \"geo-diagnose\",\n  \"targets\": [\n    {\n      \"target\": \"openai\",\n      \"status\": \"pass\",\n      \"checks\": [\n        \"SKILL.md exists\",\n        \"frontmatter name exists\",\n        \"frontmatter description exists\",\n        \"description length <= 1024\",\n        \"name is runtime-safe\",\n        \"manifest.name exists\",\n        \"manifest.version exists\",\n        \"manifest.owner exists\",\n        \"manifest.status exists\",\n        \"manifest.maturity_tier exists\",\n        \"manifest.review_cadence exists\",\n        \"manifest declares openai\",\n        \"interface.display_name exists\",\n        \"interface.short_description exists\",\n        \"interface.default_prompt exists\",\n        \"adapter target declares openai\",\n        \"activation mode exists\",\n        \"execution context exists\",\n        \"execution shell exists\",\n        \"trust source tier exists\",\n        \"openai degradation note exists\",\n        \"Skill IR schema_version is 2.0.0\",\n        \"Skill IR name matches frontmatter\",\n        \"Skill IR description matches frontmatter\",\n        \"references resource resolves: references/diagnosis-method.md\",\n        \"references resource resolves: references/input-example.json\",\n        \"scripts resource resolves: scripts/run_diagnose.py\",\n        \"reports resource resolves: reports/output_quality_scorecard.md\"\n      ],\n      \"failures\": [],\n      \"warnings\": []\n    }\n  ],\n  \"summary\": {\n    \"target_count\": 1,\n    \"pass_count\": 1,\n    \"fail_count\": 0\n  },\n  \"artifacts\": {\n    \"json\": \"reports/yao-meta/geo-diagnose-conformance-openai.json\",\n    \"markdown\": \"reports/yao-meta/geo-diagnose-conformance-openai.md\"\n  }\n}\n",
+      "stderr_tail": ""
+    },
+    {
+      "skill_id": "geo-diagnose",
+      "command": [
+        ".venv/bin/python",
+        "<yao-meta-root>/scripts/yao.py",
+        "compile-skill",
+        "skills/geo-diagnose",
+        "--target",
+        "claude",
+        "--output-json",
+        "reports/yao-meta/geo-diagnose-compiled-claude.json",
+        "--output-md",
+        "reports/yao-meta/geo-diagnose-compiled-claude.md"
+      ],
+      "exit_code": 0,
+      "status": "pass",
+      "stdout_tail": "   \"metadata_mapping\": {\n          \"display_name\": \"targets/claude/adapter.json::display_name\",\n          \"default_prompt\": \"targets/claude/adapter.json::default_prompt\",\n          \"activation\": \"targets/claude/adapter.json::activation_mode\",\n          \"execution\": \"targets/claude/adapter.json::execution_context\",\n          \"trust\": \"targets/claude/adapter.json::trust_level\",\n          \"permissions\": \"targets/claude/adapter.json::target_permission_contract\",\n          \"degradation\": \"targets/claude/adapter.json::degradation_strategy\"\n        },\n        \"preserved_semantics\": [\n          \"trigger\",\n          \"workflow-counts\",\n          \"resources\",\n          \"eval-plan\",\n          \"risk\",\n          \"governance\",\n          \"runtime\",\n          \"trust\",\n          \"permissions\"\n        ],\n        \"degradation_strategy\": \"neutral-source-plus-adapter\",\n        \"permission_representation\": \"targets/claude/adapter.json::target_permission_contract and README notes\",\n        \"native_surface\": \"Claude-compatible neutral source folder with adapter notes\",\n        \"activation_policy\": \"Use SKILL.md frontmatter description as the primary activation contract and adapter.json for review metadata.\",\n        \"resource_strategy\": \"Preserve the source tree directly; write target notes in targets/claude/README.md.\",\n        \"script_strategy\": \"Scripts remain local package resources and must be reviewed through trust and permission reports before use.\",\n        \"permission_enforcement\": \"metadata-fallback\"\n      },\n      \"unsupported_features\": [\n        \"vendor-native metadata fields are carried as adapter JSON and README notes\"\n      ],\n      \"warnings\": [],\n      \"failures\": []\n    }\n  ],\n  \"failures\": [],\n  \"warnings\": [],\n  \"artifacts\": {\n    \"json\": \"reports/yao-meta/geo-diagnose-compiled-claude.json\",\n    \"markdown\": \"reports/yao-meta/geo-diagnose-compiled-claude.md\"\n  }\n}\n",
+      "stderr_tail": ""
+    },
+    {
+      "skill_id": "geo-diagnose",
+      "command": [
+        ".venv/bin/python",
+        "<yao-meta-root>/scripts/yao.py",
+        "conformance",
+        "skills/geo-diagnose",
+        "--target",
+        "claude",
+        "--output-json",
+        "reports/yao-meta/geo-diagnose-conformance-claude.json",
+        "--output-md",
+        "reports/yao-meta/geo-diagnose-conformance-claude.md"
+      ],
+      "exit_code": 0,
+      "status": "pass",
+      "stdout_tail": "{\n  \"ok\": true,\n  \"skill\": \"geo-diagnose\",\n  \"targets\": [\n    {\n      \"target\": \"claude\",\n      \"status\": \"pass\",\n      \"checks\": [\n        \"SKILL.md exists\",\n        \"frontmatter name exists\",\n        \"frontmatter description exists\",\n        \"description length <= 1024\",\n        \"name is runtime-safe\",\n        \"manifest.name exists\",\n        \"manifest.version exists\",\n        \"manifest.owner exists\",\n        \"manifest.status exists\",\n        \"manifest.maturity_tier exists\",\n        \"manifest.review_cadence exists\",\n        \"manifest declares claude\",\n        \"interface.display_name exists\",\n        \"interface.short_description exists\",\n        \"interface.default_prompt exists\",\n        \"adapter target declares claude\",\n        \"activation mode exists\",\n        \"execution context exists\",\n        \"execution shell exists\",\n        \"trust source tier exists\",\n        \"claude degradation note exists\",\n        \"Skill IR schema_version is 2.0.0\",\n        \"Skill IR name matches frontmatter\",\n        \"Skill IR description matches frontmatter\",\n        \"references resource resolves: references/diagnosis-method.md\",\n        \"references resource resolves: references/input-example.json\",\n        \"scripts resource resolves: scripts/run_diagnose.py\",\n        \"reports resource resolves: reports/output_quality_scorecard.md\"\n      ],\n      \"failures\": [],\n      \"warnings\": []\n    }\n  ],\n  \"summary\": {\n    \"target_count\": 1,\n    \"pass_count\": 1,\n    \"fail_count\": 0\n  },\n  \"artifacts\": {\n    \"json\": \"reports/yao-meta/geo-diagnose-conformance-claude.json\",\n    \"markdown\": \"reports/yao-meta/geo-diagnose-conformance-claude.md\"\n  }\n}\n",
+      "stderr_tail": ""
+    },
+    {
+      "skill_id": "geo-content",
+      "command": [
+        ".venv/bin/python",
+        "<yao-meta-root>/scripts/yao.py",
+        "validate",
+        "skills/geo-content",
+        "--require-manifest"
+      ],
+      "exit_code": 0,
+      "status": "pass",
+      "stdout_tail": "0,\n          \"declared_maturity_minimum\": 85,\n          \"computed_governance_band\": \"production\",\n          \"computed_maturity_tier\": \"production\",\n          \"score_breakdown\": {\n            \"metadata_integrity\": 20,\n            \"ownership_and_review\": 20,\n            \"boundary_and_eval\": 15,\n            \"operational_assets\": 20,\n            \"maintenance_evidence\": 5\n          }\n        }\n      }\n    },\n    {\n      \"command\": \"resource_boundary_check.py skills/geo-content\",\n      \"ok\": true,\n      \"returncode\": 0,\n      \"payload\": {\n        \"ok\": true,\n        \"failures\": [],\n        \"warnings\": [],\n        \"stats\": {\n          \"context_budget_tier\": \"production\",\n          \"context_budget_limit\": 1000,\n          \"skill_body_tokens\": 327,\n          \"other_text_tokens\": 3264,\n          \"estimated_initial_load_tokens\": 839,\n          \"estimated_total_text_tokens\": 3591,\n          \"deferred_resource_tokens\": 1506,\n          \"deferred_resource_warn_threshold\": 120000,\n          \"deferred_resource_dirs\": [\n            {\n              \"path\": \"references\",\n              \"estimated_tokens\": 1217,\n              \"file_count\": 5\n            },\n            {\n              \"path\": \"evals\",\n              \"estimated_tokens\": 181,\n              \"file_count\": 2\n            },\n            {\n              \"path\": \"scripts\",\n              \"estimated_tokens\": 108,\n              \"file_count\": 1\n            }\n          ],\n          \"large_deferred_resource_dirs\": [],\n          \"deferred_resource_governance\": {\n            \"status\": \"not-required\",\n            \"large_dir_count\": 0,\n            \"governed_large_dir_count\": 0,\n            \"directories\": [],\n            \"summary\": \"No large deferred resource directory exceeds the per-dir threshold.\"\n          },\n          \"relevant_file_count\": 15,\n          \"unused_resource_dirs\": [],\n          \"quality_signal_points\": 115,\n          \"quality_density\": 137.1\n        }\n      }\n    }\n  ]\n}\n",
+      "stderr_tail": ""
+    },
+    {
+      "skill_id": "geo-content",
+      "command": [
+        ".venv/bin/python",
+        "<yao-meta-root>/scripts/trigger_eval.py",
+        "--description",
+        "Create evidence-lined GEO titles, explainers, neutral comparisons, method-backed rankings, page blueprints, refinements, and article-friendly Markdown. Use for title generation, 科普/解释、对比、榜单、页面蓝图、内容优化, and article-friendly rewriting. Excludes unsupported factual claims, winner declarations without like-for-like evidence, network research, publishing, and live ranking measurement.",
+        "--cases",
+        "skills/geo-content/evals/trigger_cases.json",
+        "--semantic-config",
+        "skills/geo-content/evals/semantic_config.json",
+        "--threshold",
+        "0.2"
+      ],
+      "exit_code": 0,
+      "status": "pass",
+      "stdout_tail": "          }\n          }\n        }\n      }\n    ],\n    \"near_neighbor\": [\n      {\n        \"prompt\": \"Discover questions before writing\",\n        \"family\": \"default\",\n        \"score\": 0.0,\n        \"predicted_trigger\": false,\n        \"expected_trigger\": false,\n        \"passed\": true,\n        \"score_detail\": {\n          \"mode\": \"semantic-intent\",\n          \"desired_positive_concepts\": [\n            \"owned\"\n          ],\n          \"matched_desired_concepts\": [],\n          \"extra_positive_concepts\": [],\n          \"matched_negative_concepts\": [\n            \"neighbor\"\n          ],\n          \"exclusive_negative_concepts\": [\n            \"neighbor\"\n          ],\n          \"semantic_coverage\": 0.0,\n          \"support_score\": 0,\n          \"lexical_support\": 0.0,\n          \"negative_penalty\": 1.0,\n          \"coverage_boost\": 0.0,\n          \"concept_evidence\": {\n            \"positive\": {},\n            \"negative\": {\n              \"neighbor\": [\n                \"discover questions\"\n              ]\n            }\n          }\n        }\n      },\n      {\n        \"prompt\": \"Build a knowledge graph\",\n        \"family\": \"default\",\n        \"score\": 0.0,\n        \"predicted_trigger\": false,\n        \"expected_trigger\": false,\n        \"passed\": true,\n        \"score_detail\": {\n          \"mode\": \"semantic-intent\",\n          \"desired_positive_concepts\": [\n            \"owned\"\n          ],\n          \"matched_desired_concepts\": [],\n          \"extra_positive_concepts\": [],\n          \"matched_negative_concepts\": [\n            \"neighbor\"\n          ],\n          \"exclusive_negative_concepts\": [\n            \"neighbor\"\n          ],\n          \"semantic_coverage\": 0.0,\n          \"support_score\": 0,\n          \"lexical_support\": 0.0,\n          \"negative_penalty\": 1.0,\n          \"coverage_boost\": 0.0,\n          \"concept_evidence\": {\n            \"positive\": {},\n            \"negative\": {\n              \"neighbor\": [\n                \"knowledge graph\"\n              ]\n            }\n          }\n        }\n      }\n    ]\n  }\n}\n",
+      "stderr_tail": ""
+    },
+    {
+      "skill_id": "geo-content",
+      "command": [
+        ".venv/bin/python",
+        "<yao-meta-root>/scripts/yao.py",
+        "skill-ir",
+        "skills/geo-content",
+        "--output-json",
+        "skills/geo-content/reports/skill-ir.json"
+      ],
+      "exit_code": 0,
+      "status": "pass",
+      "stdout_tail": "{\n  \"ok\": true,\n  \"schema\": \"<yao-meta-root>/skill-ir/schema.json\",\n  \"skill_dir\": \"skills/geo-content\",\n  \"artifacts\": {\n    \"json\": \"skills/geo-content/reports/skill-ir.json\"\n  },\n  \"summary\": {\n    \"name\": \"geo-content\",\n    \"maturity\": \"library\",\n    \"target_count\": 3,\n    \"trigger_samples\": 2,\n    \"resource_count\": 7\n  },\n  \"failures\": []\n}\n",
+      "stderr_tail": ""
+    },
+    {
+      "skill_id": "geo-content",
+      "command": [
+        ".venv/bin/python",
+        "<yao-meta-root>/scripts/yao.py",
+        "skill-ir",
+        "skills/geo-content",
+        "--output-json",
+        "reports/yao-meta/geo-content-skill-ir.json"
+      ],
+      "exit_code": 0,
+      "status": "pass",
+      "stdout_tail": "{\n  \"ok\": true,\n  \"schema\": \"<yao-meta-root>/skill-ir/schema.json\",\n  \"skill_dir\": \"skills/geo-content\",\n  \"artifacts\": {\n    \"json\": \"reports/yao-meta/geo-content-skill-ir.json\"\n  },\n  \"summary\": {\n    \"name\": \"geo-content\",\n    \"maturity\": \"library\",\n    \"target_count\": 3,\n    \"trigger_samples\": 2,\n    \"resource_count\": 7\n  },\n  \"failures\": []\n}\n",
+      "stderr_tail": ""
+    },
+    {
+      "skill_id": "geo-content",
+      "command": [
+        ".venv/bin/python",
+        "<yao-meta-root>/scripts/yao.py",
+        "output-eval",
+        "--cases",
+        "skills/geo-content/evals/output/cases.jsonl",
+        "--output-json",
+        "reports/yao-meta/geo-content-output-eval.json",
+        "--output-md",
+        "reports/yao-meta/geo-content-output-eval.md",
+        "--blind-pack-json",
+        "reports/yao-meta/geo-content-blind-pack.json",
+        "--blind-pack-md",
+        "reports/yao-meta/geo-content-blind-pack.md",
+        "--blind-answer-key-json",
+        "reports/yao-meta/geo-content-blind-answer-key.json"
+      ],
+      "exit_code": 0,
+      "status": "pass",
+      "stdout_tail": "ent_forbidden\": []\n          }\n        ],\n        \"failed\": [\n          {\n            \"id\": \"shortfall\",\n            \"description\": \"The output must satisfy the declared contract.\",\n            \"weight\": 1.0,\n            \"failure_type\": \"assertion_failed\",\n            \"passed\": false,\n            \"missing\": [\n              \"unverified\",\n              \"blocked-by-evidence\",\n              \"fabricated citations\"\n            ],\n            \"present_forbidden\": []\n          }\n        ]\n      },\n      \"with_skill\": {\n        \"score\": 100.0,\n        \"passed_count\": 1,\n        \"failed_count\": 0,\n        \"checks\": [\n          {\n            \"id\": \"shortfall\",\n            \"description\": \"The output must satisfy the declared contract.\",\n            \"weight\": 1.0,\n            \"failure_type\": \"assertion_failed\",\n            \"passed\": true,\n            \"missing\": [],\n            \"present_forbidden\": []\n          }\n        ],\n        \"failed\": []\n      },\n      \"delta\": 100.0,\n      \"winner\": \"with_skill\",\n      \"failure_taxonomy\": []\n    }\n  ],\n  \"failures\": [],\n  \"blind_review\": {\n    \"pack\": \"reports/yao-meta/geo-content-blind-pack.json\",\n    \"answer_key\": \"reports/yao-meta/geo-content-blind-answer-key.json\",\n    \"pair_count\": 5\n  },\n  \"artifacts\": {\n    \"json\": \"reports/yao-meta/geo-content-output-eval.json\",\n    \"markdown\": \"reports/yao-meta/geo-content-output-eval.md\",\n    \"blind_review_pack_json\": \"reports/yao-meta/geo-content-blind-pack.json\",\n    \"blind_review_pack_md\": \"reports/yao-meta/geo-content-blind-pack.md\",\n    \"blind_answer_key_json\": \"reports/yao-meta/geo-content-blind-answer-key.json\"\n  }\n}\n",
+      "stderr_tail": ""
+    },
+    {
+      "skill_id": "geo-content",
+      "command": [
+        ".venv/bin/python",
+        "<yao-meta-root>/scripts/yao.py",
+        "trust",
+        "skills/geo-content",
+        "--output-json",
+        "reports/yao-meta/geo-content-trust.json",
+        "--output-md",
+        "reports/yao-meta/geo-content-trust.md"
+      ],
+      "exit_code": 0,
+      "status": "pass",
+      "stdout_tail": "\": [\n    {\n      \"path\": \"scripts/run_content.py\",\n      \"interface\": \"cli\",\n      \"interface_declared\": false,\n      \"interface_reason\": \"Default CLI classification; add SCRIPT_INTERFACE for internal modules.\",\n      \"has_argparse\": false,\n      \"has_main_guard\": true,\n      \"uses_input\": false,\n      \"uses_network\": false,\n      \"uses_file_write\": false,\n      \"uses_subprocess\": false,\n      \"network_urls\": [],\n      \"network_hosts\": []\n    }\n  ],\n  \"dependencies\": {\n    \"present\": [],\n    \"pinned\": [],\n    \"unpinned\": []\n  },\n  \"network_policy\": {\n    \"present\": false,\n    \"path\": \"security/network_policy.json\",\n    \"schema_version\": \"\",\n    \"network_script_count\": 0,\n    \"covered_scripts\": [],\n    \"missing_scripts\": [],\n    \"mismatches\": [],\n    \"default_policy\": {}\n  },\n  \"help_smoke\": {\n    \"enabled\": true,\n    \"timeout_seconds\": 5.0,\n    \"candidate_count\": 0,\n    \"checked_count\": 0,\n    \"passed_count\": 0,\n    \"failed_count\": 0,\n    \"skipped_count\": 1,\n    \"failed_scripts\": [],\n    \"results\": [],\n    \"skipped\": [\n      {\n        \"path\": \"scripts/run_content.py\",\n        \"reason\": \"missing argparse/help surface\"\n      }\n    ]\n  },\n  \"permission_governance\": {\n    \"present\": false,\n    \"path\": \"security/permission_policy.json\",\n    \"schema_version\": \"\",\n    \"reviewed_at\": \"\",\n    \"required_capabilities\": [],\n    \"approved_capabilities\": [],\n    \"missing_capabilities\": [],\n    \"invalid_capabilities\": [],\n    \"expired_capabilities\": [],\n    \"approval_count\": 0,\n    \"required_count\": 0,\n    \"missing_count\": 0,\n    \"invalid_count\": 0,\n    \"expired_count\": 0,\n    \"approvals\": []\n  },\n  \"trust_metadata\": {\n    \"source_tier\": \"local\",\n    \"remote_inline_execution\": \"forbid\",\n    \"remote_metadata_policy\": \"allow-metadata-only\"\n  },\n  \"artifacts\": {\n    \"json\": \"reports/yao-meta/geo-content-trust.json\",\n    \"markdown\": \"reports/yao-meta/geo-content-trust.md\"\n  }\n}\n",
+      "stderr_tail": ""
+    },
+    {
+      "skill_id": "geo-content",
+      "command": [
+        ".venv/bin/python",
+        "<yao-meta-root>/scripts/yao.py",
+        "review-studio",
+        "skills/geo-content",
+        "--output-json",
+        "reports/yao-meta/geo-content-review-studio.json",
+        "--output-html",
+        "reports/yao-meta/geo-content-review-studio.html"
+      ],
+      "exit_code": 0,
+      "status": "pass",
+      "stdout_tail": "\"reports/python_compatibility.md\",\n    \"architecture_maintainability\": \"reports/architecture_maintainability.md\",\n    \"permission_policy\": \"security/permission_policy.md\",\n    \"runtime_permissions\": \"reports/runtime_permission_probes.md\",\n    \"skill_atlas\": \"reports/skill_atlas.html\",\n    \"compiled_targets\": \"reports/compiled_targets.md\",\n    \"adoption_drift\": \"reports/adoption_drift_report.md\",\n    \"review_waivers\": \"reports/review_waivers.md\",\n    \"review_annotations\": \"reports/review_annotations.md\",\n    \"adaptation_proposals\": \"reports/adaptation_proposals.md\",\n    \"adaptation_approval_ledger\": \"reports/adaptation_approval_ledger.json\",\n    \"adaptation_regression\": \"reports/adaptation_regression_report.md\",\n    \"world_class_evidence_plan\": \"reports/world_class_evidence_plan.md\",\n    \"world_class_evidence_ledger\": \"reports/world_class_evidence_ledger.md\",\n    \"world_class_evidence_intake\": \"reports/world_class_evidence_intake.md\",\n    \"world_class_evidence_preflight\": \"reports/world_class_evidence_preflight.md\",\n    \"world_class_evidence_preflight_html\": \"reports/world_class_evidence_preflight.html\",\n    \"world_class_submission_review\": \"reports/world_class_submission_review.md\",\n    \"world_class_operator_runbook\": \"reports/world_class_operator_runbook.md\",\n    \"world_class_operator_runbook_html\": \"reports/world_class_operator_runbook.html\",\n    \"world_class_claim_guard\": \"reports/world_class_claim_guard.md\",\n    \"registry_audit\": \"reports/registry_audit.md\",\n    \"package_verification\": \"reports/package_verification.md\",\n    \"install_simulation\": \"reports/install_simulation.md\",\n    \"upgrade_check\": \"reports/upgrade_check.md\",\n    \"migration\": \"docs/migration-v2.md\",\n    \"skill_ir\": \"reports/skill-ir.json\"\n  },\n  \"artifacts\": {\n    \"html\": \"reports/yao-meta/geo-content-review-studio.html\",\n    \"json\": \"reports/yao-meta/geo-content-review-studio.json\"\n  }\n}\n",
+      "stderr_tail": ""
+    },
+    {
+      "skill_id": "geo-content",
+      "command": [
+        ".venv/bin/python",
+        "<yao-meta-root>/scripts/yao.py",
+        "compile-skill",
+        "skills/geo-content",
+        "--target",
+        "generic",
+        "--output-json",
+        "reports/yao-meta/geo-content-compiled-generic.json",
+        "--output-md",
+        "reports/yao-meta/geo-content-compiled-generic.md"
+      ],
+      "exit_code": 0,
+      "status": "pass",
+      "stdout_tail": "c\",\n        \"adapter_mode\": \"agent-skills-compatible\",\n        \"generated_files\": [\n          \"targets/generic/adapter.json\"\n        ],\n        \"metadata_mapping\": {\n          \"display_name\": \"targets/generic/adapter.json::display_name\",\n          \"default_prompt\": \"targets/generic/adapter.json::default_prompt\",\n          \"activation\": \"targets/generic/adapter.json::activation_mode\",\n          \"execution\": \"targets/generic/adapter.json::execution_context\",\n          \"trust\": \"targets/generic/adapter.json::trust_level\",\n          \"permissions\": \"targets/generic/adapter.json::target_permission_contract\",\n          \"degradation\": \"targets/generic/adapter.json::degradation_strategy\"\n        },\n        \"preserved_semantics\": [\n          \"trigger\",\n          \"workflow-counts\",\n          \"resources\",\n          \"eval-plan\",\n          \"risk\",\n          \"governance\",\n          \"runtime\",\n          \"trust\",\n          \"permissions\"\n        ],\n        \"degradation_strategy\": \"neutral-source\",\n        \"permission_representation\": \"targets/generic/adapter.json::target_permission_contract\",\n        \"native_surface\": \"Agent Skills compatible neutral package\",\n        \"activation_policy\": \"Use SKILL.md name and description; consumers decide automatic or manual activation.\",\n        \"resource_strategy\": \"Preserve references, scripts, assets, evals, reports, and adapter metadata as relative package resources.\",\n        \"script_strategy\": \"Expose script and permission metadata for downstream clients or installers to enforce.\",\n        \"permission_enforcement\": \"consumer-enforced-or-metadata-only\"\n      },\n      \"unsupported_features\": [],\n      \"warnings\": [],\n      \"failures\": []\n    }\n  ],\n  \"failures\": [],\n  \"warnings\": [],\n  \"artifacts\": {\n    \"json\": \"reports/yao-meta/geo-content-compiled-generic.json\",\n    \"markdown\": \"reports/yao-meta/geo-content-compiled-generic.md\"\n  }\n}\n",
+      "stderr_tail": ""
+    },
+    {
+      "skill_id": "geo-content",
+      "command": [
+        ".venv/bin/python",
+        "<yao-meta-root>/scripts/yao.py",
+        "conformance",
+        "skills/geo-content",
+        "--target",
+        "generic",
+        "--output-json",
+        "reports/yao-meta/geo-content-conformance-generic.json",
+        "--output-md",
+        "reports/yao-meta/geo-content-conformance-generic.md"
+      ],
+      "exit_code": 0,
+      "status": "pass",
+      "stdout_tail": "{\n  \"ok\": true,\n  \"skill\": \"geo-content\",\n  \"targets\": [\n    {\n      \"target\": \"generic\",\n      \"status\": \"pass\",\n      \"checks\": [\n        \"SKILL.md exists\",\n        \"frontmatter name exists\",\n        \"frontmatter description exists\",\n        \"description length <= 1024\",\n        \"name is runtime-safe\",\n        \"manifest.name exists\",\n        \"manifest.version exists\",\n        \"manifest.owner exists\",\n        \"manifest.status exists\",\n        \"manifest.maturity_tier exists\",\n        \"manifest.review_cadence exists\",\n        \"manifest declares generic\",\n        \"interface.display_name exists\",\n        \"interface.short_description exists\",\n        \"interface.default_prompt exists\",\n        \"adapter target declares generic\",\n        \"activation mode exists\",\n        \"execution context exists\",\n        \"execution shell exists\",\n        \"trust source tier exists\",\n        \"generic degradation note exists\",\n        \"Skill IR schema_version is 2.0.0\",\n        \"Skill IR name matches frontmatter\",\n        \"Skill IR description matches frontmatter\",\n        \"references resource resolves: references/content-method.md\",\n        \"references resource resolves: references/evidence-policy.md\",\n        \"references resource resolves: references/input-example.json\",\n        \"references resource resolves: references/modes.md\",\n        \"references resource resolves: references/output-contract.md\",\n        \"scripts resource resolves: scripts/run_content.py\",\n        \"reports resource resolves: reports/output_quality_scorecard.md\"\n      ],\n      \"failures\": [],\n      \"warnings\": []\n    }\n  ],\n  \"summary\": {\n    \"target_count\": 1,\n    \"pass_count\": 1,\n    \"fail_count\": 0\n  },\n  \"artifacts\": {\n    \"json\": \"reports/yao-meta/geo-content-conformance-generic.json\",\n    \"markdown\": \"reports/yao-meta/geo-content-conformance-generic.md\"\n  }\n}\n",
+      "stderr_tail": ""
+    },
+    {
+      "skill_id": "geo-content",
+      "command": [
+        ".venv/bin/python",
+        "<yao-meta-root>/scripts/yao.py",
+        "compile-skill",
+        "skills/geo-content",
+        "--target",
+        "openai",
+        "--output-json",
+        "reports/yao-meta/geo-content-compiled-openai.json",
+        "--output-md",
+        "reports/yao-meta/geo-content-compiled-openai.md"
+      ],
+      "exit_code": 0,
+      "status": "pass",
+      "stdout_tail": "activation\": \"targets/openai/agents/openai.yaml::compatibility.activation_mode\",\n          \"execution\": \"targets/openai/agents/openai.yaml::compatibility.execution_context\",\n          \"trust\": \"targets/openai/agents/openai.yaml::compatibility.trust_level\",\n          \"permissions\": \"targets/openai/agents/openai.yaml::compatibility.permission_contract\",\n          \"degradation\": \"targets/openai/agents/openai.yaml::compatibility.degradation_strategy\"\n        },\n        \"preserved_semantics\": [\n          \"trigger\",\n          \"workflow-counts\",\n          \"resources\",\n          \"eval-plan\",\n          \"risk\",\n          \"governance\",\n          \"runtime\",\n          \"trust\",\n          \"permissions\"\n        ],\n        \"degradation_strategy\": \"metadata-adapter\",\n        \"permission_representation\": \"targets/openai/agents/openai.yaml::compatibility.permission_contract plus adapter.json\",\n        \"native_surface\": \"OpenAI-style interface metadata plus neutral Agent Skills source\",\n        \"activation_policy\": \"Use frontmatter description for catalog routing and targets/openai/agents/openai.yaml for display name, default prompt, and compatibility metadata.\",\n        \"resource_strategy\": \"Ship the neutral source tree and expose OpenAI-facing interface metadata as a generated companion file.\",\n        \"script_strategy\": \"Keep scripts as local package resources; expose help-smoke and permission metadata for reviewer approval before execution.\",\n        \"permission_enforcement\": \"metadata-only\"\n      },\n      \"unsupported_features\": [\n        \"client-native script permission prompts are represented as permission contract metadata\"\n      ],\n      \"warnings\": [],\n      \"failures\": []\n    }\n  ],\n  \"failures\": [],\n  \"warnings\": [],\n  \"artifacts\": {\n    \"json\": \"reports/yao-meta/geo-content-compiled-openai.json\",\n    \"markdown\": \"reports/yao-meta/geo-content-compiled-openai.md\"\n  }\n}\n",
+      "stderr_tail": ""
+    },
+    {
+      "skill_id": "geo-content",
+      "command": [
+        ".venv/bin/python",
+        "<yao-meta-root>/scripts/yao.py",
+        "conformance",
+        "skills/geo-content",
+        "--target",
+        "openai",
+        "--output-json",
+        "reports/yao-meta/geo-content-conformance-openai.json",
+        "--output-md",
+        "reports/yao-meta/geo-content-conformance-openai.md"
+      ],
+      "exit_code": 0,
+      "status": "pass",
+      "stdout_tail": "{\n  \"ok\": true,\n  \"skill\": \"geo-content\",\n  \"targets\": [\n    {\n      \"target\": \"openai\",\n      \"status\": \"pass\",\n      \"checks\": [\n        \"SKILL.md exists\",\n        \"frontmatter name exists\",\n        \"frontmatter description exists\",\n        \"description length <= 1024\",\n        \"name is runtime-safe\",\n        \"manifest.name exists\",\n        \"manifest.version exists\",\n        \"manifest.owner exists\",\n        \"manifest.status exists\",\n        \"manifest.maturity_tier exists\",\n        \"manifest.review_cadence exists\",\n        \"manifest declares openai\",\n        \"interface.display_name exists\",\n        \"interface.short_description exists\",\n        \"interface.default_prompt exists\",\n        \"adapter target declares openai\",\n        \"activation mode exists\",\n        \"execution context exists\",\n        \"execution shell exists\",\n        \"trust source tier exists\",\n        \"openai degradation note exists\",\n        \"Skill IR schema_version is 2.0.0\",\n        \"Skill IR name matches frontmatter\",\n        \"Skill IR description matches frontmatter\",\n        \"references resource resolves: references/content-method.md\",\n        \"references resource resolves: references/evidence-policy.md\",\n        \"references resource resolves: references/input-example.json\",\n        \"references resource resolves: references/modes.md\",\n        \"references resource resolves: references/output-contract.md\",\n        \"scripts resource resolves: scripts/run_content.py\",\n        \"reports resource resolves: reports/output_quality_scorecard.md\"\n      ],\n      \"failures\": [],\n      \"warnings\": []\n    }\n  ],\n  \"summary\": {\n    \"target_count\": 1,\n    \"pass_count\": 1,\n    \"fail_count\": 0\n  },\n  \"artifacts\": {\n    \"json\": \"reports/yao-meta/geo-content-conformance-openai.json\",\n    \"markdown\": \"reports/yao-meta/geo-content-conformance-openai.md\"\n  }\n}\n",
+      "stderr_tail": ""
+    },
+    {
+      "skill_id": "geo-content",
+      "command": [
+        ".venv/bin/python",
+        "<yao-meta-root>/scripts/yao.py",
+        "compile-skill",
+        "skills/geo-content",
+        "--target",
+        "claude",
+        "--output-json",
+        "reports/yao-meta/geo-content-compiled-claude.json",
+        "--output-md",
+        "reports/yao-meta/geo-content-compiled-claude.md"
+      ],
+      "exit_code": 0,
+      "status": "pass",
+      "stdout_tail": "     \"metadata_mapping\": {\n          \"display_name\": \"targets/claude/adapter.json::display_name\",\n          \"default_prompt\": \"targets/claude/adapter.json::default_prompt\",\n          \"activation\": \"targets/claude/adapter.json::activation_mode\",\n          \"execution\": \"targets/claude/adapter.json::execution_context\",\n          \"trust\": \"targets/claude/adapter.json::trust_level\",\n          \"permissions\": \"targets/claude/adapter.json::target_permission_contract\",\n          \"degradation\": \"targets/claude/adapter.json::degradation_strategy\"\n        },\n        \"preserved_semantics\": [\n          \"trigger\",\n          \"workflow-counts\",\n          \"resources\",\n          \"eval-plan\",\n          \"risk\",\n          \"governance\",\n          \"runtime\",\n          \"trust\",\n          \"permissions\"\n        ],\n        \"degradation_strategy\": \"neutral-source-plus-adapter\",\n        \"permission_representation\": \"targets/claude/adapter.json::target_permission_contract and README notes\",\n        \"native_surface\": \"Claude-compatible neutral source folder with adapter notes\",\n        \"activation_policy\": \"Use SKILL.md frontmatter description as the primary activation contract and adapter.json for review metadata.\",\n        \"resource_strategy\": \"Preserve the source tree directly; write target notes in targets/claude/README.md.\",\n        \"script_strategy\": \"Scripts remain local package resources and must be reviewed through trust and permission reports before use.\",\n        \"permission_enforcement\": \"metadata-fallback\"\n      },\n      \"unsupported_features\": [\n        \"vendor-native metadata fields are carried as adapter JSON and README notes\"\n      ],\n      \"warnings\": [],\n      \"failures\": []\n    }\n  ],\n  \"failures\": [],\n  \"warnings\": [],\n  \"artifacts\": {\n    \"json\": \"reports/yao-meta/geo-content-compiled-claude.json\",\n    \"markdown\": \"reports/yao-meta/geo-content-compiled-claude.md\"\n  }\n}\n",
+      "stderr_tail": ""
+    },
+    {
+      "skill_id": "geo-content",
+      "command": [
+        ".venv/bin/python",
+        "<yao-meta-root>/scripts/yao.py",
+        "conformance",
+        "skills/geo-content",
+        "--target",
+        "claude",
+        "--output-json",
+        "reports/yao-meta/geo-content-conformance-claude.json",
+        "--output-md",
+        "reports/yao-meta/geo-content-conformance-claude.md"
+      ],
+      "exit_code": 0,
+      "status": "pass",
+      "stdout_tail": "{\n  \"ok\": true,\n  \"skill\": \"geo-content\",\n  \"targets\": [\n    {\n      \"target\": \"claude\",\n      \"status\": \"pass\",\n      \"checks\": [\n        \"SKILL.md exists\",\n        \"frontmatter name exists\",\n        \"frontmatter description exists\",\n        \"description length <= 1024\",\n        \"name is runtime-safe\",\n        \"manifest.name exists\",\n        \"manifest.version exists\",\n        \"manifest.owner exists\",\n        \"manifest.status exists\",\n        \"manifest.maturity_tier exists\",\n        \"manifest.review_cadence exists\",\n        \"manifest declares claude\",\n        \"interface.display_name exists\",\n        \"interface.short_description exists\",\n        \"interface.default_prompt exists\",\n        \"adapter target declares claude\",\n        \"activation mode exists\",\n        \"execution context exists\",\n        \"execution shell exists\",\n        \"trust source tier exists\",\n        \"claude degradation note exists\",\n        \"Skill IR schema_version is 2.0.0\",\n        \"Skill IR name matches frontmatter\",\n        \"Skill IR description matches frontmatter\",\n        \"references resource resolves: references/content-method.md\",\n        \"references resource resolves: references/evidence-policy.md\",\n        \"references resource resolves: references/input-example.json\",\n        \"references resource resolves: references/modes.md\",\n        \"references resource resolves: references/output-contract.md\",\n        \"scripts resource resolves: scripts/run_content.py\",\n        \"reports resource resolves: reports/output_quality_scorecard.md\"\n      ],\n      \"failures\": [],\n      \"warnings\": []\n    }\n  ],\n  \"summary\": {\n    \"target_count\": 1,\n    \"pass_count\": 1,\n    \"fail_count\": 0\n  },\n  \"artifacts\": {\n    \"json\": \"reports/yao-meta/geo-content-conformance-claude.json\",\n    \"markdown\": \"reports/yao-meta/geo-content-conformance-claude.md\"\n  }\n}\n",
+      "stderr_tail": ""
+    },
+    {
+      "skill_id": "suite",
+      "command": [
+        ".venv/bin/python",
+        "<yao-meta-root>/scripts/yao.py",
+        "skill-atlas",
+        "--workspace-root",
+        "skills",
+        "--report-json",
+        "reports/skill-atlas.json",
+        "--report-html",
+        "reports/skill-atlas.html"
+      ],
+      "exit_code": 0,
+      "status": "pass",
+      "stdout_tail": "     \"risk_band\": \"no-data\",\n      \"signal_types\": [\n        \"no telemetry\"\n      ],\n      \"recommendation\": \"Render adoption drift evidence or record a small metadata-only sample before release review.\",\n      \"actionable\": true,\n      \"scope\": \"release\",\n      \"summary\": {\n        \"event_count\": 0,\n        \"adoption_sample_count\": 0\n      }\n    },\n    {\n      \"name\": \"geo-diagnose\",\n      \"path\": \"geo-diagnose\",\n      \"source\": \"geo-diagnose/reports/adoption_drift_report.json\",\n      \"risk_band\": \"no-data\",\n      \"signal_types\": [\n        \"no telemetry\"\n      ],\n      \"recommendation\": \"Render adoption drift evidence or record a small metadata-only sample before release review.\",\n      \"actionable\": true,\n      \"scope\": \"release\",\n      \"summary\": {\n        \"event_count\": 0,\n        \"adoption_sample_count\": 0\n      }\n    },\n    {\n      \"name\": \"geo-discover\",\n      \"path\": \"geo-discover\",\n      \"source\": \"geo-discover/reports/adoption_drift_report.json\",\n      \"risk_band\": \"no-data\",\n      \"signal_types\": [\n        \"no telemetry\"\n      ],\n      \"recommendation\": \"Render adoption drift evidence or record a small metadata-only sample before release review.\",\n      \"actionable\": true,\n      \"scope\": \"release\",\n      \"summary\": {\n        \"event_count\": 0,\n        \"adoption_sample_count\": 0\n      }\n    }\n  ],\n  \"no_route_opportunities\": [],\n  \"artifacts\": {\n    \"catalog\": \"skill_atlas/catalog.json\",\n    \"route_overlap_matrix\": \"skill_atlas/route_overlap_matrix.csv\",\n    \"dependency_graph\": \"skill_atlas/dependency_graph.json\",\n    \"stale_skills\": \"skill_atlas/stale_skills.json\",\n    \"owner_review_gaps\": \"skill_atlas/owner_review_gaps.json\",\n    \"drift_signals\": \"skill_atlas/drift_signals.json\",\n    \"no_route_opportunities\": \"skill_atlas/no_route_opportunities.json\",\n    \"report_json\": \"reports/skill-atlas.json\",\n    \"report_html\": \"reports/skill-atlas.html\"\n  }\n}\n",
+      "stderr_tail": ""
+    }
+  ],
+  "failed_commands": 0,
+  "source_digest": "fe9ae087d0e7ae387f3e9c16138fbe7cf5657cc05c9fa37934ddcfc7d4ee89e0",
+  "evidence": {
+    "deterministic_gates": "recorded",
+    "human_blind_review": "missing evidence",
+    "real_platform_benchmark": "missing evidence",
+    "commercial_legal_review": "missing evidence"
+  },
+  "note": "Any nonzero yao-meta command fails this gate; missing external evidence remains explicit."
+}

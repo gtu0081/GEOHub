@@ -6,9 +6,14 @@
   "review_cadence": "per-release",
   "status": "experimental",
   "maturity": "experimental",
-  "maturity_tier": "experimental",
-  "lifecycle_stage": "experimental",
-  "context_budget_tier": "experimental",
+  "maturity_tier": "library",
+  "lifecycle_stage": "library",
+  "context_budget_tier": "production",
+  "contract_version": "1.0.0",
+  "availability": "active",
+  "entrypoint": "SKILL.md",
+  "target_platforms": ["openai", "claude", "generic"],
+  "permission_profile": {"filesystem": "read-write-output", "network": "explicit-public-http-only", "shell": "bash"},
   "license_expression": "AGPL-3.0-only",
   "commercial_license_available": true,
   "commercial_license_status": "inquiry_only",
@@ -17,5 +22,5 @@
   "input_files": ["file-backed fixture: diagnosis brief JSON and up to five replayable source_html snapshots"],
   "output_contract": ["input/diagnosis-brief.json", "input/sources/*.html", "report", "diagnosis", "evidence-ledger", "query-map", "opportunity-map", "quality-report", "run-manifest"],
   "rollback_boundary": "Remove generated diagnosis run directories and revert diagnose, CLI, registry, packaging, and geo-diagnose together.",
-  "factory_components": ["references", "scripts", "agents"]
+  "factory_components": ["references", "scripts", "evals", "reports", "agents"]
 }

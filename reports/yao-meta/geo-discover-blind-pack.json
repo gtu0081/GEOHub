@@ -1,0 +1,131 @@
+{
+  "schema_version": "1.0",
+  "seed": "yao-output-eval-blind-v1",
+  "summary": {
+    "pair_count": 5,
+    "answer_key_separate": true,
+    "with_skill_hidden_count": 5
+  },
+  "pairs": [
+    {
+      "case_id": "happy",
+      "prompt": "Discover from a valid brief.",
+      "input_files": [],
+      "metadata": {
+        "case_type": "happy"
+      },
+      "review_instruction": "Pick A or B based only on the rubric. Do not infer which output came from the skill.",
+      "rubric": [
+        {
+          "id": "contract",
+          "description": "The output must satisfy the declared contract.",
+          "weight": 1.0
+        }
+      ],
+      "variant_a": {
+        "blind_id": "happy:A",
+        "output": "Create query-map, opportunity-map, evidence-ledger, quality-report, and run-manifest in an Artifact Bus run."
+      },
+      "variant_b": {
+        "blind_id": "happy:B",
+        "output": "List topics."
+      }
+    },
+    {
+      "case_id": "missing-input",
+      "prompt": "Discover without a brief.",
+      "input_files": [],
+      "metadata": {
+        "case_type": "missing_input"
+      },
+      "review_instruction": "Pick A or B based only on the rubric. Do not infer which output came from the skill.",
+      "rubric": [
+        {
+          "id": "missing",
+          "description": "The output must satisfy the declared contract.",
+          "weight": 1.0
+        }
+      ],
+      "variant_a": {
+        "blind_id": "missing-input:A",
+        "output": "Guess topics."
+      },
+      "variant_b": {
+        "blind_id": "missing-input:B",
+        "output": "Reject missing input_files and report missing evidence."
+      }
+    },
+    {
+      "case_id": "boundary",
+      "prompt": "Estimate search volume.",
+      "input_files": [],
+      "metadata": {
+        "case_type": "boundary"
+      },
+      "review_instruction": "Pick A or B based only on the rubric. Do not infer which output came from the skill.",
+      "rubric": [
+        {
+          "id": "boundary",
+          "description": "The output must satisfy the declared contract.",
+          "weight": 1.0
+        }
+      ],
+      "variant_a": {
+        "blind_id": "boundary:A",
+        "output": "Do not invent platform volume, ranking, conversion, competitor, or customer data."
+      },
+      "variant_b": {
+        "blind_id": "boundary:B",
+        "output": "Volume is 1000."
+      }
+    },
+    {
+      "case_id": "near-neighbor",
+      "prompt": "Audit a page.",
+      "input_files": [],
+      "metadata": {
+        "case_type": "near_neighbor"
+      },
+      "review_instruction": "Pick A or B based only on the rubric. Do not infer which output came from the skill.",
+      "rubric": [
+        {
+          "id": "neighbor",
+          "description": "The output must satisfy the declared contract.",
+          "weight": 1.0
+        }
+      ],
+      "variant_a": {
+        "blind_id": "near-neighbor:A",
+        "output": "Route the request to geo-diagnose; discovery does not own diagnosis."
+      },
+      "variant_b": {
+        "blind_id": "near-neighbor:B",
+        "output": "Generate questions."
+      }
+    },
+    {
+      "case_id": "source-shortfall",
+      "prompt": "Discover with no evidence claims.",
+      "input_files": [],
+      "metadata": {
+        "case_type": "source_shortfall"
+      },
+      "review_instruction": "Pick A or B based only on the rubric. Do not infer which output came from the skill.",
+      "rubric": [
+        {
+          "id": "shortfall",
+          "description": "The output must satisfy the declared contract.",
+          "weight": 1.0
+        }
+      ],
+      "variant_a": {
+        "blind_id": "source-shortfall:A",
+        "output": "Produce deterministic artifacts with explicit source_gap and missing evidence labels."
+      },
+      "variant_b": {
+        "blind_id": "source-shortfall:B",
+        "output": "Cite market research."
+      }
+    }
+  ]
+}

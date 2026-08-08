@@ -1,0 +1,67 @@
+{
+  "status": "pass",
+  "target": "all",
+  "source": {
+    "package": "yao-geo-source-0.1.0.zip",
+    "wheel": "yao_geo-0.1.0-py3-none-any.whl",
+    "cli_smokes": [
+      "route",
+      "discover",
+      "diagnose",
+      "content"
+    ],
+    "status": "pass"
+  },
+  "structural_packages": [
+    {
+      "package": "geo-community-0.1.0.zip",
+      "entry": "SKILL.md",
+      "wrapper": "scripts/run_route.py",
+      "runtime_data": true,
+      "status": "pass"
+    },
+    {
+      "package": "geo-content-community-0.1.0.zip",
+      "entry": "SKILL.md",
+      "wrapper": "scripts/run_content.py",
+      "runtime_data": true,
+      "status": "pass"
+    },
+    {
+      "package": "geo-diagnose-community-0.1.0.zip",
+      "entry": "SKILL.md",
+      "wrapper": "scripts/run_diagnose.py",
+      "runtime_data": true,
+      "status": "pass"
+    },
+    {
+      "package": "geo-discover-community-0.1.0.zip",
+      "entry": "SKILL.md",
+      "wrapper": "scripts/run_discover.py",
+      "runtime_data": true,
+      "status": "pass"
+    },
+    {
+      "package": "yao-geo-claude-community-0.1.0.zip",
+      "entry": "SKILL.md",
+      "wrapper": "scripts/run_route.py",
+      "runtime_data": true,
+      "status": "pass"
+    },
+    {
+      "package": "yao-geo-codex-community-0.1.0.zip",
+      "entry": "SKILL.md",
+      "wrapper": "scripts/run_route.py",
+      "runtime_data": true,
+      "status": "pass"
+    },
+    {
+      "package": "yao-geo-unified-community-0.1.0.zip",
+      "entry": "SKILL.md",
+      "wrapper": "scripts/run_route.py",
+      "runtime_data": true,
+      "status": "pass"
+    }
+  ],
+  "scratch_retained": false
+}

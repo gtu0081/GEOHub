@@ -1,6 +1,7 @@
 #!/usr/bin/env python3
 from __future__ import annotations
 
+import importlib.util
 import os
 import stat
 import subprocess
@@ -10,7 +11,15 @@ from pathlib import Path
 
 ROOT = Path(__file__).resolve().parents[1]
 VERSION = (ROOT / "VERSION").read_text(encoding="utf-8").strip()
-OUTPUT = ROOT / "dist" / f"yao-geo-{VERSION}.zip"
+OUTPUT = ROOT / "dist" / f"yao-geo-source-{VERSION}.zip"
+
+
+def load_current_packager():
+    spec = importlib.util.spec_from_file_location("yao_geo_current_packager", ROOT / "scripts" / "package.py")
+    module = importlib.util.module_from_spec(spec)
+    assert spec.loader
+    spec.loader.exec_module(module)
+    return module
 
 
 def trusted_files(root: Path) -> list[Path]:
@@ -18,12 +27,7 @@ def trusted_files(root: Path) -> list[Path]:
     if root.is_symlink() or not stat.S_ISDIR(root_mode):
         raise ValueError(f"package root must be a regular directory: {root}")
     root_resolved = root.resolve()
-    result = subprocess.run(
-        ["git", "ls-files", "-z", "--cached"],
-        cwd=root,
-        check=True,
-        capture_output=True,
-    )
+    result = subprocess.run(["git", "ls-files", "-z", "--cached"], cwd=root, check=True, capture_output=True)
     files: list[Path] = []
     for raw_path in result.stdout.split(b"\0"):
         if not raw_path:
@@ -46,7 +50,11 @@ def trusted_files(root: Path) -> list[Path]:
         if root_resolved not in resolved.parents:
             raise ValueError(f"tracked package entry escapes package root: {relative}")
         files.append(relative)
-    return sorted(files, key=lambda path: path.as_posix())
+    files = sorted(files, key=lambda path: path.as_posix())
+    if root.resolve() == ROOT.resolve():
+        allowed = set(load_current_packager().tracked_files())
+        files = [path for path in files if path in allowed]
+    return files
 
 
 def build_archive(root: Path, output: Path) -> list[Path]:

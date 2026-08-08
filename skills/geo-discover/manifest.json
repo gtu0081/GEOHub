@@ -5,9 +5,14 @@
   "updated_at": "2026-08-08",
   "review_cadence": "per-release",
   "status": "experimental",
-  "maturity_tier": "production",
-  "lifecycle_stage": "production",
+  "maturity_tier": "library",
+  "lifecycle_stage": "library",
   "context_budget_tier": "production",
+  "contract_version": "1.0.0",
+  "availability": "active",
+  "entrypoint": "SKILL.md",
+  "target_platforms": ["openai", "claude", "generic"],
+  "permission_profile": {"filesystem": "read-write-output", "network": "forbid", "shell": "bash"},
   "license_expression": "AGPL-3.0-only",
   "commercial_license_available": true,
   "commercial_license_status": "inquiry_only",
@@ -16,5 +21,5 @@
   "input_files": ["file-backed fixture: protocol 1.0.0 geo-brief JSON"],
   "output_contract": ["Artifact Bus run directory", "query-map", "opportunity-map", "evidence-ledger", "quality-report"],
   "rollback_boundary": "Remove the generated run directory and revert discover, Artifact Bus, schemas, and registry together.",
-  "factory_components": ["references", "scripts", "agents"]
+  "factory_components": ["references", "scripts", "evals", "reports", "agents"]
 }

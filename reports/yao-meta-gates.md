@@ -1,0 +1,63 @@
+# yao-meta Gates
+
+Status: **pass**
+
+Commands: 53; nonzero: 0.
+
+Human blind review, real-platform benchmark, and commercial legal review: **missing evidence**.
+
+| Skill | Command | Exit | Status |
+| --- | --- | ---: | --- |
+| geo | `validate skills/geo` | 0 | pass |
+| geo | `--description Route GEO and generative engine optimization requests to an available Yao GEO capability. Use for broad GEO requests, workflow selection, capability checks, or requests spanning discovery, brand/site/page diagnosis, content, strategy, knowledge, publishing, and measurement.` | 0 | pass |
+| geo | `skill-ir skills/geo` | 0 | pass |
+| geo | `skill-ir skills/geo` | 0 | pass |
+| geo | `output-eval --cases` | 0 | pass |
+| geo | `trust skills/geo` | 0 | pass |
+| geo | `review-studio skills/geo` | 0 | pass |
+| geo | `compile-skill skills/geo` | 0 | pass |
+| geo | `conformance skills/geo` | 0 | pass |
+| geo | `compile-skill skills/geo` | 0 | pass |
+| geo | `conformance skills/geo` | 0 | pass |
+| geo | `compile-skill skills/geo` | 0 | pass |
+| geo | `conformance skills/geo` | 0 | pass |
+| geo-discover | `validate skills/geo-discover` | 0 | pass |
+| geo-discover | `--description Discover evidence-aware GEO questions, query rewrites, intent clusters, and prioritized content opportunities from a structured brief. Use for AI search intent mining, question expansion, query research, FAQ discovery, and GEO topic discovery in Chinese or English.` | 0 | pass |
+| geo-discover | `skill-ir skills/geo-discover` | 0 | pass |
+| geo-discover | `skill-ir skills/geo-discover` | 0 | pass |
+| geo-discover | `output-eval --cases` | 0 | pass |
+| geo-discover | `trust skills/geo-discover` | 0 | pass |
+| geo-discover | `review-studio skills/geo-discover` | 0 | pass |
+| geo-discover | `compile-skill skills/geo-discover` | 0 | pass |
+| geo-discover | `conformance skills/geo-discover` | 0 | pass |
+| geo-discover | `compile-skill skills/geo-discover` | 0 | pass |
+| geo-discover | `conformance skills/geo-discover` | 0 | pass |
+| geo-discover | `compile-skill skills/geo-discover` | 0 | pass |
+| geo-discover | `conformance skills/geo-discover` | 0 | pass |
+| geo-diagnose | `validate skills/geo-diagnose` | 0 | pass |
+| geo-diagnose | `--description Diagnose a brand, website, or page for evidence-backed GEO gaps and opportunities from user-supplied URLs, HTML, or evidence. Use for brand diagnosis, website or page audits, GEO gap analysis, and 品牌诊断、网站诊断、页面诊断. Excludes live AI-platform recall, ranking, and citation-share measurement.` | 0 | pass |
+| geo-diagnose | `skill-ir skills/geo-diagnose` | 0 | pass |
+| geo-diagnose | `skill-ir skills/geo-diagnose` | 0 | pass |
+| geo-diagnose | `output-eval --cases` | 0 | pass |
+| geo-diagnose | `trust skills/geo-diagnose` | 0 | pass |
+| geo-diagnose | `review-studio skills/geo-diagnose` | 0 | pass |
+| geo-diagnose | `compile-skill skills/geo-diagnose` | 0 | pass |
+| geo-diagnose | `conformance skills/geo-diagnose` | 0 | pass |
+| geo-diagnose | `compile-skill skills/geo-diagnose` | 0 | pass |
+| geo-diagnose | `conformance skills/geo-diagnose` | 0 | pass |
+| geo-diagnose | `compile-skill skills/geo-diagnose` | 0 | pass |
+| geo-diagnose | `conformance skills/geo-diagnose` | 0 | pass |
+| geo-content | `validate skills/geo-content` | 0 | pass |
+| geo-content | `--description Create evidence-lined GEO titles, explainers, neutral comparisons, method-backed rankings, page blueprints, refinements, and article-friendly Markdown. Use for title generation, 科普/解释、对比、榜单、页面蓝图、内容优化, and article-friendly rewriting. Excludes unsupported factual claims, winner declarations without like-for-like evidence, network research, publishing, and live ranking measurement.` | 0 | pass |
+| geo-content | `skill-ir skills/geo-content` | 0 | pass |
+| geo-content | `skill-ir skills/geo-content` | 0 | pass |
+| geo-content | `output-eval --cases` | 0 | pass |
+| geo-content | `trust skills/geo-content` | 0 | pass |
+| geo-content | `review-studio skills/geo-content` | 0 | pass |
+| geo-content | `compile-skill skills/geo-content` | 0 | pass |
+| geo-content | `conformance skills/geo-content` | 0 | pass |
+| geo-content | `compile-skill skills/geo-content` | 0 | pass |
+| geo-content | `conformance skills/geo-content` | 0 | pass |
+| geo-content | `compile-skill skills/geo-content` | 0 | pass |
+| geo-content | `conformance skills/geo-content` | 0 | pass |
+| suite | `skill-atlas --workspace-root` | 0 | pass |

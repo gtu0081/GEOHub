@@ -1,0 +1,166 @@
+#!/usr/bin/env python3
+from __future__ import annotations
+
+import argparse
+import json
+import os
+import stat
+import subprocess
+import zipfile
+from pathlib import Path
+
+ROOT = Path(__file__).resolve().parents[1]
+VERSION = (ROOT / "VERSION").read_text(encoding="utf-8").strip()
+DIST = ROOT / "dist"
+SKILLS = ("geo", "geo-discover", "geo-diagnose", "geo-content")
+LEGAL = ("VERSION", "LICENSE", "LICENSE-SCOPE.md", "COMMERCIAL-LICENSING.md", "THIRD_PARTY_NOTICES.md")
+SOURCE_EXACT = set(LEGAL) | {"README.md", "pyproject.toml", "Makefile", "CONTRIBUTING.md", "CONTRIBUTOR-LICENSE-AGREEMENT.md", "TRADEMARKS.md", ".github/workflows/ci.yml"}
+SOURCE_PREFIXES = ("src/", "schemas/", "registry/", "skills/", "scripts/", "docs/")
+EXCLUDED_PARTS = {"reports", "evals", "tests", ".git", "__pycache__", ".pytest_cache", "runs", "dist"}
+
+
+def source_allowed(relative: Path) -> bool:
+    raw = relative.as_posix()
+    return not (set(relative.parts) & EXCLUDED_PARTS) and (raw in SOURCE_EXACT or raw.startswith(SOURCE_PREFIXES))
+
+
+def tracked_files() -> list[Path]:
+    if ROOT.is_symlink() or not stat.S_ISDIR(ROOT.lstat().st_mode):
+        raise ValueError(f"package root must be a regular directory: {ROOT}")
+    result = subprocess.run(["git", "ls-files", "-z", "--cached"], cwd=ROOT, check=True, capture_output=True)
+    dirty_result = subprocess.run(["git", "diff", "--name-only", "-z"], cwd=ROOT, check=True, capture_output=True)
+    dirty_allowed = [Path(os.fsdecode(raw)) for raw in dirty_result.stdout.split(b"\0") if raw and source_allowed(Path(os.fsdecode(raw)))]
+    if dirty_allowed:
+        raise ValueError(f"allowlisted package files have unstaged changes: {[path.as_posix() for path in dirty_allowed]}")
+    files = []
+    root_resolved = ROOT.resolve()
+    for raw in result.stdout.split(b"\0"):
+        if not raw:
+            continue
+        relative = Path(os.fsdecode(raw))
+        if relative.is_absolute() or ".." in relative.parts:
+            continue
+        if not source_allowed(relative):
+            continue
+        current = ROOT
+        for part in relative.parts:
+            current = current / part
+            mode = current.lstat().st_mode
+            if stat.S_ISLNK(mode):
+                raise ValueError(f"symlink is forbidden: {relative}")
+        if not stat.S_ISREG((ROOT / relative).lstat().st_mode):
+            raise ValueError(f"non-file package entry: {relative}")
+        if root_resolved not in (ROOT / relative).resolve().parents:
+            raise ValueError(f"package path escapes root: {relative}")
+        files.append(relative)
+    return sorted(files, key=lambda item: item.as_posix())
+
+
+def common_runtime(files: list[Path]) -> dict[str, bytes]:
+    allowed = set(LEGAL) | {"pyproject.toml"}
+    prefixes = ("src/", "schemas/", "registry/")
+    return {path.as_posix(): (ROOT / path).read_bytes() for path in files if path.as_posix() in allowed or path.as_posix().startswith(prefixes)}
+
+
+def packaged_skill(skill_id: str) -> bytes:
+    text = (ROOT / "skills" / skill_id / "SKILL.md").read_text(encoding="utf-8")
+    return text.replace("`../RESOLVER.md`", "`references/RESOLVER.md`").encode()
+
+
+def zip_write(output: Path, entries: dict[str, bytes], prefix: str = "") -> None:
+    output.parent.mkdir(parents=True, exist_ok=True)
+    with zipfile.ZipFile(output, "w", compression=zipfile.ZIP_DEFLATED) as archive:
+        for name, payload in sorted(entries.items()):
+            safe = Path(name)
+            if safe.is_absolute() or ".." in safe.parts:
+                raise ValueError(f"unsafe archive path: {name}")
+            info = zipfile.ZipInfo(f"{prefix}{name}", date_time=(2026, 8, 8, 0, 0, 0))
+            info.compress_type = zipfile.ZIP_DEFLATED
+            info.external_attr = 0o100644 << 16
+            archive.writestr(info, payload)
+
+
+def source_package(files: list[Path]) -> Path:
+    output = DIST / f"yao-geo-source-{VERSION}.zip"
+    entries = {path.as_posix(): (ROOT / path).read_bytes() for path in files}
+    zip_write(output, entries, prefix=f"yao-geo-{VERSION}/")
+    return output
+
+
+def unified_package(files: list[Path]) -> Path:
+    entries = common_runtime(files)
+    entries["SKILL.md"] = packaged_skill("geo")
+    entries["agents/interface.yaml"] = (ROOT / "skills" / "geo" / "agents" / "interface.yaml").read_bytes()
+    entries["scripts/run_route.py"] = (ROOT / "skills" / "geo" / "scripts" / "run_route.py").read_bytes()
+    entries["references/RESOLVER.md"] = (ROOT / "skills" / "RESOLVER.md").read_bytes()
+    entries["references/routing-contract.md"] = (ROOT / "skills" / "geo" / "references" / "routing-contract.md").read_bytes()
+    for skill_id in SKILLS:
+        skill_root = ROOT / "skills" / skill_id
+        entries[f"references/providers/{skill_id}.md"] = (skill_root / "SKILL.md").read_bytes()
+        entries[f"manifests/{skill_id}.json"] = (skill_root / "manifest.json").read_bytes()
+    entries["PACKAGE-METADATA.json"] = json.dumps({"channel": "community", "license": "AGPL-3.0-only", "commercial_license_status": "inquiry_only", "kind": "unified"}, indent=2).encode() + b"\n"
+    output = DIST / f"yao-geo-unified-community-{VERSION}.zip"
+    zip_write(output, entries)
+    return output
+
+
+def provider_package(files: list[Path], skill_id: str) -> Path:
+    entries = common_runtime(files)
+    skill_root = ROOT / "skills" / skill_id
+    entries["SKILL.md"] = packaged_skill(skill_id)
+    entries["agents/interface.yaml"] = (skill_root / "agents" / "interface.yaml").read_bytes()
+    entries["manifest.json"] = (skill_root / "manifest.json").read_bytes()
+    for path in files:
+        prefix = f"skills/{skill_id}/"
+        raw = path.as_posix()
+        if raw.startswith(prefix + "references/") or raw.startswith(prefix + "scripts/"):
+            entries[raw[len(prefix):]] = (ROOT / path).read_bytes()
+    if skill_id == "geo":
+        entries["references/RESOLVER.md"] = (ROOT / "skills" / "RESOLVER.md").read_bytes()
+    entries["PACKAGE-METADATA.json"] = json.dumps({"channel": "community", "license": "AGPL-3.0-only", "commercial_license_status": "inquiry_only", "kind": "provider", "skill_id": skill_id}, indent=2).encode() + b"\n"
+    output = DIST / f"{skill_id}-community-{VERSION}.zip"
+    zip_write(output, entries)
+    return output
+
+
+def target_package(files: list[Path], target: str) -> Path:
+    entries = common_runtime(files)
+    entries["SKILL.md"] = packaged_skill("geo")
+    entries["agents/interface.yaml"] = (ROOT / "skills" / "geo" / "agents" / "interface.yaml").read_bytes()
+    entries["scripts/run_route.py"] = (ROOT / "skills" / "geo" / "scripts" / "run_route.py").read_bytes()
+    entries["references/RESOLVER.md"] = (ROOT / "skills" / "RESOLVER.md").read_bytes()
+    entries["references/routing-contract.md"] = (ROOT / "skills" / "geo" / "references" / "routing-contract.md").read_bytes()
+    for skill_id in SKILLS:
+        entries[f"manifests/{skill_id}.json"] = (ROOT / "skills" / skill_id / "manifest.json").read_bytes()
+    entries["TARGET.md"] = f"# {target.title()} adapter\n\nInstall this directory as one Yao GEO skill. Runtime contracts remain protocol 1.0.0.\n".encode()
+    entries["PACKAGE-METADATA.json"] = json.dumps({"channel": "community", "license": "AGPL-3.0-only", "commercial_license_status": "inquiry_only", "kind": "target", "target": target}, indent=2).encode() + b"\n"
+    output = DIST / f"yao-geo-{target}-community-{VERSION}.zip"
+    zip_write(output, entries)
+    return output
+
+
+def build(target: str) -> list[Path]:
+    files = tracked_files()
+    outputs = []
+    if target in {"generic", "all"}:
+        outputs.extend([source_package(files), unified_package(files)])
+        outputs.extend(provider_package(files, skill_id) for skill_id in SKILLS)
+    if target in {"codex", "all"}:
+        outputs.append(target_package(files, "codex"))
+    if target in {"claude", "all"}:
+        outputs.append(target_package(files, "claude"))
+    return outputs
+
+
+def main() -> int:
+    parser = argparse.ArgumentParser()
+    parser.add_argument("--target", choices=("generic", "codex", "claude", "all"), default="all")
+    parser.add_argument("--channel", choices=("community",), default="community")
+    args = parser.parse_args()
+    for path in build(args.target):
+        print(path)
+    return 0
+
+
+if __name__ == "__main__":
+    raise SystemExit(main())

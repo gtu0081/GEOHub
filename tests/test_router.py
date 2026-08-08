@@ -67,3 +67,65 @@ def test_routes_chinese_and_english_content_modes():
         assert result["status"] == "active"
         assert result["runnable"] is True
         assert result["entry"] == "skills/geo-content/SKILL.md"
+
+
+def test_brand_baseline_workflow_is_stable_dag():
+    result = route("先做意图挖掘，再做品牌诊断")
+    assert result["skill_id"] == "geo-discover"
+    assert result["workflow"] == {
+        "id": "brand-baseline-lite",
+        "steps": [
+            {"id": "discover", "skill_id": "geo-discover", "depends_on": []},
+            {"id": "diagnose", "skill_id": "geo-diagnose", "depends_on": ["discover"]},
+        ],
+    }
+
+
+def test_content_campaign_requires_both_stage_intents():
+    single = route("Write an explainer and comparison")
+    assert "workflow" not in single
+    mixed = route("Discover questions then write an explainer")
+    assert mixed["skill_id"] == "geo-discover"
+    assert mixed["workflow"]["id"] == "content-campaign"
+
+
+def test_planned_routes_have_domain_nearest_active_suggestions():
+    cases = {
+        "strategy": "geo-discover",
+        "knowledge base": "geo-content",
+        "publish": "geo-content",
+        "measure": "geo-diagnose",
+    }
+    for text, expected in cases.items():
+        result = route(text)
+        assert result["runnable"] is False
+        assert result["suggestion"] == expected
+
+
+def test_workflows_require_positive_ordered_exact_two_stage_intent():
+    negated = route("Do not discover; audit our site")
+    assert negated["skill_id"] == "geo-diagnose"
+    assert "workflow" not in negated
+
+    reversed_order = route("Audit our site, then discover questions")
+    assert "workflow" not in reversed_order
+
+    three_stage = route("Discover questions, audit our site, then write an explainer")
+    assert three_stage["workflow"]["id"] == "brand-baseline-lite+content-campaign"
+    assert three_stage["workflow"]["recipes"] == ["brand-baseline-lite", "content-campaign"]
+    assert three_stage["workflow"]["steps"][-1] == {"id": "content", "skill_id": "geo-content", "depends_on": ["discover"]}
+
+    noun_phrase = route("We need content discovery")
+    assert "workflow" not in noun_phrase
+
+
+def test_negated_planned_intent_does_not_override_active_intent():
+    result = route("Do not publish; write content")
+    assert result["skill_id"] == "geo-content"
+    assert result["runnable"] is True
+
+
+def test_chinese_not_needed_stage_is_excluded():
+    result = route("意图挖掘后不需要发布内容")
+    assert result["skill_id"] == "geo-discover"
+    assert "workflow" not in result

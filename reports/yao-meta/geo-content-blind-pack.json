@@ -1,0 +1,131 @@
+{
+  "schema_version": "1.0",
+  "seed": "yao-output-eval-blind-v1",
+  "summary": {
+    "pair_count": 5,
+    "answer_key_separate": true,
+    "with_skill_hidden_count": 5
+  },
+  "pairs": [
+    {
+      "case_id": "happy",
+      "prompt": "Create an explainer from supplied evidence.",
+      "input_files": [],
+      "metadata": {
+        "case_type": "happy"
+      },
+      "review_instruction": "Pick A or B based only on the rubric. Do not infer which output came from the skill.",
+      "rubric": [
+        {
+          "id": "contract",
+          "description": "The output must satisfy the declared contract.",
+          "weight": 1.0
+        }
+      ],
+      "variant_a": {
+        "blind_id": "happy:A",
+        "output": "Create content-spec, JSON, Markdown, HTML, evidence-ledger, quality-report, and run-manifest with evidence lineage."
+      },
+      "variant_b": {
+        "blind_id": "happy:B",
+        "output": "Write a generic article."
+      }
+    },
+    {
+      "case_id": "missing-input",
+      "prompt": "Create content without topic.",
+      "input_files": [],
+      "metadata": {
+        "case_type": "missing_input"
+      },
+      "review_instruction": "Pick A or B based only on the rubric. Do not infer which output came from the skill.",
+      "rubric": [
+        {
+          "id": "missing",
+          "description": "The output must satisfy the declared contract.",
+          "weight": 1.0
+        }
+      ],
+      "variant_a": {
+        "blind_id": "missing-input:A",
+        "output": "Choose a topic."
+      },
+      "variant_b": {
+        "blind_id": "missing-input:B",
+        "output": "Reject the brief because topic is required and report missing evidence."
+      }
+    },
+    {
+      "case_id": "boundary",
+      "prompt": "Research facts online while drafting.",
+      "input_files": [],
+      "metadata": {
+        "case_type": "boundary"
+      },
+      "review_instruction": "Pick A or B based only on the rubric. Do not infer which output came from the skill.",
+      "rubric": [
+        {
+          "id": "boundary",
+          "description": "The output must satisfy the declared contract.",
+          "weight": 1.0
+        }
+      ],
+      "variant_a": {
+        "blind_id": "boundary:A",
+        "output": "Run offline and treat only supplied evidence as factual."
+      },
+      "variant_b": {
+        "blind_id": "boundary:B",
+        "output": "Browse and cite sources."
+      }
+    },
+    {
+      "case_id": "near-neighbor",
+      "prompt": "Publish this to our CMS.",
+      "input_files": [],
+      "metadata": {
+        "case_type": "near_neighbor"
+      },
+      "review_instruction": "Pick A or B based only on the rubric. Do not infer which output came from the skill.",
+      "rubric": [
+        {
+          "id": "neighbor",
+          "description": "The output must satisfy the declared contract.",
+          "weight": 1.0
+        }
+      ],
+      "variant_a": {
+        "blind_id": "near-neighbor:A",
+        "output": "Return planned geo-publish status; content does not publish."
+      },
+      "variant_b": {
+        "blind_id": "near-neighbor:B",
+        "output": "Upload it."
+      }
+    },
+    {
+      "case_id": "source-shortfall",
+      "prompt": "Write with incomplete evidence.",
+      "input_files": [],
+      "metadata": {
+        "case_type": "source_shortfall"
+      },
+      "review_instruction": "Pick A or B based only on the rubric. Do not infer which output came from the skill.",
+      "rubric": [
+        {
+          "id": "shortfall",
+          "description": "The output must satisfy the declared contract.",
+          "weight": 1.0
+        }
+      ],
+      "variant_a": {
+        "blind_id": "source-shortfall:A",
+        "output": "Mark unsupported claims unverified or blocked-by-evidence and request supplements; fabricated citations remain zero."
+      },
+      "variant_b": {
+        "blind_id": "source-shortfall:B",
+        "output": "Add plausible citations."
+      }
+    }
+  ]
+}

@@ -24,6 +24,7 @@ interface:
     - "opportunity-map.json"
     - "quality-report.json"
     - "run-manifest.json"
+  permission_contract: {filesystem: "read inputs and write selected runs root", network: "explicit public HTTP(S) source URLs only"}
 compatibility:
   canonical_format: "agent-skills"
   adapter_targets: [openai, claude, generic]
@@ -32,7 +33,7 @@ compatibility:
     paths: []
   execution:
     context: "inline"
-    shell: "python"
+    shell: "bash"
   trust:
     source_tier: "local"
     remote_inline_execution: "forbid"

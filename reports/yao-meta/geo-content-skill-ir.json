@@ -1,0 +1,81 @@
+{
+  "schema_version": "2.0.0",
+  "name": "geo-content",
+  "title": "Yao GEO Content",
+  "job_to_be_done": "Create evidence-lined GEO titles, explainers, neutral comparisons, method-backed rankings, page blueprints, refinements, and article-friendly Markdown. Use for title generation, 科普/解释、对比、榜单、页面蓝图、内容优化, and article-friendly rewriting. Excludes unsupported factual claims, winner declarations without like-for-like evidence, network research, publishing, and live ranking measurement.",
+  "trigger_surface": {
+    "description": "Create evidence-lined GEO titles, explainers, neutral comparisons, method-backed rankings, page blueprints, refinements, and article-friendly Markdown. Use for title generation, 科普/解释、对比、榜单、页面蓝图、内容优化, and article-friendly rewriting. Excludes unsupported factual claims, winner declarations without like-for-like evidence, network research, publishing, and live ranking measurement.",
+    "should_trigger": [
+      "Create an evidence-backed explainer",
+      "写一篇有来源的对比文章"
+    ],
+    "should_not_trigger": [
+      "Audit this website",
+      "Publish to our CMS"
+    ],
+    "edge_cases": [
+      "Discover questions before writing",
+      "Build a knowledge graph"
+    ]
+  },
+  "workflow": {
+    "steps": [
+      "Read `references/content-method.md`, then select one mode from `references/modes.md`.",
+      "Prepare a strict content brief using `references/input-example.json` and `references/evidence-policy.md`.",
+      "Run the deterministic `python3 scripts/run_content.py --input <brief.json> --output <runs-root>` wrapper or `python -m yao_geo content --input <brief.json> --output <runs-root>`.",
+      "Inspect `quality-report.json`, `evidence-ledger.json`, content status, and supplement requests.",
+      "Deliver the complete run described by `references/output-contract.md`."
+    ],
+    "decision_points": [],
+    "failure_modes": []
+  },
+  "resources": {
+    "references": [
+      "references/content-method.md",
+      "references/evidence-policy.md",
+      "references/input-example.json",
+      "references/modes.md",
+      "references/output-contract.md"
+    ],
+    "scripts": [
+      "scripts/run_content.py"
+    ],
+    "assets": [],
+    "reports": [
+      "reports/output_quality_scorecard.md"
+    ]
+  },
+  "eval_plan": {
+    "trigger": [
+      "evals/output/cases.jsonl",
+      "evals/semantic_config.json",
+      "evals/trigger_cases.json"
+    ],
+    "output": [
+      "evals/output/cases.jsonl"
+    ],
+    "adversarial": [],
+    "baseline": "without_skill"
+  },
+  "risk": {
+    "output_risk": "low",
+    "execution_risk": "medium",
+    "trust_boundary": "team"
+  },
+  "governance": {
+    "owner": "姚金刚 / Yao",
+    "maturity": "library",
+    "review_cadence": "per-release",
+    "review_due": ""
+  },
+  "targets": [
+    "openai",
+    "claude",
+    "generic"
+  ],
+  "source_files": [
+    "SKILL.md",
+    "manifest.json",
+    "agents/interface.yaml"
+  ]
+}

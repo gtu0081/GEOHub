@@ -56,4 +56,25 @@ def load_registry(path: Path | None = None) -> dict[str, Any]:
     suggestions = [skill for skill in skills if skill["id"] == "geo-discover"]
     if len(suggestions) != 1 or suggestions[0]["status"] != "active" or not suggestions[0]["entry"]:
         raise RegistryError("Invalid registry: geo-discover suggestion must exist and be runnable")
+    by_id = {skill["id"]: skill for skill in skills}
+    for skill in skills:
+        suggestion = skill.get("nearest_active")
+        if suggestion and (suggestion not in by_id or by_id[suggestion]["status"] != "active" or not by_id[suggestion]["entry"]):
+            raise RegistryError(f"Invalid registry: nearest active suggestion for {skill['id']} is not runnable")
+    workflow_ids: set[str] = set()
+    for workflow in data["workflows"]:
+        if workflow["id"] in workflow_ids:
+            raise RegistryError("Invalid registry: duplicate workflow IDs")
+        workflow_ids.add(workflow["id"])
+        step_ids: set[str] = set()
+        step_skills = []
+        for step in workflow["steps"]:
+            if step["id"] in step_ids or any(dep not in step_ids for dep in step["depends_on"]):
+                raise RegistryError(f"Invalid registry: workflow {workflow['id']} is not a stable DAG")
+            if step["skill_id"] not in by_id or by_id[step["skill_id"]]["status"] != "active":
+                raise RegistryError(f"Invalid registry: workflow {workflow['id']} references an inactive skill")
+            step_ids.add(step["id"])
+            step_skills.append(step["skill_id"])
+        if step_skills != workflow["required_skills"]:
+            raise RegistryError(f"Invalid registry: workflow {workflow['id']} required_skills must match step order")
     return data

@@ -1,0 +1,131 @@
+{
+  "schema_version": "1.0",
+  "seed": "yao-output-eval-blind-v1",
+  "summary": {
+    "pair_count": 5,
+    "answer_key_separate": true,
+    "with_skill_hidden_count": 5
+  },
+  "pairs": [
+    {
+      "case_id": "happy",
+      "prompt": "Route a discovery request.",
+      "input_files": [],
+      "metadata": {
+        "case_type": "happy"
+      },
+      "review_instruction": "Pick A or B based only on the rubric. Do not infer which output came from the skill.",
+      "rubric": [
+        {
+          "id": "contract",
+          "description": "The output must satisfy the declared contract.",
+          "weight": 1.0
+        }
+      ],
+      "variant_a": {
+        "blind_id": "happy:A",
+        "output": "Return skill_id, status, runnable, entry, reason, suggestion, alternatives, and protocol_version from the registry."
+      },
+      "variant_b": {
+        "blind_id": "happy:B",
+        "output": "Use GEO."
+      }
+    },
+    {
+      "case_id": "missing-input",
+      "prompt": "Route blank text.",
+      "input_files": [],
+      "metadata": {
+        "case_type": "missing_input"
+      },
+      "review_instruction": "Pick A or B based only on the rubric. Do not infer which output came from the skill.",
+      "rubric": [
+        {
+          "id": "error",
+          "description": "The output must satisfy the declared contract.",
+          "weight": 1.0
+        }
+      ],
+      "variant_a": {
+        "blind_id": "missing-input:A",
+        "output": "Guess a route."
+      },
+      "variant_b": {
+        "blind_id": "missing-input:B",
+        "output": "Reject blank text with an explicit error; do not infer intent."
+      }
+    },
+    {
+      "case_id": "boundary",
+      "prompt": "Route strategy.",
+      "input_files": [],
+      "metadata": {
+        "case_type": "boundary"
+      },
+      "review_instruction": "Pick A or B based only on the rubric. Do not infer which output came from the skill.",
+      "rubric": [
+        {
+          "id": "planned",
+          "description": "The output must satisfy the declared contract.",
+          "weight": 1.0
+        }
+      ],
+      "variant_a": {
+        "blind_id": "boundary:A",
+        "output": "Return planned, runnable false, null entry, and a nearest active suggestion."
+      },
+      "variant_b": {
+        "blind_id": "boundary:B",
+        "output": "Execute strategy."
+      }
+    },
+    {
+      "case_id": "near-neighbor",
+      "prompt": "Route page audit.",
+      "input_files": [],
+      "metadata": {
+        "case_type": "near_neighbor"
+      },
+      "review_instruction": "Pick A or B based only on the rubric. Do not infer which output came from the skill.",
+      "rubric": [
+        {
+          "id": "neighbor",
+          "description": "The output must satisfy the declared contract.",
+          "weight": 1.0
+        }
+      ],
+      "variant_a": {
+        "blind_id": "near-neighbor:A",
+        "output": "Select geo-diagnose as the smallest active skill."
+      },
+      "variant_b": {
+        "blind_id": "near-neighbor:B",
+        "output": "Use broad GEO."
+      }
+    },
+    {
+      "case_id": "source-shortfall",
+      "prompt": "Route an unknown sentence.",
+      "input_files": [],
+      "metadata": {
+        "case_type": "source_shortfall"
+      },
+      "review_instruction": "Pick A or B based only on the rubric. Do not infer which output came from the skill.",
+      "rubric": [
+        {
+          "id": "unknown",
+          "description": "The output must satisfy the declared contract.",
+          "weight": 1.0
+        }
+      ],
+      "variant_a": {
+        "blind_id": "source-shortfall:A",
+        "output": "Fall back to geo and preserve that no specific stage matched."
+      },
+      "variant_b": {
+        "blind_id": "source-shortfall:B",
+        "output": "Invent a specialist."
+      }
+    }
+  ]
+}

@@ -1,0 +1,77 @@
+{
+  "schema_version": "2.0.0",
+  "name": "geo-diagnose",
+  "title": "Yao GEO Diagnose",
+  "job_to_be_done": "Diagnose a brand, website, or page for evidence-backed GEO gaps and opportunities from user-supplied URLs, HTML, or evidence. Use for brand diagnosis, website or page audits, GEO gap analysis, and 品牌诊断、网站诊断、页面诊断. Excludes live AI-platform recall, ranking, and citation-share measurement.",
+  "trigger_surface": {
+    "description": "Diagnose a brand, website, or page for evidence-backed GEO gaps and opportunities from user-supplied URLs, HTML, or evidence. Use for brand diagnosis, website or page audits, GEO gap analysis, and 品牌诊断、网站诊断、页面诊断. Excludes live AI-platform recall, ranking, and citation-share measurement.",
+    "should_trigger": [
+      "Run a brand GEO audit",
+      "诊断这个网站页面"
+    ],
+    "should_not_trigger": [
+      "Draft a comparison",
+      "Monitor our ranking"
+    ],
+    "edge_cases": [
+      "Run query research for customer questions",
+      "Measure live citation share"
+    ]
+  },
+  "workflow": {
+    "steps": [
+      "Read `references/diagnosis-method.md` and prepare the diagnosis brief contract.",
+      "Run the deterministic `python3 scripts/run_diagnose.py --input <brief.json> --output <runs-root>` wrapper or `python -m yao_geo diagnose --input <brief.json> --output <runs-root>`.",
+      "Inspect `quality-report.json`, `source_status`, and `limitations` before using findings.",
+      "Deliver the complete Artifact Bus run directory."
+    ],
+    "decision_points": [],
+    "failure_modes": []
+  },
+  "resources": {
+    "references": [
+      "references/diagnosis-method.md",
+      "references/input-example.json"
+    ],
+    "scripts": [
+      "scripts/run_diagnose.py"
+    ],
+    "assets": [],
+    "reports": [
+      "reports/output_quality_scorecard.md"
+    ]
+  },
+  "eval_plan": {
+    "trigger": [
+      "evals/output/cases.jsonl",
+      "evals/semantic_config.json",
+      "evals/trigger_cases.json"
+    ],
+    "output": [
+      "evals/output/cases.jsonl"
+    ],
+    "adversarial": [],
+    "baseline": "without_skill"
+  },
+  "risk": {
+    "output_risk": "low",
+    "execution_risk": "medium",
+    "trust_boundary": "team"
+  },
+  "governance": {
+    "owner": "姚金刚 / Yao",
+    "maturity": "library",
+    "review_cadence": "per-release",
+    "review_due": ""
+  },
+  "targets": [
+    "openai",
+    "claude",
+    "generic"
+  ],
+  "source_files": [
+    "SKILL.md",
+    "manifest.json",
+    "agents/interface.yaml"
+  ]
+}

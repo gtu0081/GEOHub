@@ -101,7 +101,9 @@ def test_skill_manifests_declare_license_governance():
     diagnose_manifest = json.loads((repository_root() / "skills" / "geo-diagnose" / "manifest.json").read_text(encoding="utf-8"))
     assert diagnose_manifest["status"] == "experimental"
     assert diagnose_manifest["maturity"] == "experimental"
-    assert "production" not in json.dumps(diagnose_manifest)
+    assert diagnose_manifest["maturity_tier"] == "library"
+    assert diagnose_manifest["lifecycle_stage"] == "library"
+    assert diagnose_manifest["context_budget_tier"] == "production"
 
 
 def _write_test_registry(tmp_path, registry):

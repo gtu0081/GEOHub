@@ -31,6 +31,7 @@ interface:
     - "quality-report.json"
     - "run-manifest.json"
     - "content.docx/content.pdf when requested and rendered"
+  permission_contract: {filesystem: "read inputs and write selected runs root", network: "forbid"}
 compatibility:
   canonical_format: "agent-skills"
   adapter_targets: [openai, claude, generic]
@@ -39,7 +40,7 @@ compatibility:
     paths: []
   execution:
     context: "inline"
-    shell: "python"
+    shell: "bash"
   trust:
     source_tier: "local"
     remote_inline_execution: "forbid"

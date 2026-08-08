@@ -1,0 +1,662 @@
+[
+  {
+    "id": "r001",
+    "text": "帮我做 AI 搜索意图挖掘",
+    "category": "single",
+    "expected": {
+      "skill_id": "geo-discover",
+      "workflow_id": null,
+      "runnable": true
+    }
+  },
+  {
+    "id": "r002",
+    "text": "Discover customer questions",
+    "category": "single",
+    "expected": {
+      "skill_id": "geo-discover",
+      "workflow_id": null,
+      "runnable": true
+    }
+  },
+  {
+    "id": "r003",
+    "text": "Run query research",
+    "category": "single",
+    "expected": {
+      "skill_id": "geo-discover",
+      "workflow_id": null,
+      "runnable": true
+    }
+  },
+  {
+    "id": "r004",
+    "text": "查询拓展和选题发现",
+    "category": "single",
+    "expected": {
+      "skill_id": "geo-discover",
+      "workflow_id": null,
+      "runnable": true
+    }
+  },
+  {
+    "id": "r005",
+    "text": "FAQ discovery for AI search",
+    "category": "single",
+    "expected": {
+      "skill_id": "geo-discover",
+      "workflow_id": null,
+      "runnable": true
+    }
+  },
+  {
+    "id": "r006",
+    "text": "Intent mining for our category",
+    "category": "single",
+    "expected": {
+      "skill_id": "geo-discover",
+      "workflow_id": null,
+      "runnable": true
+    }
+  },
+  {
+    "id": "r007",
+    "text": "挖掘 AI 搜索问题",
+    "category": "single",
+    "expected": {
+      "skill_id": "geo-discover",
+      "workflow_id": null,
+      "runnable": true
+    }
+  },
+  {
+    "id": "r008",
+    "text": "Build a query research opportunity map",
+    "category": "single",
+    "expected": {
+      "skill_id": "geo-discover",
+      "workflow_id": null,
+      "runnable": true
+    }
+  },
+  {
+    "id": "r009",
+    "text": "诊断我们的网站 GEO 差距",
+    "category": "single",
+    "expected": {
+      "skill_id": "geo-diagnose",
+      "workflow_id": null,
+      "runnable": true
+    }
+  },
+  {
+    "id": "r010",
+    "text": "Run a brand diagnosis",
+    "category": "single",
+    "expected": {
+      "skill_id": "geo-diagnose",
+      "workflow_id": null,
+      "runnable": true
+    }
+  },
+  {
+    "id": "r011",
+    "text": "Audit this website",
+    "category": "single",
+    "expected": {
+      "skill_id": "geo-diagnose",
+      "workflow_id": null,
+      "runnable": true
+    }
+  },
+  {
+    "id": "r012",
+    "text": "Page audit for pricing",
+    "category": "single",
+    "expected": {
+      "skill_id": "geo-diagnose",
+      "workflow_id": null,
+      "runnable": true
+    }
+  },
+  {
+    "id": "r013",
+    "text": "品牌诊断与差距分析",
+    "category": "single",
+    "expected": {
+      "skill_id": "geo-diagnose",
+      "workflow_id": null,
+      "runnable": true
+    }
+  },
+  {
+    "id": "r014",
+    "text": "Website diagnosis from HTML",
+    "category": "single",
+    "expected": {
+      "skill_id": "geo-diagnose",
+      "workflow_id": null,
+      "runnable": true
+    }
+  },
+  {
+    "id": "r015",
+    "text": "页面诊断",
+    "category": "single",
+    "expected": {
+      "skill_id": "geo-diagnose",
+      "workflow_id": null,
+      "runnable": true
+    }
+  },
+  {
+    "id": "r016",
+    "text": "Run a site audit",
+    "category": "single",
+    "expected": {
+      "skill_id": "geo-diagnose",
+      "workflow_id": null,
+      "runnable": true
+    }
+  },
+  {
+    "id": "r017",
+    "text": "生成标题候选",
+    "category": "single",
+    "expected": {
+      "skill_id": "geo-content",
+      "workflow_id": null,
+      "runnable": true
+    }
+  },
+  {
+    "id": "r018",
+    "text": "Write an explainer",
+    "category": "single",
+    "expected": {
+      "skill_id": "geo-content",
+      "workflow_id": null,
+      "runnable": true
+    }
+  },
+  {
+    "id": "r019",
+    "text": "做一个中立对比",
+    "category": "single",
+    "expected": {
+      "skill_id": "geo-content",
+      "workflow_id": null,
+      "runnable": true
+    }
+  },
+  {
+    "id": "r020",
+    "text": "Create a ranking draft",
+    "category": "single",
+    "expected": {
+      "skill_id": "geo-content",
+      "workflow_id": null,
+      "runnable": true
+    }
+  },
+  {
+    "id": "r021",
+    "text": "输出页面蓝图",
+    "category": "single",
+    "expected": {
+      "skill_id": "geo-content",
+      "workflow_id": null,
+      "runnable": true
+    }
+  },
+  {
+    "id": "r022",
+    "text": "帮我做内容优化",
+    "category": "single",
+    "expected": {
+      "skill_id": "geo-content",
+      "workflow_id": null,
+      "runnable": true
+    }
+  },
+  {
+    "id": "r023",
+    "text": "Create an article-friendly draft",
+    "category": "single",
+    "expected": {
+      "skill_id": "geo-content",
+      "workflow_id": null,
+      "runnable": true
+    }
+  },
+  {
+    "id": "r024",
+    "text": "写一篇科普文章",
+    "category": "single",
+    "expected": {
+      "skill_id": "geo-content",
+      "workflow_id": null,
+      "runnable": true
+    }
+  },
+  {
+    "id": "r025",
+    "text": "Build a GEO strategy",
+    "category": "single",
+    "expected": {
+      "skill_id": "geo-strategy",
+      "workflow_id": null,
+      "runnable": false
+    }
+  },
+  {
+    "id": "r026",
+    "text": "给我一份路线图",
+    "category": "single",
+    "expected": {
+      "skill_id": "geo-strategy",
+      "workflow_id": null,
+      "runnable": false
+    }
+  },
+  {
+    "id": "r027",
+    "text": "Create a knowledge base",
+    "category": "single",
+    "expected": {
+      "skill_id": "geo-knowledge",
+      "workflow_id": null,
+      "runnable": false
+    }
+  },
+  {
+    "id": "r028",
+    "text": "知识治理流程",
+    "category": "single",
+    "expected": {
+      "skill_id": "geo-knowledge",
+      "workflow_id": null,
+      "runnable": false
+    }
+  },
+  {
+    "id": "r029",
+    "text": "Publish this result",
+    "category": "single",
+    "expected": {
+      "skill_id": "geo-publish",
+      "workflow_id": null,
+      "runnable": false
+    }
+  },
+  {
+    "id": "r030",
+    "text": "分发这篇文章",
+    "category": "single",
+    "expected": {
+      "skill_id": "geo-publish",
+      "workflow_id": null,
+      "runnable": false
+    }
+  },
+  {
+    "id": "r031",
+    "text": "Monitor GEO performance",
+    "category": "single",
+    "expected": {
+      "skill_id": "geo-measure",
+      "workflow_id": null,
+      "runnable": false
+    }
+  },
+  {
+    "id": "r032",
+    "text": "衡量 GEO 效果",
+    "category": "single",
+    "expected": {
+      "skill_id": "geo-measure",
+      "workflow_id": null,
+      "runnable": false
+    }
+  },
+  {
+    "id": "r033",
+    "text": "What can Yao GEO do?",
+    "category": "single",
+    "expected": {
+      "skill_id": "geo",
+      "workflow_id": null,
+      "runnable": true
+    }
+  },
+  {
+    "id": "r034",
+    "text": "帮我选择下一步",
+    "category": "single",
+    "expected": {
+      "skill_id": "geo",
+      "workflow_id": null,
+      "runnable": true
+    }
+  },
+  {
+    "id": "r035",
+    "text": "Hello world",
+    "category": "single",
+    "expected": {
+      "skill_id": "geo",
+      "workflow_id": null,
+      "runnable": true
+    }
+  },
+  {
+    "id": "r036",
+    "text": "Summarize this invoice",
+    "category": "single",
+    "expected": {
+      "skill_id": "geo",
+      "workflow_id": null,
+      "runnable": true
+    }
+  },
+  {
+    "id": "r037",
+    "text": "Translate a poem",
+    "category": "single",
+    "expected": {
+      "skill_id": "geo",
+      "workflow_id": null,
+      "runnable": true
+    }
+  },
+  {
+    "id": "r038",
+    "text": "What is the weather?",
+    "category": "single",
+    "expected": {
+      "skill_id": "geo",
+      "workflow_id": null,
+      "runnable": true
+    }
+  },
+  {
+    "id": "r039",
+    "text": "GEO capability check",
+    "category": "single",
+    "expected": {
+      "skill_id": "geo",
+      "workflow_id": null,
+      "runnable": true
+    }
+  },
+  {
+    "id": "r040",
+    "text": "choose the next step",
+    "category": "single",
+    "expected": {
+      "skill_id": "geo",
+      "workflow_id": null,
+      "runnable": true
+    }
+  },
+  {
+    "id": "r041",
+    "text": "Discover questions then audit our website",
+    "category": "mixed",
+    "expected": {
+      "skill_id": "geo-discover",
+      "workflow_id": "brand-baseline-lite",
+      "runnable": true
+    }
+  },
+  {
+    "id": "r042",
+    "text": "先做意图挖掘，再做品牌诊断",
+    "category": "mixed",
+    "expected": {
+      "skill_id": "geo-discover",
+      "workflow_id": "brand-baseline-lite",
+      "runnable": true
+    }
+  },
+  {
+    "id": "r043",
+    "text": "Query research and page audit",
+    "category": "mixed",
+    "expected": {
+      "skill_id": "geo-discover",
+      "workflow_id": "brand-baseline-lite",
+      "runnable": true
+    }
+  },
+  {
+    "id": "r044",
+    "text": "问题挖掘加网站诊断",
+    "category": "mixed",
+    "expected": {
+      "skill_id": "geo-discover",
+      "workflow_id": "brand-baseline-lite",
+      "runnable": true
+    }
+  },
+  {
+    "id": "r045",
+    "text": "Discover questions then write an explainer",
+    "category": "mixed",
+    "expected": {
+      "skill_id": "geo-discover",
+      "workflow_id": "content-campaign",
+      "runnable": true
+    }
+  },
+  {
+    "id": "r046",
+    "text": "先做意图挖掘，再写文章",
+    "category": "mixed",
+    "expected": {
+      "skill_id": "geo-discover",
+      "workflow_id": "content-campaign",
+      "runnable": true
+    }
+  },
+  {
+    "id": "r047",
+    "text": "Query research and content draft",
+    "category": "mixed",
+    "expected": {
+      "skill_id": "geo-discover",
+      "workflow_id": "content-campaign",
+      "runnable": true
+    }
+  },
+  {
+    "id": "r048",
+    "text": "选题发现加内容优化",
+    "category": "mixed",
+    "expected": {
+      "skill_id": "geo-discover",
+      "workflow_id": "content-campaign",
+      "runnable": true
+    }
+  },
+  {
+    "id": "r049",
+    "text": "Write an explainer and comparison",
+    "category": "mixed",
+    "expected": {
+      "skill_id": "geo-content",
+      "workflow_id": null,
+      "runnable": true
+    }
+  },
+  {
+    "id": "r050",
+    "text": "Do a title and ranking draft",
+    "category": "mixed",
+    "expected": {
+      "skill_id": "geo-content",
+      "workflow_id": null,
+      "runnable": true
+    }
+  },
+  {
+    "id": "r051",
+    "text": "GEO strategy only; do not execute",
+    "category": "mixed",
+    "expected": {
+      "skill_id": "geo-strategy",
+      "workflow_id": null,
+      "runnable": false
+    }
+  },
+  {
+    "id": "r052",
+    "text": "Measure only, no diagnosis",
+    "category": "mixed",
+    "expected": {
+      "skill_id": "geo-measure",
+      "workflow_id": null,
+      "runnable": false
+    }
+  },
+  {
+    "id": "r053",
+    "text": "The article mentions audit but I need an explainer",
+    "category": "mixed",
+    "expected": {
+      "skill_id": "geo-content",
+      "workflow_id": null,
+      "runnable": true
+    }
+  },
+  {
+    "id": "r054",
+    "text": "Do not publish; write content",
+    "category": "mixed",
+    "expected": {
+      "skill_id": "geo-content",
+      "workflow_id": null,
+      "runnable": true
+    }
+  },
+  {
+    "id": "r055",
+    "text": "knowledge graph content",
+    "category": "mixed",
+    "expected": {
+      "skill_id": "geo-knowledge",
+      "workflow_id": null,
+      "runnable": false
+    }
+  },
+  {
+    "id": "r056",
+    "text": "brand audit and roadmap",
+    "category": "mixed",
+    "expected": {
+      "skill_id": "geo-diagnose",
+      "workflow_id": null,
+      "runnable": true
+    }
+  },
+  {
+    "id": "r057",
+    "text": "DISCOVER questions AND DIAGNOSE page",
+    "category": "mixed",
+    "expected": {
+      "skill_id": "geo-discover",
+      "workflow_id": "brand-baseline-lite",
+      "runnable": true
+    }
+  },
+  {
+    "id": "r058",
+    "text": "问题挖掘，然后页面审计",
+    "category": "mixed",
+    "expected": {
+      "skill_id": "geo-discover",
+      "workflow_id": "brand-baseline-lite",
+      "runnable": true
+    }
+  },
+  {
+    "id": "r059",
+    "text": "DISCOVER topics and CONTENT draft",
+    "category": "mixed",
+    "expected": {
+      "skill_id": "geo-discover",
+      "workflow_id": "content-campaign",
+      "runnable": true
+    }
+  },
+  {
+    "id": "r060",
+    "text": "查询拓展，然后标题创作",
+    "category": "mixed",
+    "expected": {
+      "skill_id": "geo-discover",
+      "workflow_id": "content-campaign",
+      "runnable": true
+    }
+  },
+  {
+    "id": "r061",
+    "text": "citation share measurement",
+    "category": "mixed",
+    "expected": {
+      "skill_id": "geo-measure",
+      "workflow_id": null,
+      "runnable": false
+    }
+  },
+  {
+    "id": "r062",
+    "text": "knowledge base publishing roadmap",
+    "category": "mixed",
+    "expected": {
+      "skill_id": "geo-knowledge",
+      "workflow_id": null,
+      "runnable": false
+    }
+  },
+  {
+    "id": "r063",
+    "text": "brand audit content refine",
+    "category": "mixed",
+    "expected": {
+      "skill_id": "geo-content",
+      "workflow_id": null,
+      "runnable": true
+    }
+  },
+  {
+    "id": "r064",
+    "text": "page blueprint for a website",
+    "category": "mixed",
+    "expected": {
+      "skill_id": "geo-content",
+      "workflow_id": null,
+      "runnable": true
+    }
+  },
+  {
+    "id": "r065",
+    "text": "Discover questions, audit our site, then write an explainer",
+    "category": "mixed",
+    "expected": {
+      "skill_id": "geo-discover",
+      "workflow_id": "brand-baseline-lite+content-campaign",
+      "runnable": true
+    }
+  },
+  {
+    "id": "r066",
+    "text": "意图挖掘后不需要发布内容",
+    "category": "adversarial",
+    "expected": {
+      "skill_id": "geo-discover",
+      "workflow_id": null,
+      "runnable": true
+    }
+  }
+]

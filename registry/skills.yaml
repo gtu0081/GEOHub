@@ -1,5 +1,16 @@
 protocol_version: 1.0.0
-registry_version: 0.1.0
+registry_version: 0.2.0
+workflows:
+  - id: brand-baseline-lite
+    required_skills: [geo-discover, geo-diagnose]
+    steps:
+      - {id: discover, skill_id: geo-discover, depends_on: []}
+      - {id: diagnose, skill_id: geo-diagnose, depends_on: [discover]}
+  - id: content-campaign
+    required_skills: [geo-discover, geo-content]
+    steps:
+      - {id: discover, skill_id: geo-discover, depends_on: []}
+      - {id: content, skill_id: geo-content, depends_on: [discover]}
 skills:
   - id: geo
     status: active
@@ -33,6 +44,7 @@ skills:
     status: planned
     active_placeholder: false
     entry: null
+    nearest_active: geo-discover
     summary: Roadmap route for strategy planning.
     intents: [strategy, roadmap, 策略, 路线图]
     outputs: [opportunity-map]
@@ -40,6 +52,7 @@ skills:
     status: planned
     active_placeholder: false
     entry: null
+    nearest_active: geo-content
     summary: Roadmap route for knowledge operations.
     intents: [knowledge, knowledge base, 知识库, 知识治理]
     outputs: [brand-fact-card]
@@ -47,6 +60,7 @@ skills:
     status: planned
     active_placeholder: false
     entry: null
+    nearest_active: geo-content
     summary: Roadmap route for publishing workflows.
     intents: [publish, distribute, 发布, 分发]
     outputs: [run-manifest]
@@ -54,6 +68,7 @@ skills:
     status: planned
     active_placeholder: false
     entry: null
+    nearest_active: geo-diagnose
     summary: Roadmap route for measurement.
     intents: [measure, monitor, tracking, 监测, 衡量, 效果]
     outputs: [quality-report]

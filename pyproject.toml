@@ -30,6 +30,7 @@ yao-geo = "yao_geo.cli:main"
 where = ["src"]
 
 [tool.setuptools.data-files]
+"share/yao-geo/skills" = ["skills/RESOLVER.md"]
 "share/yao-geo/registry" = [
   "registry/skills.yaml",
   "registry/skills.schema.json",
@@ -50,6 +51,7 @@ where = ["src"]
 ]
 "share/yao-geo/skills/geo/agents" = ["skills/geo/agents/interface.yaml"]
 "share/yao-geo/skills/geo/references" = ["skills/geo/references/routing-contract.md"]
+"share/yao-geo/skills/geo/scripts" = ["skills/geo/scripts/run_route.py"]
 "share/yao-geo/skills/geo-discover" = [
   "skills/geo-discover/SKILL.md",
   "skills/geo-discover/manifest.json",

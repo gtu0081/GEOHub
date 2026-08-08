@@ -1,0 +1,209 @@
+[
+  {
+    "id": "o01",
+    "skill_id": "geo",
+    "case_type": "happy",
+    "input": null,
+    "route_text": "Discover AI search questions",
+    "expected_skill": "geo-discover",
+    "expected_outcome": "success",
+    "fixture_policy": "synthetic only",
+    "fabricated_citations": 0
+  },
+  {
+    "id": "o02",
+    "skill_id": "geo",
+    "case_type": "missing_input",
+    "input": null,
+    "route_text": "",
+    "expected_outcome": "error",
+    "fixture_policy": "synthetic only",
+    "fabricated_citations": 0
+  },
+  {
+    "id": "o03",
+    "skill_id": "geo",
+    "case_type": "boundary",
+    "input": null,
+    "route_text": "Build a GEO strategy",
+    "expected_skill": "geo-strategy",
+    "expected_suggestion": "geo-discover",
+    "expected_outcome": "planned",
+    "fixture_policy": "synthetic only",
+    "fabricated_citations": 0
+  },
+  {
+    "id": "o04",
+    "skill_id": "geo",
+    "case_type": "near_neighbor",
+    "input": null,
+    "route_text": "Audit this page",
+    "expected_skill": "geo-diagnose",
+    "expected_outcome": "success",
+    "fixture_policy": "synthetic only",
+    "fabricated_citations": 0
+  },
+  {
+    "id": "o05",
+    "skill_id": "geo",
+    "case_type": "source_shortfall",
+    "input": null,
+    "route_text": "nonsense request",
+    "expected_skill": "geo",
+    "expected_outcome": "success",
+    "fixture_policy": "synthetic only",
+    "fabricated_citations": 0
+  },
+  {
+    "id": "o06",
+    "skill_id": "geo-discover",
+    "case_type": "happy",
+    "input": "tests/fixtures/brief.json",
+    "route_text": null,
+    "expected_outcome": "success",
+    "fixture_policy": "synthetic only",
+    "fabricated_citations": 0
+  },
+  {
+    "id": "o07",
+    "skill_id": "geo-discover",
+    "case_type": "missing_input",
+    "input": null,
+    "route_text": null,
+    "expected_outcome": "error",
+    "fixture_policy": "synthetic only",
+    "fabricated_citations": 0
+  },
+  {
+    "id": "o08",
+    "skill_id": "geo-discover",
+    "case_type": "boundary",
+    "input": null,
+    "route_text": "Estimate live search volume",
+    "expected_skill": "geo",
+    "expected_outcome": "boundary",
+    "fixture_policy": "synthetic only",
+    "fabricated_citations": 0
+  },
+  {
+    "id": "o09",
+    "skill_id": "geo-discover",
+    "case_type": "near_neighbor",
+    "input": null,
+    "route_text": "Audit this page",
+    "expected_outcome": "geo-diagnose",
+    "fixture_policy": "synthetic only",
+    "fabricated_citations": 0
+  },
+  {
+    "id": "o10",
+    "skill_id": "geo-discover",
+    "case_type": "source_shortfall",
+    "input": "tests/fixtures/brief-missing-evidence.json",
+    "route_text": null,
+    "expected_outcome": "success",
+    "fixture_policy": "synthetic only",
+    "fabricated_citations": 0
+  },
+  {
+    "id": "o11",
+    "skill_id": "geo-diagnose",
+    "case_type": "happy",
+    "input": "tests/fixtures/diagnosis-page.json",
+    "route_text": null,
+    "expected_outcome": "success",
+    "fixture_policy": "synthetic only",
+    "fabricated_citations": 0
+  },
+  {
+    "id": "o12",
+    "skill_id": "geo-diagnose",
+    "case_type": "missing_input",
+    "input": null,
+    "route_text": null,
+    "expected_outcome": "error",
+    "fixture_policy": "synthetic only",
+    "fabricated_citations": 0
+  },
+  {
+    "id": "o13",
+    "skill_id": "geo-diagnose",
+    "case_type": "boundary",
+    "input": null,
+    "route_text": "Measure live citation share",
+    "expected_skill": "geo-measure",
+    "expected_outcome": "boundary",
+    "fixture_policy": "synthetic only",
+    "fabricated_citations": 0
+  },
+  {
+    "id": "o14",
+    "skill_id": "geo-diagnose",
+    "case_type": "near_neighbor",
+    "input": null,
+    "route_text": "Write an explainer",
+    "expected_outcome": "geo-content",
+    "fixture_policy": "synthetic only",
+    "fabricated_citations": 0
+  },
+  {
+    "id": "o15",
+    "skill_id": "geo-diagnose",
+    "case_type": "source_shortfall",
+    "input": "tests/fixtures/diagnosis-brand.json",
+    "route_text": null,
+    "expected_outcome": "success",
+    "fixture_policy": "synthetic only",
+    "fabricated_citations": 0
+  },
+  {
+    "id": "o16",
+    "skill_id": "geo-content",
+    "case_type": "happy",
+    "input": "skills/geo-content/references/input-example.json",
+    "route_text": null,
+    "expected_outcome": "success",
+    "fixture_policy": "synthetic only",
+    "fabricated_citations": 0
+  },
+  {
+    "id": "o17",
+    "skill_id": "geo-content",
+    "case_type": "missing_input",
+    "input": null,
+    "route_text": null,
+    "expected_outcome": "error",
+    "fixture_policy": "synthetic only",
+    "fabricated_citations": 0
+  },
+  {
+    "id": "o18",
+    "skill_id": "geo-content",
+    "case_type": "boundary",
+    "input": "skills/geo-content/references/input-example.json",
+    "route_text": "Research facts online and draft",
+    "expected_outcome": "boundary",
+    "fixture_policy": "synthetic only",
+    "fabricated_citations": 0
+  },
+  {
+    "id": "o19",
+    "skill_id": "geo-content",
+    "case_type": "near_neighbor",
+    "input": null,
+    "route_text": "Publish this article",
+    "expected_outcome": "geo-publish",
+    "fixture_policy": "synthetic only",
+    "fabricated_citations": 0
+  },
+  {
+    "id": "o20",
+    "skill_id": "geo-content",
+    "case_type": "source_shortfall",
+    "input": "skills/geo-content/references/input-example.json",
+    "route_text": null,
+    "expected_outcome": "success",
+    "fixture_policy": "synthetic only",
+    "fabricated_citations": 0
+  }
+]

@@ -3,10 +3,23 @@
   "$id": "https://yao.example/geo/registry/skills.schema.json",
   "type": "object",
   "additionalProperties": false,
-  "required": ["protocol_version", "registry_version", "skills"],
+  "required": ["protocol_version", "registry_version", "skills", "workflows"],
   "properties": {
     "protocol_version": {"const": "1.0.0"},
     "registry_version": {"type": "string", "pattern": "^\\d+\\.\\d+\\.\\d+$"},
+    "workflows": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["id", "required_skills", "steps"],
+        "properties": {
+          "id": {"enum": ["brand-baseline-lite", "content-campaign"]},
+          "required_skills": {"type": "array", "minItems": 2, "uniqueItems": true, "items": {"type": "string"}},
+          "steps": {"type": "array", "minItems": 2, "items": {"type": "object", "additionalProperties": false, "required": ["id", "skill_id", "depends_on"], "properties": {"id": {"type": "string", "pattern": "^[a-z]+$"}, "skill_id": {"type": "string"}, "depends_on": {"type": "array", "uniqueItems": true, "items": {"type": "string"}}}}}
+        }
+      }
+    },
     "skills": {
       "type": "array",
       "minItems": 1,
@@ -21,7 +34,8 @@
           "entry": {"type": ["string", "null"], "pattern": "\\S"},
           "summary": {"type": "string", "minLength": 1, "pattern": "\\S"},
           "intents": {"type": "array", "minItems": 1, "items": {"type": "string", "minLength": 1, "pattern": "\\S"}},
-          "outputs": {"type": "array", "items": {"type": "string", "minLength": 1, "pattern": "\\S"}}
+          "outputs": {"type": "array", "items": {"type": "string", "minLength": 1, "pattern": "\\S"}},
+          "nearest_active": {"type": "string", "pattern": "^geo(?:-[a-z]+)?$"}
         },
         "allOf": [
           {"if": {"properties": {"status": {"const": "active"}}}, "then": {"properties": {"entry": {"type": "string"}}}},

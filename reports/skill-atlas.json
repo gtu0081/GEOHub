@@ -1,0 +1,484 @@
+{
+  "ok": true,
+  "workspace_root": "skills",
+  "summary": {
+    "skill_count": 4,
+    "actionable_skill_count": 4,
+    "route_collision_count": 0,
+    "actionable_route_collision_count": 0,
+    "owner_gap_count": 0,
+    "actionable_owner_gap_count": 0,
+    "stale_count": 0,
+    "actionable_stale_count": 0,
+    "shared_resource_count": 1,
+    "no_route_opportunity_count": 0,
+    "telemetry_report_count": 0,
+    "drift_signal_count": 4,
+    "actionable_drift_signal_count": 4,
+    "non_actionable_issue_count": 0
+  },
+  "scope_policy": {
+    "present": false,
+    "path": "skill_atlas/policy.json",
+    "rules": []
+  },
+  "catalog": {
+    "workspace_root": "skills",
+    "generated_at": "2026-08-08",
+    "skills": [
+      {
+        "name": "geo",
+        "path": "geo",
+        "description": "Route GEO and generative engine optimization requests to an available Yao GEO capability. Use for broad GEO requests, workflow selection, capability checks, or requests spanning discovery, brand/site/page diagnosis, content, strategy, knowledge, publishing, and measurement.",
+        "owner": "姚金刚 / Yao",
+        "version": "0.1.0",
+        "status": "experimental",
+        "maturity": "library",
+        "updated_at": "2026-08-08",
+        "review_cadence": "per-release",
+        "targets": [
+          "openai",
+          "claude",
+          "generic"
+        ],
+        "resources": [
+          "scripts/run_route.py",
+          "references/routing-contract.md"
+        ],
+        "token_set": [
+          "available",
+          "brand",
+          "broad",
+          "capability",
+          "checks",
+          "content",
+          "diagnosis",
+          "discovery",
+          "engine",
+          "generative",
+          "geo",
+          "knowledge",
+          "measurement",
+          "optimization",
+          "or",
+          "page",
+          "publishing",
+          "requests",
+          "route",
+          "selection",
+          "site",
+          "spanning",
+          "strategy",
+          "workflow",
+          "yao"
+        ],
+        "atlas_scope": "release",
+        "actionable": true,
+        "scope_reason": "default release-actionable skill",
+        "telemetry": {
+          "report_present": false,
+          "report": "geo/reports/adoption_drift_report.json",
+          "risk_band": "missing",
+          "event_count": 0,
+          "adoption_sample_count": 0,
+          "adoption_rate": 0,
+          "candidate_count": 0
+        }
+      },
+      {
+        "name": "geo-content",
+        "path": "geo-content",
+        "description": "Create evidence-lined GEO titles, explainers, neutral comparisons, method-backed rankings, page blueprints, refinements, and article-friendly Markdown. Use for title generation, 科普/解释、对比、榜单、页面蓝图、内容优化, and article-friendly rewriting. Excludes unsupported factual claims, winner declarations without like-for-like evidence, network research, publishing, and live ranking measurement.",
+        "owner": "姚金刚 / Yao",
+        "version": "0.1.0",
+        "status": "experimental",
+        "maturity": "library",
+        "updated_at": "2026-08-08",
+        "review_cadence": "per-release",
+        "targets": [
+          "openai",
+          "claude",
+          "generic"
+        ],
+        "resources": [
+          "scripts/run_content.py",
+          "references/content-method.md",
+          "references/evidence-policy.md",
+          "references/input-example.json",
+          "references/modes.md",
+          "references/output-contract.md"
+        ],
+        "token_set": [
+          "article-friendly",
+          "blueprints",
+          "claims",
+          "comparisons",
+          "declarations",
+          "evidence",
+          "evidence-lined",
+          "excludes",
+          "explainers",
+          "factual",
+          "generation",
+          "geo",
+          "like-for-like",
+          "live",
+          "markdown",
+          "measurement",
+          "method-backed",
+          "network",
+          "neutral",
+          "page",
+          "publishing",
+          "ranking",
+          "rankings",
+          "refinements",
+          "research",
+          "rewriting",
+          "title",
+          "titles",
+          "unsupported",
+          "winner",
+          "without",
+          "内容优化",
+          "对比",
+          "榜单",
+          "科普",
+          "解释",
+          "页面蓝图"
+        ],
+        "atlas_scope": "release",
+        "actionable": true,
+        "scope_reason": "default release-actionable skill",
+        "telemetry": {
+          "report_present": false,
+          "report": "geo-content/reports/adoption_drift_report.json",
+          "risk_band": "missing",
+          "event_count": 0,
+          "adoption_sample_count": 0,
+          "adoption_rate": 0,
+          "candidate_count": 0
+        }
+      },
+      {
+        "name": "geo-diagnose",
+        "path": "geo-diagnose",
+        "description": "Diagnose a brand, website, or page for evidence-backed GEO gaps and opportunities from user-supplied URLs, HTML, or evidence. Use for brand diagnosis, website or page audits, GEO gap analysis, and 品牌诊断、网站诊断、页面诊断. Excludes live AI-platform recall, ranking, and citation-share measurement.",
+        "owner": "姚金刚 / Yao",
+        "version": "0.1.0",
+        "status": "experimental",
+        "maturity": "library",
+        "updated_at": "2026-08-08",
+        "review_cadence": "per-release",
+        "targets": [
+          "openai",
+          "claude",
+          "generic"
+        ],
+        "resources": [
+          "scripts/run_diagnose.py",
+          "references/diagnosis-method.md",
+          "references/input-example.json"
+        ],
+        "token_set": [
+          "ai-platform",
+          "analysis",
+          "audits",
+          "brand",
+          "citation-share",
+          "diagnose",
+          "diagnosis",
+          "evidence",
+          "evidence-backed",
+          "excludes",
+          "gap",
+          "gaps",
+          "geo",
+          "html",
+          "live",
+          "measurement",
+          "opportunities",
+          "or",
+          "page",
+          "ranking",
+          "recall",
+          "urls",
+          "user-supplied",
+          "website",
+          "品牌诊断",
+          "网站诊断",
+          "页面诊断"
+        ],
+        "atlas_scope": "release",
+        "actionable": true,
+        "scope_reason": "default release-actionable skill",
+        "telemetry": {
+          "report_present": false,
+          "report": "geo-diagnose/reports/adoption_drift_report.json",
+          "risk_band": "missing",
+          "event_count": 0,
+          "adoption_sample_count": 0,
+          "adoption_rate": 0,
+          "candidate_count": 0
+        }
+      },
+      {
+        "name": "geo-discover",
+        "path": "geo-discover",
+        "description": "Discover evidence-aware GEO questions, query rewrites, intent clusters, and prioritized content opportunities from a structured brief. Use for AI search intent mining, question expansion, query research, FAQ discovery, and GEO topic discovery in Chinese or English.",
+        "owner": "姚金刚 / Yao",
+        "version": "0.1.0",
+        "status": "experimental",
+        "maturity": "library",
+        "updated_at": "2026-08-08",
+        "review_cadence": "per-release",
+        "targets": [
+          "openai",
+          "claude",
+          "generic"
+        ],
+        "resources": [
+          "scripts/run_discover.py",
+          "references/discovery-method.md",
+          "references/input-example.json"
+        ],
+        "token_set": [
+          "ai",
+          "brief",
+          "chinese",
+          "clusters",
+          "content",
+          "discover",
+          "discovery",
+          "english",
+          "evidence-aware",
+          "expansion",
+          "faq",
+          "geo",
+          "in",
+          "intent",
+          "mining",
+          "opportunities",
+          "or",
+          "prioritized",
+          "query",
+          "question",
+          "questions",
+          "research",
+          "rewrites",
+          "search",
+          "structured",
+          "topic"
+        ],
+        "atlas_scope": "release",
+        "actionable": true,
+        "scope_reason": "default release-actionable skill",
+        "telemetry": {
+          "report_present": false,
+          "report": "geo-discover/reports/adoption_drift_report.json",
+          "risk_band": "missing",
+          "event_count": 0,
+          "adoption_sample_count": 0,
+          "adoption_rate": 0,
+          "candidate_count": 0
+        }
+      }
+    ],
+    "summary": {
+      "skill_count": 4,
+      "actionable_skill_count": 4,
+      "route_collision_count": 0,
+      "actionable_route_collision_count": 0,
+      "owner_gap_count": 0,
+      "actionable_owner_gap_count": 0,
+      "stale_count": 0,
+      "actionable_stale_count": 0,
+      "shared_resource_count": 1,
+      "no_route_opportunity_count": 0,
+      "telemetry_report_count": 0,
+      "drift_signal_count": 4,
+      "actionable_drift_signal_count": 4,
+      "non_actionable_issue_count": 0
+    }
+  },
+  "route_collisions": [],
+  "actionable_route_collisions": [],
+  "dependency_graph": {
+    "nodes": [
+      {
+        "name": "geo",
+        "path": "geo"
+      },
+      {
+        "name": "geo-content",
+        "path": "geo-content"
+      },
+      {
+        "name": "geo-diagnose",
+        "path": "geo-diagnose"
+      },
+      {
+        "name": "geo-discover",
+        "path": "geo-discover"
+      }
+    ],
+    "shared_resources": [
+      {
+        "resource": "references/input-example.json",
+        "skills": [
+          "geo-content",
+          "geo-diagnose",
+          "geo-discover"
+        ]
+      }
+    ]
+  },
+  "stale_skills": [],
+  "actionable_stale_skills": [],
+  "owner_review_gaps": [],
+  "actionable_owner_review_gaps": [],
+  "drift_signals": [
+    {
+      "name": "geo",
+      "path": "geo",
+      "source": "geo/reports/adoption_drift_report.json",
+      "risk_band": "no-data",
+      "signal_types": [
+        "no telemetry"
+      ],
+      "recommendation": "Render adoption drift evidence or record a small metadata-only sample before release review.",
+      "actionable": true,
+      "scope": "release",
+      "summary": {
+        "event_count": 0,
+        "adoption_sample_count": 0
+      }
+    },
+    {
+      "name": "geo-content",
+      "path": "geo-content",
+      "source": "geo-content/reports/adoption_drift_report.json",
+      "risk_band": "no-data",
+      "signal_types": [
+        "no telemetry"
+      ],
+      "recommendation": "Render adoption drift evidence or record a small metadata-only sample before release review.",
+      "actionable": true,
+      "scope": "release",
+      "summary": {
+        "event_count": 0,
+        "adoption_sample_count": 0
+      }
+    },
+    {
+      "name": "geo-diagnose",
+      "path": "geo-diagnose",
+      "source": "geo-diagnose/reports/adoption_drift_report.json",
+      "risk_band": "no-data",
+      "signal_types": [
+        "no telemetry"
+      ],
+      "recommendation": "Render adoption drift evidence or record a small metadata-only sample before release review.",
+      "actionable": true,
+      "scope": "release",
+      "summary": {
+        "event_count": 0,
+        "adoption_sample_count": 0
+      }
+    },
+    {
+      "name": "geo-discover",
+      "path": "geo-discover",
+      "source": "geo-discover/reports/adoption_drift_report.json",
+      "risk_band": "no-data",
+      "signal_types": [
+        "no telemetry"
+      ],
+      "recommendation": "Render adoption drift evidence or record a small metadata-only sample before release review.",
+      "actionable": true,
+      "scope": "release",
+      "summary": {
+        "event_count": 0,
+        "adoption_sample_count": 0
+      }
+    }
+  ],
+  "actionable_drift_signals": [
+    {
+      "name": "geo",
+      "path": "geo",
+      "source": "geo/reports/adoption_drift_report.json",
+      "risk_band": "no-data",
+      "signal_types": [
+        "no telemetry"
+      ],
+      "recommendation": "Render adoption drift evidence or record a small metadata-only sample before release review.",
+      "actionable": true,
+      "scope": "release",
+      "summary": {
+        "event_count": 0,
+        "adoption_sample_count": 0
+      }
+    },
+    {
+      "name": "geo-content",
+      "path": "geo-content",
+      "source": "geo-content/reports/adoption_drift_report.json",
+      "risk_band": "no-data",
+      "signal_types": [
+        "no telemetry"
+      ],
+      "recommendation": "Render adoption drift evidence or record a small metadata-only sample before release review.",
+      "actionable": true,
+      "scope": "release",
+      "summary": {
+        "event_count": 0,
+        "adoption_sample_count": 0
+      }
+    },
+    {
+      "name": "geo-diagnose",
+      "path": "geo-diagnose",
+      "source": "geo-diagnose/reports/adoption_drift_report.json",
+      "risk_band": "no-data",
+      "signal_types": [
+        "no telemetry"
+      ],
+      "recommendation": "Render adoption drift evidence or record a small metadata-only sample before release review.",
+      "actionable": true,
+      "scope": "release",
+      "summary": {
+        "event_count": 0,
+        "adoption_sample_count": 0
+      }
+    },
+    {
+      "name": "geo-discover",
+      "path": "geo-discover",
+      "source": "geo-discover/reports/adoption_drift_report.json",
+      "risk_band": "no-data",
+      "signal_types": [
+        "no telemetry"
+      ],
+      "recommendation": "Render adoption drift evidence or record a small metadata-only sample before release review.",
+      "actionable": true,
+      "scope": "release",
+      "summary": {
+        "event_count": 0,
+        "adoption_sample_count": 0
+      }
+    }
+  ],
+  "no_route_opportunities": [],
+  "artifacts": {
+    "catalog": "skill_atlas/catalog.json",
+    "route_overlap_matrix": "skill_atlas/route_overlap_matrix.csv",
+    "dependency_graph": "skill_atlas/dependency_graph.json",
+    "stale_skills": "skill_atlas/stale_skills.json",
+    "owner_review_gaps": "skill_atlas/owner_review_gaps.json",
+    "drift_signals": "skill_atlas/drift_signals.json",
+    "no_route_opportunities": "skill_atlas/no_route_opportunities.json",
+    "report_json": "reports/skill-atlas.json",
+    "report_html": "reports/skill-atlas.html"
+  }
+}
