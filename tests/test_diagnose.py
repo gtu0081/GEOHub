@@ -44,7 +44,7 @@ def test_page_source_html_writes_complete_valid_run(tmp_path):
     assert result["diagnosis_status"] == "completed"
     expected = {
         "input/diagnosis-brief.json",
-        "input/source.html",
+        "input/sources/source-html-1.html",
         "diagnosis.json",
         "report.md",
         "evidence-ledger.json",
@@ -66,7 +66,8 @@ def test_page_source_html_writes_complete_valid_run(tmp_path):
     manifest = _load(output / "run-manifest.json")
     assert set(manifest["artifacts"]) == expected - {"run-manifest.json"}
     normalized_brief = _load(output / "input" / "diagnosis-brief.json")
-    assert normalized_brief["source_html"] == {"path": "source.html"}
+    assert normalized_brief["source_html"][0]["path"] == "sources/source-html-1.html"
+    assert normalized_brief["source_html"][0]["sha256"]
 
     diagnosis_artifact = _load(output / "diagnosis.json")
     assert diagnosis_artifact["scores"]["discoverability"] == 100
@@ -93,7 +94,9 @@ def test_brand_evidence_only_has_provided_lineage(tmp_path):
     assert diagnosis_artifact["scope"] == "brand"
     assert diagnosis_artifact["scores"]["brand_fact_coverage"] == 100
     assert {finding["source_kind"] for finding in diagnosis_artifact["findings"]} == {"provided", "inferred"}
-    assert {finding["evidence_id"] for finding in diagnosis_artifact["findings"]} == {"ev-acme-about"}
+    ledger_id = _load(output / "evidence-ledger.json")["records"][0]["evidence_id"]
+    assert ledger_id != "ev-acme-about"
+    assert {finding["evidence_id"] for finding in diagnosis_artifact["findings"]} == {ledger_id}
 
 
 def test_missing_all_sources_is_rejected():
@@ -127,18 +130,18 @@ def test_url_policy_rejects_hostname_if_any_dns_answer_is_nonpublic():
         validate_public_url("https://example.com", resolver=mixed_resolver)
 
 
-@pytest.mark.parametrize(
-    "url",
-    [
-        "https://example.com/page?token=secret",
-        "https://example.com/page?api_key=secret",
-        "https://example.com/page?X-Amz-Signature=secret",
-        "https://example.com/page?credential=secret",
-    ],
-)
-def test_url_policy_rejects_sensitive_query_credentials(url):
-    with pytest.raises(URLPolicyError, match="sensitive query"):
+@pytest.mark.parametrize("query", ["token=secret", "sig=value", "sessionid=value", "page=2"])
+def test_url_policy_rejects_every_nonempty_query_string(query):
+    with pytest.raises(URLPolicyError, match="query string"):
+        url = f"https://example.com/page?{query}"
         validate_public_url(url, resolver=_public_resolver)
+
+
+def test_url_fragment_is_removed_before_fetch_identity():
+    assert validate_public_url(
+        "https://example.com/page#private-fragment",
+        resolver=_public_resolver,
+    ) == "https://example.com/page"
 
 
 def test_injected_fetcher_failure_delivers_source_gap(tmp_path):
@@ -172,8 +175,45 @@ def test_injected_fetcher_happy_path_observes_only_explicit_url(tmp_path):
 
     result = diagnose(brief, tmp_path / "runs", clock=_clock, fetcher=fetch, resolver=_public_resolver)
     assert calls == ["https://example.com/page"]
-    status = _load(Path(result["output"]) / "diagnosis.json")["source_status"]
+    output = Path(result["output"])
+    diagnosis_artifact = _load(output / "diagnosis.json")
+    status = diagnosis_artifact["source_status"]
     assert status[0]["status"] == "observed"
+    normalized_input = output / "input" / "diagnosis-brief.json"
+    assert "target_urls" not in _load(normalized_input)
+    assert (output / "input" / "sources" / "url-1.html").is_file()
+
+    def no_network(_url):
+        raise AssertionError("snapshot replay must not fetch the network")
+
+    replay = diagnose(
+        normalized_input,
+        tmp_path / "replay-runs",
+        clock=lambda: datetime(2027, 1, 1, tzinfo=timezone.utc),
+        fetcher=no_network,
+        resolver=lambda *_args, **_kwargs: (_ for _ in ()).throw(AssertionError("snapshot replay must not resolve DNS")),
+    )
+    replay_output = Path(replay["output"])
+    assert replay["run_id"] == result["run_id"]
+    assert _load(replay_output / "diagnosis.json") == diagnosis_artifact
+    assert _load(replay_output / "evidence-ledger.json") == _load(output / "evidence-ledger.json")
+
+
+def test_non_html_response_degrades_without_observed_findings(tmp_path):
+    brief = tmp_path / "brief.json"
+    brief.write_text(json.dumps({"subject": "Image", "scope": "page", "target_urls": ["https://example.com/image"]}), encoding="utf-8")
+
+    def image_fetch(url):
+        return FetchResult(url, b"\x89PNG\r\n", "image/png")
+
+    result = diagnose(brief, tmp_path / "runs", clock=_clock, fetcher=image_fetch, resolver=_public_resolver)
+    output = Path(result["output"])
+    diagnosis_artifact = _load(output / "diagnosis.json")
+    assert diagnosis_artifact["status"] == "degraded"
+    assert diagnosis_artifact["source_status"][0]["status"] == "source_gap"
+    assert "unsupported Content-Type" in diagnosis_artifact["source_status"][0]["message"]
+    assert {finding["source_kind"] for finding in diagnosis_artifact["findings"]} == {"input_gap"}
+    assert _load(output / "evidence-ledger.json")["records"] == []
 
 
 def test_dns_rebinding_attempt_degrades_without_connecting(tmp_path):
@@ -280,8 +320,41 @@ def test_duplicate_evidence_ids_are_rejected():
 def test_input_limits_reject_too_many_targets_and_large_inline_html():
     with pytest.raises(ValueError, match="at most 5"):
         validate_diagnosis_brief({"subject": "Acme", "scope": "page", "target_urls": [f"https://example.com/{index}" for index in range(6)]})
-    with pytest.raises(ValueError, match="source_html exceeds"):
+    with pytest.raises(ValueError, match="source_html.*exceeds"):
         validate_diagnosis_brief({"subject": "Acme", "scope": "page", "source_html": "x" * (2 * 1024 * 1024 + 1)})
+
+
+def test_evidence_claim_content_controls_normalized_id_and_run_id(tmp_path):
+    def write_brief(path, claim):
+        path.write_text(json.dumps({"subject": "Acme", "scope": "brand", "evidence": [{"evidence_id": "input-label", "claim": claim, "source_uri": "https://example.com/about"}]}), encoding="utf-8")
+
+    first_brief = tmp_path / "first.json"
+    second_brief = tmp_path / "second.json"
+    write_brief(first_brief, "Acme offers a product.")
+    write_brief(second_brief, "Acme offers a verified service.")
+    first = diagnose(first_brief, tmp_path / "first-runs", clock=_clock)
+    second = diagnose(second_brief, tmp_path / "second-runs", clock=_clock)
+    first_ledger = _load(Path(first["output"]) / "evidence-ledger.json")
+    second_ledger = _load(Path(second["output"]) / "evidence-ledger.json")
+    assert first["run_id"] != second["run_id"]
+    assert first_ledger["records"][0]["evidence_id"] != second_ledger["records"][0]["evidence_id"]
+    assert _load(Path(first["output"]) / "input" / "diagnosis-brief.json")["evidence"][0]["evidence_id"] == first_ledger["records"][0]["evidence_id"]
+
+
+def test_exhausted_total_budget_skips_dns_for_all_remaining_urls(tmp_path, monkeypatch):
+    brief = tmp_path / "brief.json"
+    brief.write_text(json.dumps({"subject": "Budget", "scope": "site", "target_urls": ["https://example.com/one", "https://example.com/two"]}), encoding="utf-8")
+    dns_calls = []
+
+    def resolver(*args, **kwargs):
+        dns_calls.append((args, kwargs))
+        return _public_resolver(*args, **kwargs)
+
+    monkeypatch.setattr("yao_geo.diagnose.TOTAL_FETCH_SECONDS", 0)
+    result = diagnose(brief, tmp_path / "runs", clock=_clock, resolver=resolver)
+    diagnosis_artifact = _load(Path(result["output"]) / "diagnosis.json")
+    assert dns_calls == []
+    assert [source["status"] for source in diagnosis_artifact["source_status"]] == ["source_gap", "source_gap"]
 
 
 def test_diagnosis_validator_rejects_finding_without_ledger_lineage():

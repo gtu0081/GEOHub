@@ -14,8 +14,8 @@ description: Diagnose a brand, website, or page for evidence-backed GEO gaps and
 
 ## Output contract
 
-Return `<runs-root>/<run-id>/` containing the normalized input and HTML snapshot, structured diagnosis, deterministic Markdown report, evidence-linked remediation query map, opportunity map, quality report, and run manifest.
+Return `<runs-root>/<run-id>/` containing the normalized input and replayable HTML snapshots under `input/sources/`, structured diagnosis, deterministic Markdown report, evidence-linked remediation query map, opportunity map, quality report, and run manifest.
 
 ## Boundaries
 
-Fetch only explicit public HTTP(S) targets. Keep unavailable sources as `source_gap`. Every observed, provided, or inferred finding carries an evidence ID. Never claim live AI-platform recall, ranking, or citation share.
+Fetch only explicit public HTTP(S) canonical URLs without query strings. Accept remote HTML/XHTML only and keep unavailable or unsupported sources as `source_gap`. Every observed, provided, or inferred finding carries a content-derived evidence ID. Never claim live AI-platform recall, ranking, or citation share.

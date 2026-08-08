@@ -15,7 +15,7 @@ from datetime import datetime, timezone
 from html.parser import HTMLParser
 from pathlib import Path
 from typing import Any, Callable, Iterable
-from urllib.parse import parse_qsl, urljoin, urlsplit
+from urllib.parse import urljoin, urlsplit, urlunsplit
 
 from .artifact_bus import ArtifactBus
 from .validation import load_json, validate_artifact
@@ -62,6 +62,50 @@ def _require_text(value: Any, field: str) -> str:
     return value.strip()
 
 
+def _normalize_provenance_uri(value: Any, field: str) -> str:
+    uri = _require_text(value, field)
+    parsed = urlsplit(uri)
+    if not parsed.scheme:
+        raise ValueError(f"{field} must be an absolute URI")
+    if parsed.scheme.casefold() in {"http", "https"}:
+        if parsed.username is not None or parsed.password is not None or parsed.query:
+            raise ValueError(f"{field} must be a public canonical URL without credentials or query")
+        return urlunsplit((parsed.scheme.casefold(), parsed.netloc, parsed.path, "", ""))
+    return urlunsplit((parsed.scheme, parsed.netloc, parsed.path, parsed.query, ""))
+
+
+def _source_html_items(value: Any) -> list[str | dict[str, Any]]:
+    if isinstance(value, list):
+        if not 1 <= len(value) <= MAX_TARGET_URLS:
+            raise ValueError(f"source_html must contain between 1 and {MAX_TARGET_URLS} items")
+        return value
+    return [value]
+
+
+def _validate_source_html_item(item: Any, field: str) -> None:
+    if isinstance(item, str):
+        _require_text(item, field)
+        if len(item.encode("utf-8")) > MAX_FETCH_BYTES:
+            raise ValueError(f"{field} exceeds {MAX_FETCH_BYTES} bytes")
+        return
+    if not isinstance(item, dict):
+        raise ValueError(f"{field} must be non-blank HTML or a file snapshot object")
+    allowed = {"path", "source_uri", "sha256", "source_id", "source_type"}
+    if set(item) - allowed or "path" not in item:
+        raise ValueError(f"{field} has invalid file snapshot fields")
+    _require_text(item.get("path"), f"{field}.path")
+    if "source_uri" in item:
+        _normalize_provenance_uri(item["source_uri"], f"{field}.source_uri")
+    if "sha256" in item and not re.fullmatch(r"[0-9a-f]{64}", _require_text(item["sha256"], f"{field}.sha256")):
+        raise ValueError(f"{field}.sha256 must be a lowercase SHA-256 digest")
+    if "source_id" in item:
+        source_id = _require_text(item["source_id"], f"{field}.source_id")
+        if not re.fullmatch(r"[A-Za-z0-9][A-Za-z0-9._-]{0,63}", source_id):
+            raise ValueError(f"{field}.source_id has an invalid format")
+    if item.get("source_type", "source_html") not in {"source_html", "target_url"}:
+        raise ValueError(f"{field}.source_type must be source_html or target_url")
+
+
 def validate_diagnosis_brief(brief: Any) -> dict[str, Any]:
     if not isinstance(brief, dict):
         raise ValueError("diagnosis brief must be a JSON object")
@@ -91,17 +135,16 @@ def validate_diagnosis_brief(brief: Any) -> dict[str, Any]:
         _require_text(value, f"target_urls[{index}]")
 
     source_html = brief.get("source_html")
+    source_item_count = 0
     if source_html is not None:
-        if isinstance(source_html, str):
-            _require_text(source_html, "source_html")
-            if len(source_html.encode("utf-8")) > MAX_FETCH_BYTES:
-                raise ValueError(f"source_html exceeds {MAX_FETCH_BYTES} bytes")
-        elif isinstance(source_html, dict):
-            if set(source_html) != {"path"}:
-                raise ValueError("source_html file fixture must contain only path")
-            _require_text(source_html.get("path"), "source_html.path")
-        else:
-            raise ValueError("source_html must be non-blank HTML or a {path} file fixture")
+        source_items = _source_html_items(source_html)
+        source_item_count = len(source_items)
+        for index, item in enumerate(source_items):
+            _validate_source_html_item(item, f"source_html[{index}]")
+    if len(targets) + source_item_count > MAX_TARGET_URLS:
+        raise ValueError(
+            f"target_urls and source_html together must contain at most {MAX_TARGET_URLS} sources"
+        )
 
     evidence = brief.get("evidence", [])
     if not isinstance(evidence, list):
@@ -114,9 +157,7 @@ def validate_diagnosis_brief(brief: Any) -> dict[str, Any]:
             )
         evidence_ids.append(_require_text(record.get("evidence_id"), f"evidence[{index}].evidence_id"))
         _require_text(record.get("claim"), f"evidence[{index}].claim")
-        uri = _require_text(record.get("source_uri"), f"evidence[{index}].source_uri")
-        if not urlsplit(uri).scheme:
-            raise ValueError(f"evidence[{index}].source_uri must be an absolute URI")
+        _normalize_provenance_uri(record.get("source_uri"), f"evidence[{index}].source_uri")
     if len(evidence_ids) != len(set(evidence_ids)):
         raise ValueError("diagnosis brief contains duplicate evidence_id values")
 
@@ -135,7 +176,12 @@ def validate_diagnosis_brief(brief: Any) -> dict[str, Any]:
     return brief
 
 
-def _resolved_addresses(hostname: str, resolver: Resolver) -> list[ipaddress.IPv4Address | ipaddress.IPv6Address]:
+def _resolved_addresses(
+    hostname: str,
+    resolver: Resolver,
+    *,
+    timeout: float = DNS_TIMEOUT_SECONDS,
+) -> list[ipaddress.IPv4Address | ipaddress.IPv6Address]:
     try:
         return [ipaddress.ip_address(hostname)]
     except ValueError:
@@ -150,7 +196,7 @@ def _resolved_addresses(hostname: str, resolver: Resolver) -> list[ipaddress.IPv
 
     worker = threading.Thread(target=resolve, daemon=True)
     worker.start()
-    worker.join(DNS_TIMEOUT_SECONDS)
+    worker.join(max(0.01, min(DNS_TIMEOUT_SECONDS, timeout)))
     if worker.is_alive():
         raise SourceUnavailable(f"DNS resolution timed out for {hostname}")
     outcome, value = results.get_nowait()
@@ -168,20 +214,15 @@ def _resolved_addresses(hostname: str, resolver: Resolver) -> list[ipaddress.IPv
     return addresses
 
 
-def validate_public_url(url: str, *, resolver: Resolver = socket.getaddrinfo) -> str:
+def _validate_url_syntax(url: str) -> tuple[str, str]:
     value = _require_text(url, "target URL")
     parsed = urlsplit(value)
     if parsed.scheme.casefold() not in {"http", "https"}:
         raise URLPolicyError("target URL scheme must be http or https")
     if parsed.username is not None or parsed.password is not None:
         raise URLPolicyError("target URL must not contain credentials")
-    sensitive_query_terms = ("token", "secret", "signature", "credential", "password", "auth")
-    for key, _value in parse_qsl(parsed.query, keep_blank_values=True):
-        normalized_key = re.sub(r"[^a-z0-9]", "", key.casefold())
-        if normalized_key in {"key", "apikey", "accesskey"} or any(
-            term in normalized_key for term in sensitive_query_terms
-        ):
-            raise URLPolicyError("target URL must not contain sensitive query credentials")
+    if parsed.query:
+        raise URLPolicyError("target URL must not contain a query string")
     if not parsed.hostname:
         raise URLPolicyError("target URL must include a hostname")
     try:
@@ -191,10 +232,42 @@ def validate_public_url(url: str, *, resolver: Resolver = socket.getaddrinfo) ->
     hostname = parsed.hostname.rstrip(".").casefold()
     if hostname == "localhost" or hostname.endswith(".localhost"):
         raise URLPolicyError("localhost targets are forbidden")
-    addresses = _resolved_addresses(hostname, resolver)
+    try:
+        literal_address = ipaddress.ip_address(hostname)
+    except ValueError:
+        pass
+    else:
+        if not literal_address.is_global:
+            raise URLPolicyError("target URL resolves to a non-public address")
+    normalized = urlunsplit((parsed.scheme.casefold(), parsed.netloc, parsed.path, "", ""))
+    return normalized, hostname
+
+
+def _validate_public_url(
+    url: str,
+    *,
+    resolver: Resolver,
+    dns_timeout: float = DNS_TIMEOUT_SECONDS,
+) -> tuple[str, list[ipaddress.IPv4Address | ipaddress.IPv6Address]]:
+    normalized, hostname = _validate_url_syntax(url)
+    addresses = _resolved_addresses(hostname, resolver, timeout=dns_timeout)
     if any(not address.is_global for address in addresses):
         raise URLPolicyError("target URL resolves to a non-public address")
-    return value
+    return normalized, addresses
+
+
+def validate_public_url(
+    url: str,
+    *,
+    resolver: Resolver = socket.getaddrinfo,
+    dns_timeout: float = DNS_TIMEOUT_SECONDS,
+) -> str:
+    normalized, _addresses = _validate_public_url(
+        url,
+        resolver=resolver,
+        dns_timeout=dns_timeout,
+    )
+    return normalized
 
 
 def _default_fetch(
@@ -204,18 +277,30 @@ def _default_fetch(
     timeout: int = FETCH_TIMEOUT_SECONDS,
     max_bytes: int = MAX_FETCH_BYTES,
     max_redirects: int = MAX_REDIRECTS,
+    deadline: float | None = None,
+    initial_addresses: list[ipaddress.IPv4Address | ipaddress.IPv6Address] | None = None,
 ) -> FetchResult:
     current = url
-    source_deadline = time.monotonic() + timeout
+    source_deadline = min(
+        time.monotonic() + timeout,
+        deadline if deadline is not None else float("inf"),
+    )
     for redirect_count in range(max_redirects + 1):
-        if time.monotonic() >= source_deadline:
+        remaining = source_deadline - time.monotonic()
+        if remaining <= 0:
             raise SourceUnavailable(f"fetch timeout exceeded for {url}")
         try:
-            validate_public_url(current, resolver=resolver)
+            if redirect_count == 0 and initial_addresses is not None:
+                addresses = initial_addresses
+            else:
+                current, addresses = _validate_public_url(
+                    current,
+                    resolver=resolver,
+                    dns_timeout=remaining,
+                )
         except URLPolicyError as exc:
             raise SourceUnavailable(f"redirect target rejected by URL policy: {exc}") from exc
         parsed = urlsplit(current)
-        addresses = _resolved_addresses(parsed.hostname or "", resolver)
         address = str(sorted(addresses, key=lambda item: (item.version, str(item)))[0])
         port = parsed.port or (443 if parsed.scheme.casefold() == "https" else 80)
         request_target = parsed.path or "/"
@@ -257,18 +342,26 @@ def _default_fetch(
                     raise SourceUnavailable(f"redirect from {current} has no Location header")
                 if redirect_count >= max_redirects:
                     raise SourceUnavailable(f"redirect limit exceeded for {url}")
-                next_url = urljoin(current, location)
-                try:
-                    validate_public_url(next_url, resolver=resolver)
-                except (URLPolicyError, SourceUnavailable) as exc:
-                    raise SourceUnavailable(f"redirect target rejected by URL policy: {exc}") from exc
-                current = next_url
+                current = urljoin(current, location)
                 continue
             if response.status < 200 or response.status >= 300:
                 raise SourceUnavailable(f"HTTP {response.status} while fetching {current}")
-            body = response.read(max_bytes + 1)
-            if len(body) > max_bytes:
-                raise SourceUnavailable(f"source exceeds {max_bytes} byte fetch limit")
+            body_parts: list[bytes] = []
+            byte_count = 0
+            while True:
+                remaining = source_deadline - time.monotonic()
+                if remaining <= 0:
+                    raise SourceUnavailable(f"fetch timeout exceeded for {url}")
+                if connection.sock is not None:
+                    connection.sock.settimeout(max(0.1, remaining))
+                chunk = response.read(min(64 * 1024, max_bytes + 1 - byte_count))
+                if not chunk:
+                    break
+                body_parts.append(chunk)
+                byte_count += len(chunk)
+                if byte_count > max_bytes:
+                    raise SourceUnavailable(f"source exceeds {max_bytes} byte fetch limit")
+            body = b"".join(body_parts)
             return FetchResult(
                 final_url=current,
                 body=body,
@@ -628,7 +721,12 @@ def validate_diagnosis(artifact: Any, *, evidence_ids: Iterable[str] | None = No
             raise ValueError("source_status.observations must be an object or null")
 
 
-def _load_source_html(value: str | dict[str, str], input_path: Path) -> tuple[str, str]:
+def _load_source_html(
+    value: str | dict[str, Any],
+    input_path: Path,
+    *,
+    index: int,
+) -> tuple[str, str, str, str]:
     if isinstance(value, dict):
         path = Path(value["path"])
         if path.is_absolute() or ".." in path.parts:
@@ -648,8 +746,26 @@ def _load_source_html(value: str | dict[str, str], input_path: Path) -> tuple[st
             raise ValueError(f"source_html fixture must be a regular file within the brief directory: {path}")
         if resolved.stat().st_size > MAX_FETCH_BYTES:
             raise ValueError(f"source_html fixture exceeds {MAX_FETCH_BYTES} bytes")
-        return resolved.read_text(encoding="utf-8"), "urn:yao-geo:input:source-html"
-    return value, "urn:yao-geo:input:source-html"
+        html = resolved.read_text(encoding="utf-8")
+        digest = hashlib.sha256(html.encode("utf-8")).hexdigest()
+        if value.get("sha256") and value["sha256"] != digest:
+            raise ValueError(f"source_html[{index}] digest does not match its file snapshot")
+        source_uri = _normalize_provenance_uri(
+            value.get("source_uri", f"urn:yao-geo:input:source-html:{index + 1}"),
+            f"source_html[{index}].source_uri",
+        )
+        return (
+            html,
+            source_uri,
+            value.get("source_id", f"source-html-{index + 1}"),
+            value.get("source_type", "source_html"),
+        )
+    return (
+        value,
+        f"urn:yao-geo:input:source-html:{index + 1}",
+        f"source-html-{index + 1}",
+        "source_html",
+    )
 
 
 def _public_observations(metrics: dict[str, Any]) -> dict[str, Any]:
@@ -829,11 +945,27 @@ def diagnose(
         now = now.replace(tzinfo=timezone.utc)
     created_at = now.astimezone(timezone.utc).isoformat().replace("+00:00", "Z")
 
-    provided = sorted(brief.get("evidence", []), key=lambda item: item["evidence_id"])
+    provided = []
+    for record in brief.get("evidence", []):
+        claim = record["claim"].strip()
+        source_uri = _normalize_provenance_uri(record["source_uri"], "evidence.source_uri")
+        provided.append(
+            {
+                "evidence_id": _stable_id("ev", claim, source_uri),
+                "claim": claim,
+                "source_uri": source_uri,
+            }
+        )
+    provided.sort(key=lambda item: item["evidence_id"])
+    normalized_evidence_ids = [record["evidence_id"] for record in provided]
+    if len(normalized_evidence_ids) != len(set(normalized_evidence_ids)):
+        raise ValueError("diagnosis brief contains duplicate normalized evidence records")
     analyzed_sources: list[dict[str, Any]] = []
     source_status: list[dict[str, Any]] = []
     limitations: list[str] = []
     normalized_brief = dict(brief)
+    if provided:
+        normalized_brief["evidence"] = provided
     total_source_bytes = 0
     fetch_deadline = time.monotonic() + TOTAL_FETCH_SECONDS
 
@@ -849,54 +981,121 @@ def diagnose(
             }
         )
 
-    if "source_html" in brief:
-        html, source_uri = _load_source_html(brief["source_html"], input_path)
+    source_items = _source_html_items(brief["source_html"]) if "source_html" in brief else []
+    loaded_source_ids: set[str] = set()
+    for index, source_item in enumerate(source_items):
+        html, source_uri, source_id, source_type = _load_source_html(
+            source_item,
+            input_path,
+            index=index,
+        )
+        if source_id in loaded_source_ids:
+            raise ValueError(f"source_html contains duplicate source_id: {source_id}")
+        loaded_source_ids.add(source_id)
         source_bytes = html.encode("utf-8")
+        if total_source_bytes + len(source_bytes) > MAX_TOTAL_SOURCE_BYTES:
+            raise ValueError(
+                f"total source content exceeds {MAX_TOTAL_SOURCE_BYTES} byte limit"
+            )
         total_source_bytes += len(source_bytes)
         content_sha256 = hashlib.sha256(source_bytes).hexdigest()
         metrics = analyze_html(html, source_uri)
-        analyzed_sources.append({"source_id": "source-html", "source_uri": source_uri, "source_type": "source_html", "content_sha256": content_sha256, "metrics": metrics, "html": html})
-        source_status.append({"source_id": "source-html", "source_type": "source_html", "source_uri": source_uri, "status": "provided", "message": "HTML was supplied by the user and parsed locally.", "observations": _public_observations(metrics)})
-        normalized_brief["source_html"] = {"path": "source.html"}
+        analyzed_sources.append({"source_id": source_id, "source_uri": source_uri, "source_type": source_type, "content_sha256": content_sha256, "metrics": metrics, "html": html})
+        if source_type == "target_url":
+            source_status.append({"source_id": source_id, "source_type": source_type, "source_uri": source_uri, "status": "observed", "message": "The explicit public URL snapshot was parsed.", "observations": _public_observations(metrics)})
+        else:
+            source_status.append({"source_id": source_id, "source_type": source_type, "source_uri": source_uri, "status": "provided", "message": "HTML was supplied by the user and parsed locally.", "observations": _public_observations(metrics)})
 
+    failed_target_urls: list[str] = []
     for index, target_url in enumerate(brief.get("target_urls", [])):
         source_id = f"url-{index + 1}"
+        if source_id in loaded_source_ids:
+            raise ValueError(f"target URL source_id collides with source_html: {source_id}")
+        clean_target, _hostname = _validate_url_syntax(target_url)
+        remaining = fetch_deadline - time.monotonic()
+        if remaining <= 0:
+            source_status.append({"source_id": source_id, "source_type": "target_url", "source_uri": clean_target, "status": "source_gap", "message": "total fetch budget exhausted", "observations": None})
+            limitations.append(f"Source unavailable: {clean_target}. No page observation was inferred for it.")
+            failed_target_urls.append(clean_target)
+            continue
         try:
-            validate_public_url(target_url, resolver=resolver)
+            clean_target, initial_addresses = _validate_public_url(
+                target_url,
+                resolver=resolver,
+                dns_timeout=remaining,
+            )
             remaining = fetch_deadline - time.monotonic()
             if remaining <= 0:
                 raise SourceUnavailable("total fetch budget exhausted")
-            result = fetcher(target_url) if fetcher else _default_fetch(
-                target_url,
+            result = fetcher(clean_target) if fetcher else _default_fetch(
+                clean_target,
                 resolver=resolver,
-                timeout=max(1, min(FETCH_TIMEOUT_SECONDS, int(remaining))),
+                timeout=min(FETCH_TIMEOUT_SECONDS, remaining),
+                deadline=fetch_deadline,
+                initial_addresses=initial_addresses,
             )
             if not isinstance(result, FetchResult):
                 raise SourceUnavailable("fetcher returned an invalid result")
             if not isinstance(result.body, bytes):
                 raise SourceUnavailable("fetcher result body must be bytes")
             try:
-                validate_public_url(result.final_url, resolver=resolver)
+                remaining = fetch_deadline - time.monotonic()
+                if remaining <= 0:
+                    raise SourceUnavailable("total fetch budget exhausted")
+                clean_final = validate_public_url(
+                    result.final_url,
+                    resolver=resolver,
+                    dns_timeout=remaining,
+                )
             except URLPolicyError as exc:
                 raise SourceUnavailable(f"final fetch target rejected by URL policy: {exc}") from exc
+            media_type = result.content_type.partition(";")[0].strip().casefold()
+            if media_type not in {"text/html", "application/xhtml+xml"}:
+                raise SourceUnavailable(
+                    f"unsupported Content-Type for HTML diagnosis: {media_type or 'missing'}"
+                )
             if len(result.body) > MAX_FETCH_BYTES:
                 raise SourceUnavailable(f"source exceeds {MAX_FETCH_BYTES} byte fetch limit")
-            if total_source_bytes + len(result.body) > MAX_TOTAL_SOURCE_BYTES:
+            html = _decode_html(result)
+            snapshot_bytes = html.encode("utf-8")
+            if len(snapshot_bytes) > MAX_FETCH_BYTES:
+                raise SourceUnavailable(
+                    f"decoded HTML snapshot exceeds {MAX_FETCH_BYTES} byte limit"
+                )
+            if total_source_bytes + len(snapshot_bytes) > MAX_TOTAL_SOURCE_BYTES:
                 raise SourceUnavailable(
                     f"total source content exceeds {MAX_TOTAL_SOURCE_BYTES} byte limit"
                 )
-            total_source_bytes += len(result.body)
-            html = _decode_html(result)
+            total_source_bytes += len(snapshot_bytes)
         except URLPolicyError:
             raise
         except (OSError, SourceUnavailable) as exc:
-            source_status.append({"source_id": source_id, "source_type": "target_url", "source_uri": target_url, "status": "source_gap", "message": str(exc), "observations": None})
-            limitations.append(f"Source unavailable: {target_url}. No page observation was inferred for it.")
+            source_status.append({"source_id": source_id, "source_type": "target_url", "source_uri": clean_target, "status": "source_gap", "message": str(exc), "observations": None})
+            limitations.append(f"Source unavailable: {clean_target}. No page observation was inferred for it.")
+            failed_target_urls.append(clean_target)
             continue
-        content_sha256 = hashlib.sha256(result.body).hexdigest()
-        metrics = analyze_html(html, result.final_url)
-        analyzed_sources.append({"source_id": source_id, "source_uri": result.final_url, "source_type": "target_url", "content_sha256": content_sha256, "metrics": metrics})
-        source_status.append({"source_id": source_id, "source_type": "target_url", "source_uri": result.final_url, "status": "observed", "message": "The explicitly supplied public URL was fetched and parsed.", "observations": _public_observations(metrics)})
+        content_sha256 = hashlib.sha256(snapshot_bytes).hexdigest()
+        metrics = analyze_html(html, clean_final)
+        analyzed_sources.append({"source_id": source_id, "source_uri": clean_final, "source_type": "target_url", "content_sha256": content_sha256, "metrics": metrics, "html": html})
+        source_status.append({"source_id": source_id, "source_type": "target_url", "source_uri": clean_final, "status": "observed", "message": "The explicit public URL snapshot was parsed.", "observations": _public_observations(metrics)})
+
+    if failed_target_urls:
+        normalized_brief["target_urls"] = failed_target_urls
+    else:
+        normalized_brief.pop("target_urls", None)
+    if analyzed_sources:
+        normalized_brief["source_html"] = [
+            {
+                "path": f"sources/{source['source_id']}.html",
+                "source_uri": source["source_uri"],
+                "sha256": source["content_sha256"],
+                "source_id": source["source_id"],
+                "source_type": source["source_type"],
+            }
+            for source in analyzed_sources
+        ]
+    else:
+        normalized_brief.pop("source_html", None)
 
     source_fingerprints = [
         {
@@ -915,10 +1114,17 @@ def diagnose(
         for source in source_status
         if source["status"] == "source_gap"
     )
-    identity_brief = dict(brief)
-    if "source_html" in identity_brief:
-        html_source = next(source for source in analyzed_sources if source["source_id"] == "source-html")
-        identity_brief["source_html"] = {"sha256": html_source["content_sha256"]}
+    identity_brief = dict(normalized_brief)
+    if analyzed_sources:
+        identity_brief["source_html"] = [
+            {
+                "source_uri": source["source_uri"],
+                "sha256": source["content_sha256"],
+                "source_id": source["source_id"],
+                "source_type": source["source_type"],
+            }
+            for source in analyzed_sources
+        ]
     canonical = json.dumps(
         {"brief": identity_brief, "sources": source_fingerprints},
         ensure_ascii=False,
@@ -930,8 +1136,6 @@ def diagnose(
     for source in analyzed_sources:
         evidence_id = _stable_id(
             "ev",
-            run_id,
-            source["source_id"],
             source["source_uri"],
             source["content_sha256"],
         )
@@ -965,7 +1169,9 @@ def diagnose(
 
     if not analyzed_sources and brief["scope"] in {"site", "page"}:
         limitations.append("No page structure was observed; page-level scores are zero and indicate missing input coverage.")
-    if not brief.get("target_urls"):
+    if not brief.get("target_urls") and not any(
+        source["source_type"] == "target_url" for source in analyzed_sources
+    ):
         limitations.append("No live URL was requested, so network availability and current published-page state were not assessed.")
     limitations = list(dict.fromkeys(limitations))
     degraded = any(item["status"] == "source_gap" for item in source_status) or (brief["scope"] in {"site", "page"} and not analyzed_sources)
@@ -1020,7 +1226,7 @@ def diagnose(
     report = _render_report(diagnosis_artifact, opportunity_map)
     manifest_paths = [
         "input/diagnosis-brief.json",
-        *(["input/source.html"] if "source_html" in brief else []),
+        *(f"input/sources/{source['source_id']}.html" for source in analyzed_sources),
         "diagnosis.json",
         "report.md",
         "evidence-ledger.json",
@@ -1042,9 +1248,8 @@ def diagnose(
     run_path = output_path / run_id
     bus = ArtifactBus(run_path)
     bus.write_json("input/diagnosis-brief.json", normalized_brief)
-    if "source_html" in brief:
-        html_source = next(source for source in analyzed_sources if source["source_id"] == "source-html")
-        bus.write_text("input/source.html", html_source["html"])
+    for source in analyzed_sources:
+        bus.write_text(f"input/sources/{source['source_id']}.html", source["html"])
     bus.write_json("diagnosis.json", diagnosis_artifact)
     bus.write_text("report.md", report)
     bus.write_json("evidence-ledger.json", evidence_ledger, "evidence-ledger")

@@ -2,13 +2,13 @@
 
 ## Diagnosis brief
 
-The JSON object requires `subject` and `scope`, where scope is `brand`, `site`, or `page`. It accepts `target_urls`, `source_html`, `evidence`, `locale`, `audience`, and `goals`. Supply at least one target URL, HTML source, or evidence record. All strings must contain non-whitespace text. Evidence records contain unique `evidence_id`, `claim`, and absolute `source_uri` values.
+The JSON object requires `subject` and `scope`, where scope is `brand`, `site`, or `page`. It accepts `target_urls`, `source_html`, `evidence`, `locale`, `audience`, and `goals`. Supply at least one target URL, HTML source, or evidence record. All strings must contain non-whitespace text. Evidence records contain a unique input `evidence_id` label, `claim`, and absolute canonical `source_uri`. The runner replaces input labels with stable IDs derived from normalized claim and source URI content.
 
-`source_html` accepts inline HTML or `{ "path": "file.html" }`. A file-backed fixture must be a relative regular file inside the diagnosis brief directory, and no path component may be a symbolic link. The runner caps HTML at 2 MB, snapshots it to `input/source.html`, and rewrites the copied brief to that self-contained relative path.
+`source_html` accepts inline HTML, one snapshot object, or an array of at most five snapshot objects. A snapshot object requires `path` and may preserve `source_uri`, `sha256`, `source_id`, and `source_type`. A file-backed fixture must be a relative regular file inside the diagnosis brief directory, and no path component may be a symbolic link. The runner caps each HTML source at 2 MB, snapshots every accepted local or remote page under `input/sources/`, and rewrites the copied brief to those self-contained relative paths. Re-running that normalized brief uses snapshots and requires no network for successful sources.
 
 ## Source boundary
 
-Only explicit user-supplied HTTP(S) targets are fetched. The runner performs no sitemap discovery, crawl expansion, or link following. URLs with userinfo or sensitive credential query keys and hosts resolving to localhost, loopback, link-local, private, reserved, or another non-public address are rejected. The connection binds to a validated public IP while HTTPS keeps the original hostname for SNI and certificate checks. Each redirect resolves and binds again. Fetching accepts at most five URLs, uses an 8-second per-source timeout, a 30-second run budget, a 2 MB per-source cap, and a 5 MB total source cap. The diagnosis brief itself is capped at 1 MB.
+Only explicit user-supplied HTTP(S) targets are fetched. Use public canonical URLs with no query string; fragments are removed before requests and identity calculation. The runner performs no sitemap discovery, crawl expansion, or link following. URLs with userinfo and hosts resolving to localhost, loopback, link-local, private, reserved, or another non-public address are rejected. The connection binds to a validated public IP while HTTPS keeps the original hostname for SNI and certificate checks. Each redirect resolves and binds again. Remote responses must be `text/html` or `application/xhtml+xml`; other media types become `source_gap`. Fetching accepts at most five URLs, uses an 8-second per-source timeout, a 30-second total fetch budget, a 2-second DNS cap within the remaining budget, a 2 MB per-source cap, and a 5 MB total source cap. The diagnosis brief itself is capped at 1 MB. Budget is checked before DNS for every URL; exhausted remaining URLs become source gaps without resolution.
 
 Unreachable or unavailable allowed sources become `source_gap` entries and limitations. Page observations are never filled from assumptions.
 
@@ -20,7 +20,7 @@ Brand scope checks coverage for identity, offering, audience, differentiation, p
 
 Findings label their basis as `observed`, `provided`, `input_gap`, or `inferred`. Observed, provided, and inferred findings require `evidence_id`. Input gaps carry a null evidence ID and a concrete collection action.
 
-Source SHA-256 digests bind the run and generated evidence IDs to the analyzed content. The remediation query map gives every opportunity a valid query lineage under protocol `1.0.0`.
+Source SHA-256 digests bind the run and generated page evidence IDs to the analyzed content. Provided evidence IDs derive from normalized claim and source URI content. The remediation query map gives every opportunity a valid query lineage under protocol `1.0.0`.
 
 ## Interpretation boundary
 

@@ -14,7 +14,7 @@
   "commercial_license_status": "inquiry_only",
   "copyright_owner": "姚金刚 / Yao",
   "third_party_notice_required": true,
-  "input_files": ["file-backed fixture: diagnosis brief JSON and optional source_html path"],
+  "input_files": ["file-backed fixture: diagnosis brief JSON and up to five replayable source_html snapshots"],
   "output_contract": ["report", "diagnosis", "evidence-ledger", "query-map", "opportunity-map", "quality-report", "run-manifest"],
   "rollback_boundary": "Remove generated diagnosis run directories and revert diagnose, CLI, registry, packaging, and geo-diagnose together.",
   "factory_components": ["references", "scripts", "agents"]

@@ -26,7 +26,7 @@ python3 -m yao_geo diagnose --input tests/fixtures/diagnosis-page.json --output 
 make verify
 ```
 
-The CLI prints JSON. The `--output` value is a runs root; discover and diagnose write protocol `1.0.0` runs to `<output>/<run-id>/` and return that actual run directory. Diagnose fetches only explicit public HTTP(S) URLs, performs no crawl expansion, and records unavailable sources as gaps. Its scores do not represent live AI-platform recall, ranking, or citation share.
+The CLI prints JSON. The `--output` value is a runs root; discover and diagnose write protocol `1.0.0` runs to `<output>/<run-id>/` and return that actual run directory. Diagnose fetches only explicit public HTTP(S) canonical URLs without query strings, accepts HTML/XHTML, performs no crawl expansion, and snapshots successful pages for offline replay. Unavailable or unsupported sources remain gaps. Its scores do not represent live AI-platform recall, ranking, or citation share.
 
 ## License and governance
 
