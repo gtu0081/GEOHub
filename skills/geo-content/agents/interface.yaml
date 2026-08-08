@@ -19,7 +19,7 @@ interface:
       desired_formats: "markdown, json, html, docx, pdf"
       compliance_notes: "unique non-blank strings"
       page_type: "non-blank string"
-      evaluation_method: "non-blank string or strict method object"
+      evaluation_method: "non-blank string or strict object with name, criteria[{name, weight}], and optional score_scale; tie_breaker is rejected in v0.1"
   output_contract:
     - "input/content-brief.json"
     - "input/source.md when supplied"

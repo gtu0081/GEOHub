@@ -9,13 +9,14 @@ import math
 import os
 import re
 import stat
+import unicodedata
 from datetime import datetime, timezone
 from pathlib import Path
 from typing import Any, Callable
 from urllib.parse import urlsplit
 
 from .artifact_bus import ArtifactBus
-from .validation import load_json, validate_artifact
+from .validation import validate_artifact
 
 PROTOCOL_VERSION = "1.0.0"
 GENERATOR_VERSION = "0.1.0"
@@ -49,6 +50,7 @@ UNSUPPORTED_TITLE_PATTERNS = tuple(
     )
 )
 Clock = Callable[[], datetime]
+TypedBlock = tuple[str, str]
 
 
 def _stable_id(prefix: str, *parts: str) -> str:
@@ -78,12 +80,66 @@ def _source_uri(value: Any, field: str) -> str:
     return uri
 
 
+def _open_flags(*, directory: bool = False) -> int:
+    flags = os.O_RDONLY
+    for name in ("O_NOFOLLOW", "O_NONBLOCK", "O_CLOEXEC"):
+        flags |= getattr(os, name, 0)
+    if directory:
+        flags |= getattr(os, "O_DIRECTORY", 0)
+    return flags
+
+
+def _read_regular_fd(file_descriptor: int, max_bytes: int, field: str) -> bytes:
+    file_stat = os.fstat(file_descriptor)
+    if not stat.S_ISREG(file_stat.st_mode):
+        raise ValueError(f"{field} must be a regular file")
+    if file_stat.st_size > max_bytes:
+        raise ValueError(f"{field} exceeds {max_bytes} bytes")
+    chunks: list[bytes] = []
+    count = 0
+    while True:
+        chunk = os.read(file_descriptor, min(64 * 1024, max_bytes + 1 - count))
+        if not chunk:
+            break
+        chunks.append(chunk)
+        count += len(chunk)
+        if count > max_bytes:
+            raise ValueError(f"{field} exceeds {max_bytes} bytes")
+    return b"".join(chunks)
+
+
+def _read_regular_path(path: Path, max_bytes: int, field: str) -> bytes:
+    file_descriptor: int | None = None
+    try:
+        file_descriptor = os.open(path, _open_flags())
+        return _read_regular_fd(file_descriptor, max_bytes, field)
+    except OSError as exc:
+        raise ValueError(f"{field} is unavailable or unsafe: {path}") from exc
+    finally:
+        if file_descriptor is not None:
+            try:
+                os.close(file_descriptor)
+            except OSError:
+                pass
+
+
+def _load_content_brief(path: Path) -> dict[str, Any]:
+    try:
+        raw = _read_regular_path(path, MAX_INPUT_BYTES, "content brief").decode("utf-8")
+        value = json.loads(raw)
+    except (UnicodeDecodeError, json.JSONDecodeError) as exc:
+        raise ValueError(f"content brief is not valid UTF-8 JSON: {path}: {exc}") from exc
+    if not isinstance(value, dict):
+        raise ValueError("content brief must be a JSON object")
+    return value
+
+
 def _validate_evaluation_method(value: Any) -> str | dict[str, Any]:
     if isinstance(value, str):
         return _require_text(value, "evaluation_method")
     if not isinstance(value, dict):
         raise ValueError("evaluation_method must be a non-blank string or an object")
-    allowed = {"name", "criteria", "score_scale", "tie_breaker"}
+    allowed = {"name", "criteria", "score_scale"}
     extra = sorted(set(value) - allowed)
     if extra:
         raise ValueError(f"evaluation_method has unknown fields: {', '.join(extra)}")
@@ -106,7 +162,7 @@ def _validate_evaluation_method(value: Any) -> str | dict[str, Any]:
                 raise ValueError(f"evaluation_method.criteria[{index}].weight must be positive")
             normalized_criteria.append({"name": name, "weight": float(weight)})
         normalized["criteria"] = normalized_criteria
-    for field in ("score_scale", "tie_breaker"):
+    for field in ("score_scale",):
         if field in value:
             normalized[field] = _require_text(value[field], f"evaluation_method.{field}")
     return normalized
@@ -206,34 +262,20 @@ def _read_relative_source(source: dict[str, Any], input_path: Path) -> tuple[str
         raise ValueError("source_content path must stay relative to the brief directory")
     opened: list[int] = []
     try:
-        directory_flags = os.O_RDONLY | os.O_DIRECTORY | os.O_NOFOLLOW | os.O_CLOEXEC
-        current = os.open(input_path.parent, directory_flags)
+        current = os.open(input_path.parent, _open_flags(directory=True))
         opened.append(current)
         for component in path.parts[:-1]:
-            current = os.open(component, directory_flags, dir_fd=current)
+            current = os.open(component, _open_flags(directory=True), dir_fd=current)
             opened.append(current)
         file_descriptor = os.open(
             path.parts[-1],
-            os.O_RDONLY | os.O_NOFOLLOW | os.O_CLOEXEC,
+            _open_flags(),
             dir_fd=current,
         )
         opened.append(file_descriptor)
-        file_stat = os.fstat(file_descriptor)
-        if not stat.S_ISREG(file_stat.st_mode):
-            raise ValueError("source_content path must name a regular file")
-        if file_stat.st_size > MAX_SOURCE_BYTES:
-            raise ValueError(f"source_content exceeds {MAX_SOURCE_BYTES} bytes")
-        chunks: list[bytes] = []
-        count = 0
-        while True:
-            chunk = os.read(file_descriptor, min(64 * 1024, MAX_SOURCE_BYTES + 1 - count))
-            if not chunk:
-                break
-            chunks.append(chunk)
-            count += len(chunk)
-            if count > MAX_SOURCE_BYTES:
-                raise ValueError(f"source_content exceeds {MAX_SOURCE_BYTES} bytes")
-        body = b"".join(chunks).decode("utf-8")
+        body = _read_regular_fd(
+            file_descriptor, MAX_SOURCE_BYTES, "source_content"
+        ).decode("utf-8")
     except (OSError, UnicodeDecodeError) as exc:
         raise ValueError(f"source_content is unavailable, unsafe, or not UTF-8: {path}") from exc
     finally:
@@ -295,10 +337,24 @@ def _normalize_brief(brief: dict[str, Any], input_path: Path) -> tuple[dict[str,
 
 
 def _entities(brief: dict[str, Any]) -> list[str]:
-    values = brief.get("entities") or []
-    if not values:
-        values = [brief.get("target_brand", ""), *brief.get("competitors", [])]
-    return [value for value in values if value]
+    values = [
+        brief.get("target_brand", ""),
+        *brief.get("competitors", []),
+        *brief.get("entities", []),
+    ]
+    entities: list[str] = []
+    seen: set[str] = set()
+    for value in values:
+        if not value:
+            continue
+        key = value.casefold()
+        if key in seen:
+            raise ValueError(
+                "target_brand, competitors, and entities must not contain duplicate entities"
+            )
+        seen.add(key)
+        entities.append(value)
+    return entities
 
 
 def _sections_for_mode(mode: str) -> list[dict[str, str]]:
@@ -383,11 +439,48 @@ def _title_candidates(brief: dict[str, Any]) -> list[dict[str, Any]]:
     return candidates
 
 
-def _source_claims(source_text: str | None) -> list[dict[str, str]]:
+def _normalize_claim_text(value: str) -> str:
+    normalized = unicodedata.normalize("NFKC", value).casefold()
+    normalized = re.sub(r"\s+", " ", normalized).strip()
+    return normalized.strip(" \t\r\n。！？.!?；;：:'\"“”‘’（）()[]【】")
+
+
+def _claim_text_matches(source_claim: str, evidence_claim: str) -> bool:
+    source = _normalize_claim_text(source_claim)
+    evidence = _normalize_claim_text(evidence_claim)
+    if not source or not evidence:
+        return False
+    if source == evidence:
+        return True
+    shorter, longer = sorted((source, evidence), key=len)
+    return (
+        len(shorter) >= 8
+        and len(shorter) / len(longer) >= 0.6
+        and shorter in longer
+    )
+
+
+def _source_claims(
+    source_text: str | None, evidence: list[dict[str, Any]]
+) -> list[dict[str, Any]]:
     if not source_text:
         return []
     candidates = [part.strip() for part in re.split(r"(?<=[。！？.!?])\s+|\n+", source_text) if part.strip()]
-    return [{"text": part, "status": "unverified"} for part in candidates[:20]]
+    claims = []
+    for part in candidates[:20]:
+        evidence_ids = sorted(
+            item["label"]
+            for item in evidence
+            if _claim_text_matches(part, item["claim"])
+        )
+        claims.append(
+            {
+                "text": part,
+                "status": "provided" if evidence_ids else "unverified",
+                "evidence_ids": evidence_ids,
+            }
+        )
+    return claims
 
 
 def _ranking_score_cells(
@@ -500,7 +593,11 @@ def _build_content(brief: dict[str, Any], run_id: str, source_text: str | None) 
                 for entity, dimensions in zip(entities, dimension_sets)
                 if not dimensions and entity not in missing_dimension_entities
             )
-        comparison_blocked = not comparable_dimensions or bool(missing_dimension_entities)
+        comparison_blocked = (
+            not comparable_dimensions
+            or bool(missing_dimension_entities)
+            or bool(comparison_gaps)
+        )
         if comparison_blocked:
             status = "blocked-by-evidence"
             supplement_requests.extend(comparison_gaps)
@@ -594,7 +691,7 @@ def _build_content(brief: dict[str, Any], run_id: str, source_text: str | None) 
             "ranking": {
                 "evaluation_method": method,
                 "rows": rows,
-                "limitations": ["排序只覆盖输入证据与明确方法；同分按实体名称稳定排列。"],
+                "limitations": ["排序只覆盖输入证据与明确方法；同分时内部使用稳定的实体名称顺序。"],
                 "source_evidence_ids": [item["label"] for item in brief.get("evidence", [])],
             }
         }
@@ -614,7 +711,7 @@ def _build_content(brief: dict[str, Any], run_id: str, source_text: str | None) 
             }
         }
     else:
-        claims = _source_claims(source_text)
+        claims = _source_claims(source_text, brief.get("evidence", []))
         profile = "article-friendly" if mode == "article-friendly" else "refine"
         before = 45 + min(20, len(claims))
         after = min(100, before + 25)
@@ -635,7 +732,8 @@ def _build_content(brief: dict[str, Any], run_id: str, source_text: str | None) 
                         {
                             "question": f"源内容关于“{brief['topic']}”的核心表述是什么？",
                             "answer": claims[0]["text"],
-                            "status": "unverified",
+                            "status": claims[0]["status"],
+                            "evidence_ids": claims[0]["evidence_ids"],
                         }
                     ]
                     if claims
@@ -644,16 +742,24 @@ def _build_content(brief: dict[str, Any], run_id: str, source_text: str | None) 
                 "risk_notes": ["source claims remain unverified unless linked to evidence IDs"],
             }
         }
-        if not brief.get("evidence"):
+        unverified_claims = [claim for claim in claims if not claim["evidence_ids"]]
+        if unverified_claims:
             status = "unverified"
-            supplement_requests.append("为保留的 source claims 补充可解析证据")
+            supplement_requests.extend(
+                f"为未验证 source claim 补充可解析证据：{claim['text']}"
+                for claim in unverified_claims
+            )
 
+    content_topic = brief["topic"]
+    if mode == "title":
+        content_topic = mode_data["title_candidates"][0]["title"]
+        _validate_title_candidate(content_topic)
     content = {
         "protocol_version": PROTOCOL_VERSION,
         "run_id": run_id,
         "mode": mode,
         "profile": "article-friendly" if mode == "article-friendly" else mode,
-        "topic": brief["topic"],
+        "topic": content_topic,
         "status": status,
         "sections": _sections_for_mode(mode),
         "factual_claims": _factual_claims(brief),
@@ -676,6 +782,16 @@ def _validate_content(content: dict[str, Any], evidence_ids: set[str]) -> None:
             raise ValueError("every factual claim must carry evidence_ids")
         if not set(claim["evidence_ids"]) <= evidence_ids:
             raise ValueError("factual claim evidence_ids must resolve in the evidence ledger")
+    refinement = content["mode_data"].get("refinement")
+    if refinement:
+        for claim in refinement["source_claims"]:
+            if set(claim) != {"text", "status", "evidence_ids"}:
+                raise ValueError("source claim fields do not match the output contract")
+            if not set(claim["evidence_ids"]) <= evidence_ids:
+                raise ValueError("source claim evidence_ids must resolve in the evidence ledger")
+            expected_status = "provided" if claim["evidence_ids"] else "unverified"
+            if claim["status"] != expected_status:
+                raise ValueError("source claim status does not match its evidence_ids")
 
 
 def _content_spec(brief: dict[str, Any], content: dict[str, Any]) -> dict[str, Any]:
@@ -696,101 +812,169 @@ def _content_spec(brief: dict[str, Any], content: dict[str, Any]) -> dict[str, A
     }
 
 
-def _body_lines(content: dict[str, Any]) -> list[str]:
+def _surface_title(content: dict[str, Any]) -> str:
+    if content["mode"] == "title":
+        title = content["mode_data"]["title_candidates"][0]["title"]
+        _validate_title_candidate(title)
+        return title
+    return content["topic"]
+
+
+def _commonmark_escape(value: str) -> str:
+    escaped = html.escape(value.replace("\r\n", "\n").replace("\r", "\n"), quote=False)
+    escaped = re.sub(r"([\\`*{}\[\]()#+\-.!_>~|=])", r"\\\1", escaped)
+    return "\n".join(
+        f"&#8203;{line}" if re.match(r"^(?: {4}|\t)", line) else line
+        for line in escaped.split("\n")
+    )
+
+
+def _body_blocks(content: dict[str, Any]) -> list[TypedBlock]:
     mode_data = content["mode_data"]
-    lines: list[str] = []
+    blocks: list[TypedBlock] = []
     if "title_candidates" in mode_data:
         for item in mode_data["title_candidates"]:
-            lines.extend([f"## {item['title']}", f"- 模式：{item['pattern']}", f"- 意图：{item['intent']}；场景：{item['scenario']}", f"- 评分：{json.dumps(item['scores'], ensure_ascii=False, sort_keys=True)}", ""])
+            blocks.extend(
+                [
+                    ("heading", item["title"]),
+                    ("bullet", f"模式：{item['pattern']}"),
+                    ("bullet", f"意图：{item['intent']}；场景：{item['scenario']}"),
+                    ("bullet", f"评分：{json.dumps(item['scores'], ensure_ascii=False, sort_keys=True)}"),
+                ]
+            )
     elif "explainer" in mode_data:
         data = mode_data["explainer"]
         for heading, key in zip((item["heading"] for item in content["sections"]), data):
             value = data[key]
-            lines.extend([f"## {heading}", json.dumps(value, ensure_ascii=False) if not isinstance(value, str) else value, ""])
+            blocks.extend(
+                [
+                    ("heading", heading),
+                    ("paragraph", json.dumps(value, ensure_ascii=False) if not isinstance(value, str) else value),
+                ]
+            )
     elif "comparison" in mode_data:
         data = mode_data["comparison"]
-        lines.extend(["## 中立对照", f"实体：{', '.join(data['entities'])}", f"维度：{', '.join(data['dimensions']) or '待补证'}", data["neutrality"], ""])
-        for row in data["rows"]:
-            lines.append(f"- {row['entity']}：证据 {', '.join(row['evidence_ids']) or 'source_gap'}")
-    elif "ranking" in mode_data:
-        data = mode_data["ranking"]
-        lines.extend(["## 评估方法", json.dumps(data["evaluation_method"], ensure_ascii=False), "", "## 排序结果"])
-        if data["rows"]:
-            lines.extend(f"{row['rank']}. {row['entity']} — {row['score']}（{', '.join(row['evidence_ids'])}）" for row in data["rows"])
-        else:
-            lines.append("blocked-by-evidence：当前输入不生成排名。")
-    elif "page_blueprint" in mode_data:
-        for key, value in mode_data["page_blueprint"].items():
-            lines.extend([f"## {key.replace('_', ' ').title()}", json.dumps(value, ensure_ascii=False, indent=2), ""])
-    else:
-        data = mode_data["refinement"]
-        lines.extend(
+        blocks.extend(
             [
-                "## 优化摘要",
-                f"Profile: {data['profile']}；评分 {data['before_score']} → {data['after_score']}",
-                data["summary"],
-                "",
-                "## 优化后正文",
-                data["refined_content"],
-                "",
-                "## 保留的核心 Claim",
+                ("heading", "中立对照"),
+                ("paragraph", f"实体：{', '.join(data['entities'])}"),
+                ("paragraph", f"维度：{', '.join(data['dimensions']) or '待补证'}"),
+                ("paragraph", data["neutrality"]),
             ]
         )
-        lines.extend(f"- [{item['status']}] {item['text']}" for item in data["source_claims"])
-        lines.extend(["", "## 改动说明", *[f"- {item}" for item in data["change_notes"]]])
-    return lines
+        for row in data["rows"]:
+            blocks.append(("bullet", f"{row['entity']}：证据 {', '.join(row['evidence_ids']) or 'source_gap'}"))
+    elif "ranking" in mode_data:
+        data = mode_data["ranking"]
+        blocks.extend(
+            [
+                ("heading", "评估方法"),
+                ("paragraph", json.dumps(data["evaluation_method"], ensure_ascii=False)),
+                ("heading", "排序结果"),
+            ]
+        )
+        if data["rows"]:
+            blocks.extend(
+                ("ordered", f"{row['entity']} — {row['score']}（{', '.join(row['evidence_ids'])}）")
+                for row in data["rows"]
+            )
+        else:
+            blocks.append(("paragraph", "blocked-by-evidence：当前输入不生成排名。"))
+    elif "page_blueprint" in mode_data:
+        for key, value in mode_data["page_blueprint"].items():
+            blocks.extend(
+                [
+                    ("heading", key.replace("_", " ").title()),
+                    ("paragraph", json.dumps(value, ensure_ascii=False, indent=2)),
+                ]
+            )
+    else:
+        data = mode_data["refinement"]
+        blocks.extend(
+            [
+                ("heading", "优化摘要"),
+                ("paragraph", f"Profile: {data['profile']}；评分 {data['before_score']} → {data['after_score']}"),
+                ("source", data["summary"]),
+                ("heading", "优化后正文"),
+                ("source", data["refined_content"]),
+                ("heading", "保留的核心 Claim"),
+            ]
+        )
+        blocks.extend(
+            ("source-bullet", f"[{item['status']}] {item['text']}")
+            for item in data["source_claims"]
+        )
+        blocks.append(("heading", "改动说明"))
+        blocks.extend(("bullet", item) for item in data["change_notes"])
+    return blocks
 
 
 def _markdown(content: dict[str, Any], ledger: dict[str, Any]) -> str:
-    safe_body = []
-    for line in _body_lines(content):
-        if line.startswith("## "):
-            escaped = html.escape(line[3:], quote=False).replace("\r", "").replace("\n", "\n&#8203;")
-            safe_body.append(f"## {escaped}")
+    title = _surface_title(content)
+    safe_body: list[str] = []
+    ordered_index = 0
+    for block_type, value in _body_blocks(content):
+        escaped = _commonmark_escape(value)
+        if block_type == "heading":
+            safe_body.extend([f"## {escaped}", ""])
+        elif block_type in {"bullet", "source-bullet"}:
+            safe_body.append(f"- {escaped}")
+        elif block_type == "ordered":
+            ordered_index += 1
+            safe_body.append(f"{ordered_index}. {escaped}")
         else:
-            escaped = html.escape(line, quote=False).replace("\r", "").replace("\n", "\n&#8203;")
-            if escaped.startswith("# "):
-                escaped = f"&#8203;{escaped}"
-            safe_body.append(escaped)
-    lines = [f"> 模式：`{content['mode']}` · 状态：`{content['status']}`", "", "# 内容主体", "", *safe_body, "", "# 补充说明与参考来源", ""]
+            safe_body.extend([escaped, ""])
+    lines = [
+        f"> 标题：{_commonmark_escape(title)} · 模式：`{content['mode']}` · 状态：`{content['status']}`",
+        "",
+        "# 内容主体",
+        "",
+        *safe_body,
+        "# 补充说明与参考来源",
+        "",
+    ]
     lines.extend(
-        f"- `{record['evidence_id']}` {html.escape(' '.join(record['claim'].split()), quote=False)} — {html.escape(record['source_uri'], quote=False)}"
+        f"- `{record['evidence_id']}` {_commonmark_escape(' '.join(record['claim'].split()))} — {_commonmark_escape(record['source_uri'])}"
         for record in ledger["records"]
     )
     if not ledger["records"]:
         lines.append("- source_gap：事实证据尚未提供；当前建议均按 guidance 使用。")
     lines.extend(
-        f"- {html.escape(' '.join(item.split()), quote=False)}"
+        f"- {_commonmark_escape(' '.join(item.split()))}"
         for item in content["supplement_requests"]
     )
     return "\n".join(lines).rstrip() + "\n"
 
 
 def _html_document(content: dict[str, Any], ledger: dict[str, Any]) -> str:
-    body_lines = _body_lines(content)
     rendered = []
-    for line in body_lines:
-        if line.startswith("## "):
-            rendered.append(f"<h2>{html.escape(line[3:])}</h2>")
-        elif line.startswith("- "):
-            rendered.append(f"<p>• {html.escape(line[2:])}</p>")
-        elif re.match(r"^\d+\. ", line):
-            rendered.append(f"<p>{html.escape(line)}</p>")
-        elif line:
-            rendered.append(f"<p>{html.escape(line)}</p>")
+    ordered_index = 0
+    for block_type, value in _body_blocks(content):
+        escaped = html.escape(value)
+        if block_type == "heading":
+            rendered.append(f"<h2>{escaped}</h2>")
+        elif block_type in {"bullet", "source-bullet"}:
+            rendered.append(f"<p>• {escaped}</p>")
+        elif block_type == "ordered":
+            ordered_index += 1
+            rendered.append(f"<p>{ordered_index}. {escaped}</p>")
+        elif block_type == "source":
+            rendered.append(f'<p class="source">{escaped}</p>')
+        else:
+            rendered.append(f"<p>{escaped}</p>")
     refs = [f"<li><code>{html.escape(item['evidence_id'])}</code> {html.escape(item['claim'])} — {html.escape(item['source_uri'])}</li>" for item in ledger["records"]]
     if not refs:
         refs = ["<li>source_gap：事实证据尚未提供；当前建议均按 guidance 使用。</li>"]
     supplements = [
         f"<li>{html.escape(item)}</li>" for item in content["supplement_requests"]
     ]
-    title = html.escape(content["topic"])
+    title = html.escape(_surface_title(content))
     status = html.escape(content["status"])
     return f"""<!doctype html>
 <html lang="zh-CN"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
 <title>{title}</title><style>
-:root{{--ink:#17202a;--muted:#52606d;--line:#d8dee4;--paper:#fff;--accent:#2457d6}}*{{box-sizing:border-box}}body{{margin:0;color:var(--ink);background:var(--paper);font:16px/1.7 system-ui,sans-serif}}nav{{position:sticky;top:0;background:#fffffff2;border-bottom:1px solid var(--line);padding:.8rem 5vw;backdrop-filter:blur(8px)}}nav a{{color:var(--accent);margin-right:1rem}}main{{max-width:880px;margin:auto;padding:2rem 5vw 5rem}}h1{{margin-top:2.5rem}}h2{{margin-top:1.8rem}}code{{overflow-wrap:anywhere}}.status{{color:var(--muted)}}@media print{{nav{{display:none}}main{{max-width:none;padding:0}}a{{color:inherit;text-decoration:none}}}}
-</style></head><body><nav aria-label="内容导航"><a href="#main-content">内容主体</a><a href="#references">补充说明与参考来源</a></nav><main><p class="status">模式：{html.escape(content['mode'])} · 状态：{status}</p><section id="main-content"><h1>内容主体</h1>{''.join(rendered)}</section><section id="references"><h1>补充说明与参考来源</h1><ul>{''.join(refs)}</ul><h2>补证与风险说明</h2><ul>{''.join(supplements) or '<li>当前无额外补证请求。</li>'}</ul></section></main></body></html>"""
+:root{{--ink:#17202a;--muted:#52606d;--line:#d8dee4;--paper:#fff;--accent:#2457d6}}*{{box-sizing:border-box}}body{{margin:0;color:var(--ink);background:var(--paper);font:16px/1.7 system-ui,sans-serif}}nav{{position:sticky;top:0;background:#fffffff2;border-bottom:1px solid var(--line);padding:.8rem 5vw;backdrop-filter:blur(8px)}}nav a{{color:var(--accent);margin-right:1rem}}main{{max-width:880px;margin:auto;padding:2rem 5vw 5rem}}h1{{margin-top:2.5rem}}h2{{margin-top:1.8rem}}code{{overflow-wrap:anywhere}}.status{{color:var(--muted)}}.source{{white-space:pre-wrap}}@media print{{nav{{display:none}}main{{max-width:none;padding:0}}a{{color:inherit;text-decoration:none}}}}
+</style></head><body><nav aria-label="内容导航"><a href="#main-content">内容主体</a><a href="#references">补充说明与参考来源</a></nav><main><p class="status">标题：{title} · 模式：{html.escape(content['mode'])} · 状态：{status}</p><section id="main-content"><h1>内容主体</h1>{''.join(rendered)}</section><section id="references"><h1>补充说明与参考来源</h1><ul>{''.join(refs)}</ul><h2>补证与风险说明</h2><ul>{''.join(supplements) or '<li>当前无额外补证请求。</li>'}</ul></section></main></body></html>"""
 
 
 def _render_docx(markdown: str) -> bytes:
@@ -842,12 +1026,7 @@ def _render_pdf(html_document: str, markdown: str) -> tuple[bytes, list[str]]:
 
 def content(input_path: Path, output_path: Path, *, clock: Clock | None = None) -> dict[str, Any]:
     """Create one offline, evidence-lined geo-content Artifact Bus run."""
-    try:
-        if input_path.stat().st_size > MAX_INPUT_BYTES:
-            raise ValueError(f"content brief exceeds {MAX_INPUT_BYTES} bytes")
-    except OSError as exc:
-        raise ValueError(f"content brief is unavailable: {input_path}") from exc
-    brief = validate_content_brief(load_json(input_path))
+    brief = validate_content_brief(_load_content_brief(input_path))
     normalized, source_text = _normalize_brief(brief, input_path)
     validate_content_brief(normalized)
     canonical = json.dumps(normalized, ensure_ascii=False, sort_keys=True, separators=(",", ":"))

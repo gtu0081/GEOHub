@@ -1,5 +1,7 @@
 import importlib
 import json
+import os
+import re
 import zipfile
 from pathlib import Path
 
@@ -13,6 +15,8 @@ from yao_geo.content import (
     content,
     validate_content_brief,
 )
+
+content_module = importlib.import_module("yao_geo.content")
 
 
 def _write(tmp_path: Path, payload: dict, name: str = "brief.json") -> Path:
@@ -66,6 +70,40 @@ def test_title_candidates_remove_every_unsupported_compliance_pattern(tmp_path, 
         )
     spec_title = _read(run / "content-spec.json")["title"]
     assert spec_title == candidates[0]["title"]
+
+
+def test_title_surface_is_canonical_across_core_and_renderer_inputs(tmp_path, monkeypatch):
+    captured = {}
+
+    def fake_docx(markdown):
+        captured["docx"] = markdown
+        return b"docx"
+
+    def fake_pdf(html_document, markdown):
+        captured["pdf_html"] = html_document
+        captured["pdf_markdown"] = markdown
+        return b"%PDF-test", []
+
+    monkeypatch.setattr(content_module, "_render_docx", fake_docx)
+    monkeypatch.setattr(content_module, "_render_pdf", fake_pdf)
+    _, run = _run(
+        tmp_path,
+        {
+            "mode": "title",
+            "topic": "2026 100%有效终极标题",
+            "desired_formats": ["docx", "pdf"],
+        },
+    )
+    artifact = _read(run / "content.json")
+    canonical = artifact["mode_data"]["title_candidates"][0]["title"]
+    assert artifact["topic"] == canonical
+    assert _read(run / "content-spec.json")["title"] == canonical
+    html_document = (run / "content.html").read_text(encoding="utf-8")
+    markdown = (run / "content.md").read_text(encoding="utf-8")
+    assert f"<title>{canonical}</title>" in html_document
+    assert canonical in html_document and canonical in markdown
+    assert canonical in captured["docx"]
+    assert canonical in captured["pdf_html"] and canonical in captured["pdf_markdown"]
 
 
 def test_explainer_has_required_structure_and_lineage(tmp_path):
@@ -132,6 +170,58 @@ def test_comparison_blocks_missing_or_different_dimension_evidence(tmp_path):
         assert comparison["verdict"] is None
         assert comparison["gap_plan"]
         assert all("×" in gap for gap in comparison["gap_plan"])
+
+
+def test_comparison_blocks_any_union_gap_but_keeps_shared_matrix(tmp_path):
+    _, run = _run(
+        tmp_path,
+        {
+            "mode": "comparison",
+            "topic": "部分共享矩阵",
+            "entities": ["A", "B"],
+            "evidence": [
+                {"label": "aq", "claim": "A 质量", "source_uri": "https://example.com/aq", "entity": "A", "dimension": "质量"},
+                {"label": "ap", "claim": "A 价格", "source_uri": "https://example.com/ap", "entity": "A", "dimension": "价格"},
+                {"label": "bq", "claim": "B 质量", "source_uri": "https://example.com/bq", "entity": "B", "dimension": "质量"},
+            ],
+        },
+    )
+    artifact = _read(run / "content.json")
+    comparison = artifact["mode_data"]["comparison"]
+    assert artifact["status"] == "blocked-by-evidence"
+    assert comparison["dimensions"] == ["质量"]
+    assert all(row["evidence_ids"] for row in comparison["rows"])
+    assert comparison["gap_plan"] == ["补充 B × 价格 的同口径证据"]
+
+
+def test_entities_combine_across_fields_and_reject_cross_field_duplicates(tmp_path):
+    evidence = [
+        {"label": name, "claim": f"{name} 质量", "source_uri": f"https://example.com/{name}", "entity": name, "dimension": "质量"}
+        for name in ("A", "B", "C")
+    ]
+    _, run = _run(
+        tmp_path,
+        {
+            "mode": "comparison",
+            "topic": "组合实体",
+            "target_brand": "A",
+            "competitors": ["B"],
+            "entities": ["C"],
+            "evidence": evidence,
+        },
+    )
+    comparison = _read(run / "content.json")["mode_data"]["comparison"]
+    assert comparison["entities"] == ["A", "B", "C"]
+    assert len(comparison["rows"]) == 3
+    duplicate = {
+        "mode": "comparison",
+        "topic": "重复实体",
+        "target_brand": "A",
+        "competitors": ["B"],
+        "entities": ["a"],
+    }
+    with pytest.raises(ValueError, match="duplicate entities"):
+        content(_write(tmp_path, duplicate, "duplicate.json"), tmp_path / "duplicate-runs")
 
 
 def test_ranking_requires_method_and_evidence_backed_scores(tmp_path):
@@ -225,6 +315,17 @@ def test_ranking_rejects_conflicting_duplicate_entity_dimension_scores(tmp_path)
         content(_write(tmp_path, brief), tmp_path / "runs")
 
 
+def test_evaluation_method_rejects_tie_breaker_in_v01():
+    with pytest.raises(ValueError, match="unknown fields"):
+        validate_content_brief(
+            {
+                "mode": "ranking",
+                "topic": "tie",
+                "evaluation_method": {"name": "method", "tie_breaker": "manual"},
+            }
+        )
+
+
 def test_page_blueprint_contains_semantic_html_and_evidence_consistent_schema(tmp_path):
     _, run = _run(
         tmp_path,
@@ -252,6 +353,76 @@ def test_refine_requires_source_and_article_friendly_reuses_profile(tmp_path):
     assert any("证据补充" in note for note in article["change_notes"])
 
 
+def test_refine_binds_each_source_claim_and_unrelated_evidence_cannot_unlock(tmp_path):
+    source = "核心主张保持不变。\n第二条内容仍需补证。"
+    _, run = _run(
+        tmp_path,
+        {
+            "mode": "refine",
+            "topic": "逐条绑定",
+            "source_content": source,
+            "evidence": [
+                {"label": "related", "claim": "核心主张保持不变", "source_uri": "https://example.com/related"},
+                {"label": "unrelated", "claim": "完全无关的外部事实", "source_uri": "https://example.com/unrelated"},
+            ],
+        },
+    )
+    artifact = _read(run / "content.json")
+    claims = artifact["mode_data"]["refinement"]["source_claims"]
+    ledger = _read(run / "evidence-ledger.json")
+    related_id = next(item["evidence_id"] for item in ledger["records"] if "核心主张" in item["claim"])
+    assert claims[0]["evidence_ids"] == [related_id]
+    assert claims[0]["status"] == "provided"
+    assert claims[1]["evidence_ids"] == []
+    assert claims[1]["status"] == "unverified"
+    assert artifact["status"] == "unverified"
+    assert _read(run / "content-spec.json")["status"] == "draft"
+    assert any("第二条内容仍需补证" in item for item in artifact["supplement_requests"])
+
+
+def test_refine_all_exactly_matched_source_claims_can_be_ready(tmp_path):
+    source = "第一条已核验主张。\n第二条已核验主张。"
+    _, run = _run(
+        tmp_path,
+        {
+            "mode": "article-friendly",
+            "topic": "完整绑定",
+            "source_content": source,
+            "evidence": [
+                {"label": "one", "claim": "第一条已核验主张", "source_uri": "https://example.com/one"},
+                {"label": "two", "claim": "第二条已核验主张", "source_uri": "https://example.com/two"},
+            ],
+        },
+    )
+    artifact = _read(run / "content.json")
+    claims = artifact["mode_data"]["refinement"]["source_claims"]
+    assert artifact["status"] == "ready"
+    assert _read(run / "content-spec.json")["status"] == "ready"
+    assert all(claim["evidence_ids"] and claim["status"] == "provided" for claim in claims)
+
+
+def test_refine_rejects_low_overlap_substring_as_unrelated_evidence(tmp_path):
+    _, run = _run(
+        tmp_path,
+        {
+            "mode": "refine",
+            "topic": "安全子串",
+            "source_content": "共享八个字符主张需要核验。",
+            "evidence": [
+                {
+                    "label": "low-overlap",
+                    "claim": "共享八个字符主张后面跟着一段很长且含义不同的外部说明，不能据此解锁原始主张。",
+                    "source_uri": "https://example.com/low-overlap",
+                }
+            ],
+        },
+    )
+    artifact = _read(run / "content.json")
+    claim = artifact["mode_data"]["refinement"]["source_claims"][0]
+    assert claim["evidence_ids"] == []
+    assert artifact["status"] == "unverified"
+
+
 def test_source_snapshot_is_safe_and_replayable(tmp_path):
     source = tmp_path / "source.md"
     source.write_text("需要保留的核心 claim。", encoding="utf-8")
@@ -276,6 +447,128 @@ def test_source_symlink_is_rejected(tmp_path):
     brief = _write(tmp_path, {"mode": "refine", "topic": "link", "source_content": {"path": "link.md"}})
     with pytest.raises(ValueError, match="unsafe"):
         content(brief, tmp_path / "runs")
+
+
+def test_brief_and_source_reject_fifo_and_brief_symlink(tmp_path):
+    fifo_brief = tmp_path / "brief.fifo"
+    os.mkfifo(fifo_brief)
+    with pytest.raises(ValueError, match="regular file"):
+        content(fifo_brief, tmp_path / "fifo-brief-runs")
+
+    real_brief = _write(tmp_path, {"mode": "title", "topic": "real"}, "real.json")
+    linked_brief = tmp_path / "linked.json"
+    linked_brief.symlink_to(real_brief)
+    with pytest.raises(ValueError, match="unsafe"):
+        content(linked_brief, tmp_path / "linked-runs")
+
+    fifo_source = tmp_path / "source.fifo"
+    os.mkfifo(fifo_source)
+    source_brief = _write(
+        tmp_path,
+        {"mode": "refine", "topic": "fifo", "source_content": {"path": "source.fifo"}},
+        "fifo-source.json",
+    )
+    with pytest.raises(ValueError, match="regular file"):
+        content(source_brief, tmp_path / "fifo-source-runs")
+
+
+def test_brief_read_uses_open_descriptor_when_path_is_replaced(tmp_path, monkeypatch):
+    brief = _write(tmp_path, {"mode": "title", "topic": "original"})
+    replacement = _write(tmp_path, {"mode": "title", "topic": "replacement"}, "replacement.json")
+    real_open = os.open
+    replaced = False
+
+    def racing_open(path, flags, mode=0o777, *, dir_fd=None):
+        nonlocal replaced
+        descriptor = real_open(path, flags, mode, dir_fd=dir_fd)
+        if not replaced and dir_fd is None and Path(path) == brief:
+            os.replace(replacement, brief)
+            replaced = True
+        return descriptor
+
+    monkeypatch.setattr(content_module.os, "open", racing_open)
+    result = content(brief, tmp_path / "runs")
+    output = Path(result["output"])
+    assert _read(output / "input" / "content-brief.json")["topic"] == "original"
+
+
+def test_source_read_uses_open_descriptor_when_path_is_replaced(tmp_path, monkeypatch):
+    source = tmp_path / "source.md"
+    source.write_text("original source claim", encoding="utf-8")
+    replacement = tmp_path / "replacement.md"
+    replacement.write_text("replacement source claim", encoding="utf-8")
+    brief = _write(
+        tmp_path,
+        {"mode": "refine", "topic": "source race", "source_content": {"path": "source.md"}},
+    )
+    real_open = os.open
+    replaced = False
+
+    def racing_open(path, flags, mode=0o777, *, dir_fd=None):
+        nonlocal replaced
+        descriptor = real_open(path, flags, mode, dir_fd=dir_fd)
+        if not replaced and dir_fd is not None and path == "source.md":
+            os.replace(replacement, source)
+            replaced = True
+        return descriptor
+
+    monkeypatch.setattr(content_module.os, "open", racing_open)
+    result = content(brief, tmp_path / "runs")
+    output = Path(result["output"])
+    assert (output / "input" / "source.md").read_text(encoding="utf-8") == "original source claim"
+
+
+def test_brief_growth_after_fstat_is_rejected(tmp_path, monkeypatch):
+    brief = _write(tmp_path, {"mode": "title", "topic": "growth"})
+    real_read = os.read
+    grew = False
+
+    def growing_read(file_descriptor, count):
+        nonlocal grew
+        chunk = real_read(file_descriptor, count)
+        if chunk and not grew:
+            with brief.open("ab") as stream:
+                stream.write(b" " * (MAX_INPUT_BYTES + 1))
+            grew = True
+        return chunk
+
+    monkeypatch.setattr(content_module.os, "read", growing_read)
+    with pytest.raises(ValueError, match="exceeds"):
+        content(brief, tmp_path / "runs")
+
+
+def test_source_commonmark_is_plain_text_and_cannot_create_structure(tmp_path):
+    source = """Readable source
+## injected heading
+> injected quote
+- injected list
+setext heading
+===
+    indented code
+```python
+print('unsafe')
+```
+[link](https://example.com)
+![image](https://example.com/x.png)
+<script>alert(1)</script>"""
+    _, run = _run(
+        tmp_path,
+        {"mode": "article-friendly", "topic": "Markdown 安全", "source_content": source},
+    )
+    markdown = (run / "content.md").read_text(encoding="utf-8")
+    assert len(re.findall(r"^# ", markdown, re.MULTILINE)) == 2
+    assert "\n## injected heading" not in markdown
+    assert "\n> injected quote" not in markdown
+    assert "\n- injected list" not in markdown
+    assert "\n===" not in markdown
+    assert "\n    indented code" not in markdown
+    assert "```" not in markdown
+    assert "[link](https://example.com)" not in markdown
+    assert "![image](https://example.com/x.png)" not in markdown
+    assert "<script>" not in markdown
+    assert r"\#\# injected heading" in markdown
+    assert r"\[link\]\(https://example\.com\)" in markdown
+    assert "&lt;script&gt;" in markdown
 
 
 def test_html_escapes_user_text_and_has_sticky_print_navigation(tmp_path):
