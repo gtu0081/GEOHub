@@ -89,14 +89,26 @@ def source_smoke(source_zip: Path, temp_root: Path, wheelhouse: Path) -> dict:
     content.write_text(json.dumps({"mode":"explainer","topic":"Synthetic GEO topic","evidence":[],"desired_formats":["markdown","json","html"]}, allow_nan=False), encoding="utf-8")
     runs = temp_root / "runs"
     commands = [
+        [str(python), "-m", "yao_geo", "--version"],
         [str(python), "-m", "yao_geo", "route", "--text", "Discover AI search questions"],
         [str(python), "-m", "yao_geo", "discover", "--input", str(brief), "--output", str(runs)],
         [str(python), "-m", "yao_geo", "diagnose", "--input", str(diagnosis), "--output", str(runs)],
         [str(python), "-m", "yao_geo", "content", "--input", str(content), "--output", str(runs)],
     ]
-    for command in commands:
-        run(command, temp_root, clean_env)
-    return {"package": source_zip.name, "installed_from": ".", "cli_smokes": ["route", "discover", "diagnose", "content"], "status": "pass"}
+    results = [run(command, temp_root, clean_env) for command in commands]
+    version_payload = json.loads(results[0].stdout)
+    if version_payload != {
+        "distribution": "yao-geo",
+        "name": "GEO SEO Hub",
+        "version": VERSION,
+    }:
+        raise ValueError(f"installed CLI version mismatch: {version_payload}")
+    return {
+        "package": source_zip.name,
+        "installed_from": ".",
+        "cli_smokes": ["version", "route", "discover", "diagnose", "content"],
+        "status": "pass",
+    }
 
 
 def structural_smoke(path: Path, temp_root: Path, wheelhouse: Path) -> dict:

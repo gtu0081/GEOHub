@@ -10,6 +10,7 @@ from .diagnose import diagnose
 from .discover import discover
 from .content import content
 from .router import route
+from .version import package_version
 
 
 class JsonArgumentParser(argparse.ArgumentParser):
@@ -23,6 +24,20 @@ class JsonArgumentParser(argparse.ArgumentParser):
 
 def build_parser() -> argparse.ArgumentParser:
     parser = JsonArgumentParser(prog="yao-geo")
+    parser.add_argument(
+        "--version",
+        action="version",
+        version=json.dumps(
+            {
+                "distribution": "yao-geo",
+                "name": "GEO SEO Hub",
+                "version": package_version(),
+            },
+            ensure_ascii=False,
+            sort_keys=True,
+            allow_nan=False,
+        ),
+    )
     subparsers = parser.add_subparsers(dest="command", required=True)
 
     route_parser = subparsers.add_parser("route", help="Route a GEO request")

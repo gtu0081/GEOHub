@@ -17,7 +17,18 @@ VERSION = (ROOT / "VERSION").read_text(encoding="utf-8").strip()
 DIST = ROOT / "dist"
 SKILLS = ("geo", "geo-discover", "geo-diagnose", "geo-content")
 LEGAL = ("VERSION", "LICENSE", "LICENSE-SCOPE.md", "COMMERCIAL-LICENSING.md", "THIRD_PARTY_NOTICES.md")
-SOURCE_EXACT = set(LEGAL) | {"README.md", "pyproject.toml", "Makefile", "CONTRIBUTING.md", "CONTRIBUTOR-LICENSE-AGREEMENT.md", "TRADEMARKS.md", ".github/workflows/ci.yml"}
+SOURCE_EXACT = set(LEGAL) | {
+    "README.md",
+    "SECURITY.md",
+    "pyproject.toml",
+    "Makefile",
+    "CONTRIBUTING.md",
+    "CONTRIBUTOR-LICENSE-AGREEMENT.md",
+    "TRADEMARKS.md",
+    ".github/dependabot.yml",
+    ".github/ISSUE_TEMPLATE/commercial-licensing.yml",
+    ".github/workflows/ci.yml",
+}
 SOURCE_PREFIXES = ("src/", "schemas/", "registry/", "skills/", "scripts/", "docs/")
 EXCLUDED_PARTS = {"reports", "evals", "tests", ".git", "__pycache__", ".pytest_cache", "runs", "dist"}
 

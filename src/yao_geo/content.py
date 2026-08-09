@@ -17,9 +17,10 @@ from urllib.parse import urlsplit
 
 from .artifact_bus import ArtifactBus
 from .validation import read_bounded_regular_file, strict_json_loads, validate_artifact
+from .version import package_version
 
 PROTOCOL_VERSION = "1.0.0"
-GENERATOR_VERSION = "0.1.0"
+GENERATOR_VERSION = package_version()
 MAX_INPUT_BYTES = 1024 * 1024
 MAX_SOURCE_BYTES = 2 * 1024 * 1024
 MODES = {

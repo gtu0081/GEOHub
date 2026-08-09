@@ -2,6 +2,7 @@
 from __future__ import annotations
 
 import json
+import re
 import sys
 import tomllib
 from datetime import date
@@ -97,6 +98,32 @@ EXPECTED_ZH_ACTION_LEAD_IN_PATTERN = (
     r"(?:单\s*独|仅仅|需要|继续|打算|准备|页面|请|想|去|要|做|仅|再|只|光)\s*"
 )
 EXPECTED_ACTION_OBJECT_ARTICLE_PATTERN = r"(?:(?:a|an|the)\b|一个|个)\s*"
+ACTIVE_SKILLS = ("geo", "geo-discover", "geo-diagnose", "geo-content")
+
+
+def verify_version_consistency(root: Path = ROOT) -> str:
+    version_path = root / "VERSION"
+    if not version_path.is_file():
+        fail("VERSION is missing")
+    version = version_path.read_text(encoding="utf-8").strip()
+    if not re.fullmatch(r"(?:0|[1-9]\d*)\.(?:0|[1-9]\d*)\.(?:0|[1-9]\d*)", version):
+        fail("VERSION must be a stable semantic version")
+
+    project_path = root / "pyproject.toml"
+    if not project_path.is_file():
+        fail("pyproject.toml is missing")
+    project = tomllib.loads(project_path.read_text(encoding="utf-8"))
+    if project.get("project", {}).get("version") != version:
+        fail("pyproject.toml version must match VERSION")
+
+    for skill_id in ACTIVE_SKILLS:
+        manifest_path = root / "skills" / skill_id / "manifest.json"
+        if not manifest_path.is_file():
+            fail(f"{skill_id} manifest is missing")
+        manifest = json.loads(manifest_path.read_text(encoding="utf-8"))
+        if manifest.get("version") != version:
+            fail(f"{skill_id} manifest version must match VERSION")
+    return version
 
 
 def verify_additive_connector_parity() -> None:
@@ -161,8 +188,7 @@ def main() -> int:
     verify_additive_connector_parity()
     verify_sequence_connector_parity()
     verify_action_language_parity()
-    if (ROOT / "VERSION").read_text(encoding="utf-8").strip() != "0.1.0":
-        fail("VERSION must be 0.1.0")
+    verify_version_consistency()
     if "GNU AFFERO GENERAL PUBLIC LICENSE" not in (ROOT / "LICENSE").read_text(encoding="utf-8"):
         fail("LICENSE is not the GNU AGPLv3 text")
 
@@ -202,7 +228,7 @@ def main() -> int:
         }
         if indexed_intents.get(skill["id"]) != expected_intents:
             fail(f"{skill['id']} intent index parity is broken")
-    for skill_id in ("geo", "geo-discover", "geo-diagnose", "geo-content"):
+    for skill_id in ACTIVE_SKILLS:
         if registered[skill_id]["status"] != "active":
             fail(f"{skill_id} must be active")
     for skill in registry["skills"]:
@@ -332,8 +358,6 @@ def main() -> int:
     )
     if content_manifest.get("status") != "experimental" or content_manifest.get("maturity") != "experimental":
         fail("geo-content manifest status and maturity must be experimental")
-    if content_manifest.get("version") != "0.1.0":
-        fail("geo-content manifest version must be 0.1.0")
     expected_content_outputs = {
         "input/content-brief.json",
         "input/source.md",

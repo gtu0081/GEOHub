@@ -21,6 +21,7 @@ def _run(arguments, *, cwd, env):
 
 def test_offline_wheel_install_runs_diagnose_outside_repository(tmp_path):
     root = repository_root()
+    expected_version = (root / "VERSION").read_text(encoding="utf-8").strip()
     wheels = tmp_path / "wheels"
     wheels.mkdir()
     environment = os.environ.copy()
@@ -43,7 +44,7 @@ def test_offline_wheel_install_runs_diagnose_outside_repository(tmp_path):
         cwd=root,
         env=environment,
     )
-    wheel = next(wheels.glob("yao_geo-0.1.0-*.whl"))
+    wheel = next(wheels.glob(f"yao_geo-{expected_version}-*.whl"))
     virtualenv = tmp_path / "venv"
     _run(
         [sys.executable, "-m", "venv", "--system-site-packages", str(virtualenv)],
@@ -105,6 +106,15 @@ def test_offline_wheel_install_runs_diagnose_outside_repository(tmp_path):
         env=environment,
     )
     assert data_check.stdout.strip() == str(virtualenv.resolve())
+
+    version_payload = json.loads(
+        _run([str(console), "--version"], cwd=outside, env=environment).stdout
+    )
+    assert version_payload == {
+        "distribution": "yao-geo",
+        "name": "GEO SEO Hub",
+        "version": expected_version,
+    }
 
     runs_root = tmp_path / "installed-runs"
     completed = _run(

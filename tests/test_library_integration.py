@@ -13,6 +13,7 @@ import pytest
 import yaml
 
 from yao_geo.registry import load_registry
+from yao_geo import __version__
 
 ROOT = Path(__file__).resolve().parents[1]
 SKILLS = ("geo", "geo-discover", "geo-diagnose", "geo-content")
@@ -36,6 +37,50 @@ def test_geo_seo_hub_brand_and_compatibility_names_are_consistent():
         "Repository": "https://github.com/yaojingang/geo-seo-hub",
     }
     assert all(item["interface"]["display_name"].startswith("GEO SEO Hub ") for item in interfaces)
+
+
+def test_version_is_consistent_across_distribution_and_active_manifests():
+    expected = (ROOT / "VERSION").read_text(encoding="utf-8").strip()
+    project = tomllib.loads((ROOT / "pyproject.toml").read_text(encoding="utf-8"))
+    assert project["project"]["version"] == expected
+    assert __version__ == expected
+    for skill_id in SKILLS:
+        manifest = json.loads((ROOT / "skills" / skill_id / "manifest.json").read_text(encoding="utf-8"))
+        assert manifest["version"] == expected
+
+    for module_name in ("content", "discover", "diagnose"):
+        module = __import__(f"yao_geo.{module_name}", fromlist=[module_name])
+        assert module.GENERATOR_VERSION == expected
+        assert '"version": "0.1.0"' not in inspect.getsource(module)
+
+
+@pytest.mark.parametrize(
+    ("attack", "message"),
+    [
+        ("invalid-version", "semantic version"),
+        ("project-drift", "pyproject.toml version"),
+        ("manifest-drift", "geo-diagnose manifest version"),
+    ],
+)
+def test_repository_verifier_rejects_version_drift(tmp_path, attack, message):
+    verifier = load_script("verify_repository")
+    version = "0.1.0"
+    (tmp_path / "VERSION").write_text(
+        "release-one\n" if attack == "invalid-version" else f"{version}\n",
+        encoding="utf-8",
+    )
+    project_version = "0.1.1" if attack == "project-drift" else version
+    (tmp_path / "pyproject.toml").write_text(
+        f'[project]\nname = "fixture"\nversion = "{project_version}"\n',
+        encoding="utf-8",
+    )
+    for skill_id in SKILLS:
+        manifest = tmp_path / "skills" / skill_id / "manifest.json"
+        manifest.parent.mkdir(parents=True, exist_ok=True)
+        manifest_version = "0.1.1" if attack == "manifest-drift" and skill_id == "geo-diagnose" else version
+        manifest.write_text(json.dumps({"version": manifest_version}), encoding="utf-8")
+    with pytest.raises(SystemExit, match=message):
+        verifier.verify_version_consistency(tmp_path)
 
 
 def load_script(name: str):
@@ -231,6 +276,36 @@ def test_package_allowlist_excludes_private_surfaces():
         assert not ({"reports", "evals", "tests", ".git", "runs", "dist"} & set(path.parts))
 
 
+def test_source_package_allowlist_includes_security_and_governance():
+    package = load_script("package")
+    for relative in (
+        "SECURITY.md",
+        ".github/dependabot.yml",
+        ".github/ISSUE_TEMPLATE/commercial-licensing.yml",
+    ):
+        assert package.source_allowed(Path(relative))
+
+
+def test_repository_governance_and_verification_entrypoints_are_actionable():
+    security = (ROOT / "SECURITY.md").read_text(encoding="utf-8")
+    contributing = (ROOT / "CONTRIBUTING.md").read_text(encoding="utf-8")
+    commercial = (ROOT / "COMMERCIAL-LICENSING.md").read_text(encoding="utf-8")
+    issue_template = yaml.safe_load(
+        (ROOT / ".github" / "ISSUE_TEMPLATE" / "commercial-licensing.yml").read_text(encoding="utf-8")
+    )
+    makefile = (ROOT / "Makefile").read_text(encoding="utf-8")
+    readme = (ROOT / "README.md").read_text(encoding="utf-8")
+
+    assert "security/advisories/new" in security
+    assert "SECURITY.md" in contributing
+    assert "issues/new?template=commercial-licensing.yml" in commercial
+    assert issue_template["labels"] == ["commercial-licensing"]
+    assert "verify:\n\t$(PYTHON) scripts/verify_all.py" in makefile
+    assert "repo-verify:\n\t$(PYTHON) scripts/verify_repository.py" in makefile
+    assert "git clone https://github.com/yaojingang/geo-seo-hub.git" in readme
+    assert ".venv/bin/python -m pip install ." in readme
+
+
 def test_package_verifier_rejects_traversal(tmp_path):
     verifier = load_script("verify_packages")
     attack = tmp_path / "attack.zip"
@@ -332,6 +407,7 @@ def test_install_simulation_uses_each_extracted_package_and_real_provider_execut
     assert 'wrappers["run_route.py"]' in source
     assert all(f'"run_{provider}.py"' in source for provider in ("discover", "diagnose", "content"))
     report = json.loads((ROOT / "reports" / "install-simulation.json").read_text())
+    assert report["source"]["cli_smokes"] == ["version", "route", "discover", "diagnose", "content"]
     assert len(report["structural_packages"]) == 7
     assert all(item["installed_from"] == "." and item["installed_share_resolved"] and item["resolved_entry"] and item["provider_executions"] == ["geo-discover", "geo-diagnose", "geo-content"] for item in report["structural_packages"])
 

@@ -96,3 +96,14 @@ def test_help_remains_standard_stdout():
     assert result.returncode == 0
     assert result.stderr == ""
     assert result.stdout.startswith("usage: yao-geo")
+
+
+def test_version_is_installed_distribution_json():
+    result = _run_cli("--version")
+    assert result.returncode == 0
+    assert result.stderr == ""
+    assert json.loads(result.stdout) == {
+        "distribution": "yao-geo",
+        "name": "GEO SEO Hub",
+        "version": (repository_root() / "VERSION").read_text(encoding="utf-8").strip(),
+    }

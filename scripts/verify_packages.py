@@ -66,6 +66,8 @@ def verify_archive(path: Path) -> dict:
             raise ValueError(f"{path.name} must contain exactly one SKILL.md; found {skill_count}")
         skill_ids = ("geo", "geo-discover", "geo-diagnose", "geo-content")
         if path.name.startswith("yao-geo-source-"):
+            if "SECURITY.md" not in stripped:
+                raise ValueError(f"{path.name} missing SECURITY.md")
             expected_manifests = {f"skills/{skill_id}/manifest.json": skill_id for skill_id in skill_ids}
         else:
             metadata = json.loads(archive.read(members["PACKAGE-METADATA.json"]))

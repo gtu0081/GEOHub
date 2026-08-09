@@ -1,7 +1,7 @@
 PYTHON := $(if $(wildcard .venv/bin/python),.venv/bin/python,python3)
 PYTHON314 ?= python3.14
 
-.PHONY: install test eval verify package package-verify install-smoke python314-smoke ci clean
+.PHONY: install test eval repo-verify verify package package-verify install-smoke python314-smoke ci clean
 
 install:
 	$(PYTHON) -m pip install -e '.[dev]'
@@ -13,8 +13,11 @@ test:
 eval:
 	$(PYTHON) scripts/run_evals.py
 
-verify:
+repo-verify:
 	$(PYTHON) scripts/verify_repository.py
+
+verify:
+	$(PYTHON) scripts/verify_all.py
 
 package:
 	$(PYTHON) scripts/package.py --target all --channel community
@@ -29,7 +32,7 @@ python314-smoke:
 	$(PYTHON314) -m pytest tests/test_router.py tests/test_library_integration.py
 	$(PYTHON314) scripts/run_evals.py
 
-ci: verify test eval package-verify install-smoke
+ci: verify
 
 clean:
 	rm -rf build dist .pytest_cache htmlcov

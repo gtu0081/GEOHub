@@ -1,0 +1,33 @@
+name: Commercial licensing inquiry
+description: Start a non-confidential inquiry about separate commercial terms.
+title: "[Commercial licensing] "
+labels:
+  - commercial-licensing
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Share only non-confidential context. Do not include credentials, customer data, private URLs, pricing proposals, or contract terms in this public Issue.
+  - type: input
+    id: organization
+    attributes:
+      label: Organization
+      description: The organization considering commercial terms.
+    validations:
+      required: true
+  - type: textarea
+    id: use-case
+    attributes:
+      label: Intended use
+      description: Describe the intended use without confidential information.
+    validations:
+      required: true
+  - type: checkboxes
+    id: acknowledgements
+    attributes:
+      label: Acknowledgements
+      options:
+        - label: I have not included confidential information or customer data.
+          required: true
+        - label: I understand that this inquiry grants no rights and that any commercial license requires a separate signed agreement.
+          required: true

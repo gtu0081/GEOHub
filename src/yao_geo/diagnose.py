@@ -19,8 +19,10 @@ from urllib.parse import urljoin, urlsplit, urlunsplit
 
 from .artifact_bus import ArtifactBus
 from .validation import load_bounded_json, read_bounded_regular_file, strict_json_loads, validate_artifact
+from .version import package_version
 
 PROTOCOL_VERSION = "1.0.0"
+GENERATOR_VERSION = package_version()
 MAX_FETCH_BYTES = 2 * 1024 * 1024
 MAX_INPUT_BYTES = 1024 * 1024
 MAX_TOTAL_SOURCE_BYTES = 5 * 1024 * 1024
@@ -1243,7 +1245,7 @@ def diagnose(
         "protocol_version": PROTOCOL_VERSION,
         "run_id": run_id,
         "created_at": created_at,
-        "generator": {"name": "yao-geo-diagnose", "version": "0.1.0"},
+        "generator": {"name": "yao-geo-diagnose", "version": GENERATOR_VERSION},
         "input_artifact": "input/diagnosis-brief.json",
         "artifacts": manifest_paths,
         "status": "completed-with-warnings" if warnings or degraded else "completed",

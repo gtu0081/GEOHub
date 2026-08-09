@@ -5,6 +5,7 @@
     "package": "yao-geo-source-0.1.0.zip",
     "installed_from": ".",
     "cli_smokes": [
+      "version",
       "route",
       "discover",
       "diagnose",

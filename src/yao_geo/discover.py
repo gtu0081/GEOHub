@@ -8,8 +8,10 @@ from typing import Any, Callable
 
 from .artifact_bus import ArtifactBus
 from .validation import load_bounded_json, validate_artifact
+from .version import package_version
 
 PROTOCOL_VERSION = "1.0.0"
+GENERATOR_VERSION = package_version()
 Clock = Callable[[], datetime]
 
 
@@ -192,7 +194,7 @@ def discover(
         "protocol_version": PROTOCOL_VERSION,
         "run_id": run_id,
         "created_at": created_at,
-        "generator": {"name": "yao-geo-discover", "version": "0.1.0"},
+        "generator": {"name": "yao-geo-discover", "version": GENERATOR_VERSION},
         "input_artifact": "input/geo-brief.json",
         "artifacts": manifest_paths,
         "status": "completed-with-warnings" if warnings else "completed",

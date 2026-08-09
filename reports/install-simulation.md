@@ -6,7 +6,7 @@ Status: **pass**
 
 
 
-Fresh source install and CLI smokes: route, discover, diagnose, content.
+Fresh source install and CLI smokes: version, route, discover, diagnose, content.
 
 Fresh per-ZIP `pip install .`, route-entry resolution, and provider executions: 7.
 
