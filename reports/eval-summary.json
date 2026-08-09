@@ -5248,7 +5248,7 @@
       {
         "skill_id": "geo",
         "family": "should_trigger",
-        "text": "Which Yao GEO capability handles this?",
+        "text": "Which GEO SEO Hub capability handles this?",
         "passed": true,
         "actual": "geo"
       },

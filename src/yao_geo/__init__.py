@@ -1,4 +1,4 @@
-"""Yao GEO protocol-first workflow toolkit."""
+"""GEO SEO Hub protocol-first workflow toolkit."""
 
 from .discover import discover
 from .content import content

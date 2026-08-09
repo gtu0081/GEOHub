@@ -1,8 +1,8 @@
-# Yao GEO
+# GEO SEO Hub
 
-**Version 0.1.0 · Experimental**
+**Version 0.1.0 · Experimental · GEO-first · SEO-ready**
 
-Yao GEO is a protocol-first toolkit for turning GEO work into auditable, reusable runs. The current vertical slice includes a registry-driven router, an Artifact Bus, deterministic discovery, evidence-lined diagnosis, offline content production, JSON Schema contracts, and four active skills.
+GEO SEO Hub is an open, protocol-first agent skill hub with active GEO workflows and an SEO-ready shared foundation. The current vertical slice turns generative engine optimization work into auditable, reusable runs through a registry-driven router, an Artifact Bus, deterministic discovery, evidence-lined diagnosis, offline content production, JSON Schema contracts, and four active skills.
 
 The skills are Library-engineered packages while product behavior remains **Experimental**. `maturity_tier=library` describes packaging rigor and does not claim production outcome quality.
 
@@ -17,6 +17,14 @@ The skills are Library-engineered packages while product behavior remains **Expe
 The resolver keeps single-intent routing minimal and exposes two exact multi-stage DAGs: `brand-baseline-lite` (discover → diagnose) and `content-campaign` (discover → content). A planned route is never executed; it returns the closest active suggestion, required inputs, and closest v0 artifact. Route requests are bounded to 8,000 characters and 16,384 UTF-8 bytes. See `skills/RESOLVER.md` and `docs/architecture.md`.
 
 No connector, platform sampling, search volume, ranking, or conversion data is inferred. Missing evidence remains explicit in generated artifacts.
+
+## GEO and SEO boundary
+
+GEO SEO Hub treats GEO and SEO as related capability domains with a shared search foundation. Query intent, source evidence, brand facts, entity structure, content specifications, site parsing, quality reports, and Artifact Bus contracts can serve both domains.
+
+Version 0.1.0 ships executable GEO discovery, diagnosis, content, and routing. Dedicated SEO workflows and outcome claims for technical SEO, SERP and keyword data, indexation, Core Web Vitals, internal linking, Search Console, and traffic measurement remain future Registry additions.
+
+The existing `yao-geo` CLI, `yao_geo` Python module, and `geo-*` Skill IDs remain compatibility identifiers for the 0.x series.
 
 ## Quick start
 

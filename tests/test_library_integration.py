@@ -18,6 +18,26 @@ ROOT = Path(__file__).resolve().parents[1]
 SKILLS = ("geo", "geo-discover", "geo-diagnose", "geo-content")
 
 
+def test_geo_seo_hub_brand_and_compatibility_names_are_consistent():
+    readme = (ROOT / "README.md").read_text(encoding="utf-8")
+    project = tomllib.loads((ROOT / "pyproject.toml").read_text(encoding="utf-8"))["project"]
+    interfaces = [
+        yaml.safe_load((ROOT / "skills" / skill_id / "agents" / "interface.yaml").read_text(encoding="utf-8"))
+        for skill_id in SKILLS
+    ]
+
+    assert readme.startswith("# GEO SEO Hub\n")
+    assert "GEO-first · SEO-ready" in readme
+    assert "Dedicated SEO workflows and outcome claims" in readme
+    assert project["name"] == "yao-geo"
+    assert project["scripts"] == {"yao-geo": "yao_geo.cli:main"}
+    assert project["urls"] == {
+        "Homepage": "https://github.com/yaojingang/geo-seo-hub",
+        "Repository": "https://github.com/yaojingang/geo-seo-hub",
+    }
+    assert all(item["interface"]["display_name"].startswith("GEO SEO Hub ") for item in interfaces)
+
+
 def load_script(name: str):
     spec = importlib.util.spec_from_file_location(name, ROOT / "scripts" / f"{name}.py")
     module = importlib.util.module_from_spec(spec)

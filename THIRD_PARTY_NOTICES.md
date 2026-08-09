@@ -1,6 +1,6 @@
 # Third-Party Notices
 
-Yao GEO declares runtime dependencies in `pyproject.toml`:
+GEO SEO Hub declares runtime dependencies in `pyproject.toml`:
 
 - PyYAML: MIT License
 - jsonschema: MIT License

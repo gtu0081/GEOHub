@@ -29,7 +29,7 @@
       {
         "name": "geo",
         "path": "geo",
-        "description": "Route GEO and generative engine optimization requests to an available Yao GEO capability. Use for broad GEO requests, workflow selection, capability checks, or requests spanning discovery, brand/site/page diagnosis, content, strategy, knowledge, publishing, and measurement.",
+        "description": "Route GEO and generative engine optimization requests to an available GEO SEO Hub capability. Use for broad GEO requests, workflow selection, capability checks, or requests spanning discovery, brand/site/page diagnosis, content, strategy, knowledge, publishing, and measurement.",
         "owner": "姚金刚 / Yao",
         "version": "0.1.0",
         "status": "experimental",
@@ -57,6 +57,7 @@
           "engine",
           "generative",
           "geo",
+          "hub",
           "knowledge",
           "measurement",
           "optimization",
@@ -66,11 +67,11 @@
           "requests",
           "route",
           "selection",
+          "seo",
           "site",
           "spanning",
           "strategy",
-          "workflow",
-          "yao"
+          "workflow"
         ],
         "atlas_scope": "release",
         "actionable": true,

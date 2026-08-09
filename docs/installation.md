@@ -1,5 +1,7 @@
 # Installation
 
+GEO SEO Hub retains `yao-geo` as the 0.x CLI and Python distribution compatibility name.
+
 Supported Python range: 3.11-3.14.
 
 ```bash

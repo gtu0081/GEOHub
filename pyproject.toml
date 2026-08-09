@@ -5,7 +5,7 @@ build-backend = "setuptools.build_meta"
 [project]
 name = "yao-geo"
 version = "0.1.0"
-description = "Experimental, protocol-first GEO workflow toolkit"
+description = "Experimental, GEO-first agent skill hub with an SEO-ready architecture"
 readme = "README.md"
 requires-python = ">=3.11,<3.15"
 license = {text = "AGPL-3.0-only"}
@@ -14,6 +14,10 @@ dependencies = [
   "jsonschema>=4.21,<5",
   "PyYAML>=6.0,<7",
 ]
+
+[project.urls]
+Homepage = "https://github.com/yaojingang/geo-seo-hub"
+Repository = "https://github.com/yaojingang/geo-seo-hub"
 
 [project.optional-dependencies]
 dev = [
