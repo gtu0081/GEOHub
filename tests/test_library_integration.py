@@ -167,6 +167,15 @@ def test_yao_meta_report_sanitizer_removes_machine_paths_and_trailing_whitespace
     )
 
 
+def test_dev_extra_installs_build_backend_for_offline_wheel_smoke():
+    project = tomllib.loads((ROOT / "pyproject.toml").read_text(encoding="utf-8"))
+    build_requirements = project["build-system"]["requires"]
+    dev_requirements = project["project"]["optional-dependencies"]["dev"]
+
+    assert any(requirement.startswith("setuptools") for requirement in build_requirements)
+    assert any(requirement.startswith("setuptools") for requirement in dev_requirements)
+
+
 @pytest.mark.parametrize("skill_id", SKILLS)
 def test_library_manifests_and_interfaces_are_consistent(skill_id):
     skill_root = ROOT / "skills" / skill_id
