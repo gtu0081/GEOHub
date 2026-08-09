@@ -125,6 +125,18 @@ def test_repository_verifier_rejects_action_lead_in_or_article_drift(monkeypatch
         "GOVERNED_ACTION_OBJECT_ARTICLES",
         verifier.EXPECTED_GOVERNED_ACTION_OBJECT_ARTICLES,
     )
+    monkeypatch.setattr(
+        verifier,
+        "GOVERNED_ZH_INTENT_SUFFIX_BLOCKS",
+        (("发布", ("会",)),),
+    )
+    with pytest.raises(SystemExit, match="action language inventory"):
+        verifier.verify_action_language_parity()
+    monkeypatch.setattr(
+        verifier,
+        "GOVERNED_ZH_INTENT_SUFFIX_BLOCKS",
+        verifier.EXPECTED_GOVERNED_ZH_INTENT_SUFFIX_BLOCKS,
+    )
     monkeypatch.setattr(verifier, "_EN_ACTION_LEAD_IN_RE", re.compile(r"wanted\s+"))
     with pytest.raises(SystemExit, match="action language inventory"):
         verifier.verify_action_language_parity()
@@ -136,6 +148,23 @@ def test_router_source_has_no_prefix_only_action_boolean():
     source = inspect.getsource(router)
     assert "def _starts_registered_action" not in source
     assert "_starts_registered_action(" not in source
+
+
+def test_yao_meta_report_sanitizer_removes_machine_paths_and_trailing_whitespace(
+    tmp_path,
+):
+    gate = load_script("run_yao_meta_gates")
+    report = tmp_path / "review.html"
+    report.write_text(
+        f"<p>{gate.ROOT.resolve()}/skills/geo</p>   \n<section>ok</section>\t\n",
+        encoding="utf-8",
+    )
+
+    gate.sanitize_generated_reports([report], tmp_path / "yao-meta")
+
+    assert report.read_text(encoding="utf-8") == (
+        "<p>skills/geo</p>\n<section>ok</section>\n"
+    )
 
 
 @pytest.mark.parametrize("skill_id", SKILLS)

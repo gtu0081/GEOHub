@@ -20,6 +20,7 @@ from yao_geo.router import (  # noqa: E402
     GOVERNED_EN_ACTION_LEAD_INS,
     GOVERNED_SEQUENCE_CONNECTORS,
     GOVERNED_ZH_ACTION_LEAD_INS,
+    GOVERNED_ZH_INTENT_SUFFIX_BLOCKS,
     _ACTION_LEAD_IN_RE,
     _ACTION_OBJECT_ARTICLE_RE,
     _ADDITIVE_CONNECTOR_RE,
@@ -35,6 +36,7 @@ from yao_geo.router import (  # noqa: E402
     _WORKFLOW_CONNECTOR_RE,
     _ZH_ACTION_LEAD_IN_TOKEN_RE,
     build_action_phrase_index,
+    build_intent_index,
 )
 from yao_geo.validation import load_schema  # noqa: E402
 
@@ -87,6 +89,7 @@ EXPECTED_GOVERNED_ZH_ACTION_LEAD_INS = (
     "光",
 )
 EXPECTED_GOVERNED_ACTION_OBJECT_ARTICLES = ("a", "an", "the", "一个", "个")
+EXPECTED_GOVERNED_ZH_INTENT_SUFFIX_BLOCKS = (("发布", ("会", "者")),)
 EXPECTED_EN_ACTION_LEAD_IN_PATTERN = (
     r"(?:need|want|plan|intend|prepare)\b\s+(?:to\b\s+)?"
 )
@@ -140,6 +143,8 @@ def verify_action_language_parity() -> None:
         or tuple(GOVERNED_ZH_ACTION_LEAD_INS) != EXPECTED_GOVERNED_ZH_ACTION_LEAD_INS
         or tuple(GOVERNED_ACTION_OBJECT_ARTICLES)
         != EXPECTED_GOVERNED_ACTION_OBJECT_ARTICLES
+        or tuple(GOVERNED_ZH_INTENT_SUFFIX_BLOCKS)
+        != EXPECTED_GOVERNED_ZH_INTENT_SUFFIX_BLOCKS
         or _GOVERNED_EN_ACTION_LEAD_IN_PATTERN != EXPECTED_EN_ACTION_LEAD_IN_PATTERN
         or _GOVERNED_ZH_ACTION_LEAD_IN_PATTERN != EXPECTED_ZH_ACTION_LEAD_IN_PATTERN
         or _ZH_ACTION_LEAD_IN_TOKEN_RE.pattern != EXPECTED_ZH_ACTION_LEAD_IN_PATTERN
@@ -173,6 +178,7 @@ def main() -> int:
     registry = load_registry(ROOT / "registry" / "skills.yaml")
     registered = {item["id"]: item for item in registry["skills"]}
     action_index = build_action_phrase_index(registry)
+    intent_index = build_intent_index(registry)
     registered_intents = {
         " ".join(intent.casefold().split())
         for skill in registry["skills"]
@@ -184,6 +190,18 @@ def main() -> int:
             "registry intents missing from router action index: "
             + ", ".join(sorted(missing_action_intents))
         )
+    indexed_intents = {
+        skill_id: {phrase for phrase, _ in patterns}
+        for skill_id, patterns in intent_index.patterns_by_skill.items()
+    }
+    for skill in registry["skills"]:
+        expected_intents = {
+            " ".join(intent.casefold().split())
+            for intent in skill["intents"]
+            if intent.strip()
+        }
+        if indexed_intents.get(skill["id"]) != expected_intents:
+            fail(f"{skill['id']} intent index parity is broken")
     for skill_id in ("geo", "geo-discover", "geo-diagnose", "geo-content"):
         if registered[skill_id]["status"] != "active":
             fail(f"{skill_id} must be active")

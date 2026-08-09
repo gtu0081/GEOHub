@@ -144,6 +144,7 @@ _SEQUENCE_SCOPE_TOKENS = frozenset(
 )
 GOVERNED_EN_ACTION_LEAD_INS = ("need", "want", "plan", "intend", "prepare")
 GOVERNED_ACTION_OBJECT_ARTICLES = ("a", "an", "the", "一个", "个")
+GOVERNED_ZH_INTENT_SUFFIX_BLOCKS = (("发布", ("会", "者")),)
 _GOVERNED_EN_ACTION_LEAD_IN_PATTERN = (
     r"(?:" + "|".join(re.escape(token) for token in GOVERNED_EN_ACTION_LEAD_INS) + r")"
     r"\b\s+(?:to\b\s+)?"
@@ -202,6 +203,11 @@ class ActionPhraseIndex:
     )
 
 
+@dataclass(frozen=True)
+class IntentIndex:
+    patterns_by_skill: dict[str, tuple[tuple[str, re.Pattern[str]], ...]]
+
+
 def _normalize(text: str) -> str:
     return re.sub(r"\s+", " ", text.casefold().strip())
 
@@ -225,6 +231,64 @@ def build_action_phrase_index(registry: dict[str, Any]) -> ActionPhraseIndex:
         intent_phrases=frozenset(intent_phrases),
         start_pattern=re.compile("(?:" + "|".join(alternatives) + ")"),
     )
+
+
+def build_intent_index(registry: dict[str, Any]) -> IntentIndex:
+    """Compile Registry intents with stable lexical boundaries."""
+    suffix_blocks = dict(GOVERNED_ZH_INTENT_SUFFIX_BLOCKS)
+    patterns_by_skill = {}
+    for skill in registry["skills"]:
+        patterns = []
+        for intent in skill["intents"]:
+            phrase = _normalize(intent)
+            if not phrase:
+                continue
+            escaped = re.escape(phrase)
+            if phrase.isascii():
+                source = rf"(?<![\w-]){escaped}(?![\w-])"
+            else:
+                blocked = suffix_blocks.get(phrase, ())
+                suffix = (
+                    "(?!" + "|".join(re.escape(item) for item in blocked) + ")"
+                    if blocked
+                    else ""
+                )
+                source = escaped + suffix
+            patterns.append((phrase, re.compile(source)))
+        patterns_by_skill[skill["id"]] = tuple(patterns)
+    return IntentIndex(patterns_by_skill=patterns_by_skill)
+
+
+def _quoted_or_code_spans(text: str) -> tuple[tuple[int, int], ...]:
+    pairs = {'"': '"', "'": "'", "`": "`", "“": "”", "‘": "’"}
+    spans = []
+    cursor = 0
+    while cursor < len(text):
+        opening = text[cursor]
+        closing = pairs.get(opening)
+        if closing is None:
+            cursor += 1
+            continue
+        if (
+            opening == "'"
+            and cursor > 0
+            and cursor + 1 < len(text)
+            and text[cursor - 1].isalnum()
+            and text[cursor + 1].isalnum()
+        ):
+            cursor += 1
+            continue
+        end = cursor + 1
+        while end < len(text):
+            if text[end] == closing and (
+                end == 0 or text[end - 1] != "\\"
+            ):
+                end += 1
+                break
+            end += 1
+        spans.append((cursor, end))
+        cursor = end
+    return tuple(spans)
 
 
 def _direct_action_after_optional_article(
@@ -265,6 +329,17 @@ def _resolve_action_match(
     return None
 
 
+def _registered_intent_match(
+    text: str,
+    action_index: ActionPhraseIndex,
+    action_match: re.Match[str] | None,
+) -> re.Match[str] | None:
+    if action_match is None:
+        return None
+    action_phrase = text[action_match.start() : action_match.end()]
+    return action_match if action_phrase in action_index.intent_phrases else None
+
+
 def _registered_action_span(
     text: str,
     action_index: ActionPhraseIndex,
@@ -276,10 +351,27 @@ def _registered_action_span(
         return action_index.span_cache[start]
     lexical_positive = _LEXICAL_POSITIVE_ZHI_RE.match(text, start)
     prefix_end = lexical_positive.end() if lexical_positive else start
+    direct_match = action_index.start_pattern.match(text, prefix_end)
+    action_match = _registered_intent_match(text, action_index, direct_match)
+    if action_match is not None:
+        result = action_match.span()
+        action_index.span_cache[start] = result
+        return result
+    article = _ACTION_OBJECT_ARTICLE_RE.match(text, prefix_end)
+    if article is not None:
+        action_match = _registered_intent_match(
+            text,
+            action_index,
+            action_index.start_pattern.match(text, article.end()),
+        )
+        if action_match is not None:
+            result = action_match.span()
+            action_index.span_cache[start] = result
+            return result
     action_match = _resolve_action_match(
         text,
         action_index,
-        action_index.start_pattern.match(text, prefix_end),
+        direct_match,
     )
     if action_match is not None:
         result = action_match.span()
@@ -322,10 +414,8 @@ def _registered_action_span(
 def _raw_replacement_spans(
     text: str,
     action_index: ActionPhraseIndex,
+    lexical_positive_spans: tuple[tuple[int, int], ...],
 ) -> tuple[tuple[int, int], ...]:
-    lexical_positive_spans = tuple(
-        match.span() for match in _LEXICAL_POSITIVE_ZHI_RE.finditer(text)
-    )
     lexical_positive_index = 0
     spans = []
     for match in _REPLACEMENT_CONNECTOR_RE.finditer(text):
@@ -356,8 +446,9 @@ def _exclusivity_exception_starts(
     replacement_spans: tuple[tuple[int, int], ...],
     hard_clause_spans: tuple[tuple[int, int], ...],
     gap_prefix: tuple[int, ...],
-) -> frozenset[int]:
+) -> tuple[frozenset[int], frozenset[int]]:
     exceptions: set[int] = set()
+    releases: set[int] = set()
     connector_index = 0
     replacement_index = 0
     hard_clause_index = 0
@@ -366,11 +457,19 @@ def _exclusivity_exception_starts(
         if action_span is None:
             continue
         action_end = action_span[1]
-        while (
-            connector_index < len(connector_spans)
-            and connector_spans[connector_index][0] < action_end
-        ):
-            connector_index += 1
+        while connector_index < len(connector_spans):
+            connector_start, connector_end = connector_spans[connector_index]
+            if connector_start < action_end:
+                connector_index += 1
+                continue
+            connector_token = _normalize(text[connector_start:connector_end])
+            if (
+                connector_token in _GOVERNED_SINGLE_ZH_CONNECTOR_TOKENS
+                and gap_prefix[action_end] != gap_prefix[connector_start]
+            ):
+                connector_index += 1
+                continue
+            break
         while (
             replacement_index < len(replacement_spans)
             and replacement_spans[replacement_index][0] < action_end
@@ -386,18 +485,6 @@ def _exclusivity_exception_starts(
             if connector_index < len(connector_spans)
             else len(text) + 1
         )
-        if connector_index < len(connector_spans):
-            connector_token = _normalize(
-                text[
-                    connector_spans[connector_index][0]
-                    : connector_spans[connector_index][1]
-                ]
-            )
-            if (
-                connector_token in _GOVERNED_SINGLE_ZH_CONNECTOR_TOKENS
-                and gap_prefix[action_end] != gap_prefix[connector_start]
-            ):
-                connector_start = len(text) + 1
         replacement_start = (
             replacement_spans[replacement_index][0]
             if replacement_index < len(replacement_spans)
@@ -410,7 +497,8 @@ def _exclusivity_exception_starts(
         )
         if connector_start < replacement_start and connector_start < hard_clause_start:
             exceptions.add(negation_start)
-    return frozenset(exceptions)
+            releases.add(connector_start)
+    return frozenset(exceptions), frozenset(releases)
 
 
 def _connector_starts_scope(
@@ -422,6 +510,7 @@ def _connector_starts_scope(
     object_prefix: tuple[int, ...],
     negation_action_ends: dict[int, int],
     gap_prefix: tuple[int, ...],
+    exclusivity_release_starts: frozenset[int],
     action_index: ActionPhraseIndex,
 ) -> bool:
     token = _normalize(boundary.group().strip(" ,，"))
@@ -441,6 +530,8 @@ def _connector_starts_scope(
         and right.startswith((",", "，"))
     ):
         return False
+    if boundary.start() in exclusivity_release_starts:
+        return True
     negation_index = bisect_right(negation_starts, boundary.start() - 1) - 1
     if negation_index < 0 or negation_spans[negation_index][0] < scope_start:
         return True
@@ -462,6 +553,7 @@ def _parse_clause_scopes(
     text: str,
     action_index: ActionPhraseIndex,
     gap_prefix: tuple[int, ...],
+    lexical_positive_spans: tuple[tuple[int, int], ...],
 ) -> tuple[ClauseScope, ...]:
     additive_spans = tuple(
         match.span()
@@ -475,7 +567,11 @@ def _parse_clause_scopes(
         and _registered_action_span(text, action_index, match.end()) is not None
     )
     exclusivity_connector_spans = tuple(sorted((*additive_spans, *sequence_spans)))
-    replacement_spans = _raw_replacement_spans(text, action_index)
+    replacement_spans = _raw_replacement_spans(
+        text,
+        action_index,
+        lexical_positive_spans,
+    )
     hard_clause_spans = tuple(match.span() for match in _HARD_CLAUSE_RE.finditer(text))
     bare_negation_matches = tuple(_BARE_ZH_NEGATION_RE.finditer(text))
     chinese_candidates = tuple(
@@ -487,16 +583,36 @@ def _parse_clause_scopes(
     english_candidates = tuple(
         match.span() for match in _ENGLISH_ADDITIVE_EXCLUSIVITY_RE.finditer(text)
     )
-    exclusivity_exception_starts = _exclusivity_exception_starts(
-        text,
-        action_index,
-        tuple(sorted((*chinese_candidates, *english_candidates))),
-        exclusivity_connector_spans,
-        replacement_spans,
-        hard_clause_spans,
-        gap_prefix,
+    exclusivity_exception_starts, exclusivity_release_starts = (
+        _exclusivity_exception_starts(
+            text,
+            action_index,
+            tuple(sorted((*chinese_candidates, *english_candidates))),
+            exclusivity_connector_spans,
+            replacement_spans,
+            hard_clause_spans,
+            gap_prefix,
+        )
     )
+    exclusivity_candidates = tuple(
+        sorted((*chinese_candidates, *english_candidates))
+    )
+    exclusivity_action_ends = {
+        negation_start: action_span[1]
+        for negation_start, action_search_start in exclusivity_candidates
+        if negation_start in exclusivity_exception_starts
+        and (
+            action_span := _registered_action_span(
+                text,
+                action_index,
+                action_search_start,
+            )
+        )
+        is not None
+    }
     negation_action_ends: dict[int, int] = {}
+    for action_end in exclusivity_action_ends.values():
+        negation_action_ends[action_end] = action_end
     static_negation_spans_list: list[tuple[int, int]] = []
     for match in _NEGATION_RE.finditer(text):
         if match.start() in exclusivity_exception_starts:
@@ -529,7 +645,19 @@ def _parse_clause_scopes(
             continue
         bare_negation_spans.append((match.start(), action_span[0]))
         negation_action_ends[match.start()] = action_span[1]
-    negation_spans = tuple(sorted((*static_negation_spans, *bare_negation_spans)))
+    exclusivity_tail_spans = tuple(
+        (action_end, action_end)
+        for action_end in exclusivity_action_ends.values()
+    )
+    negation_spans = tuple(
+        sorted(
+            (
+                *static_negation_spans,
+                *bare_negation_spans,
+                *exclusivity_tail_spans,
+            )
+        )
+    )
     negation_starts = tuple(span[0] for span in negation_spans)
     ignored = bytearray(len(text))
     filler_spans = tuple(match.span() for match in _NEGATION_FILLER_RE.finditer(text))
@@ -551,6 +679,7 @@ def _parse_clause_scopes(
             object_prefix,
             negation_action_ends,
             gap_prefix,
+            exclusivity_release_starts,
             action_index,
         ):
             scope_start = boundary.end()
@@ -567,29 +696,47 @@ def _parse_clause_scopes(
 
 def _positive_intent_spans(
     text: str,
-    intent: str,
+    pattern: re.Pattern[str],
     scopes: tuple[ClauseScope, ...],
+    ignored_spans: tuple[tuple[int, int], ...],
+    lexical_positive_action_starts: frozenset[int],
 ) -> list[tuple[int, int]]:
-    phrase = _normalize(intent)
     scope_starts = tuple(scope.start for scope in scopes)
+    ignored_starts = tuple(span[0] for span in ignored_spans)
     spans = []
-    for match in re.finditer(re.escape(phrase), text):
+    for match in pattern.finditer(text):
+        ignored_index = bisect_right(ignored_starts, match.start()) - 1
+        if (
+            ignored_index >= 0
+            and ignored_spans[ignored_index][1] > match.start()
+        ):
+            continue
         scope = scopes[bisect_right(scope_starts, match.start()) - 1]
-        if not any(start < match.start() for start in scope.negation_starts):
+        if (
+            match.start() in lexical_positive_action_starts
+            or not any(start < match.start() for start in scope.negation_starts)
+        ):
             spans.append(match.span())
     return spans
 
 
 def _analyze_skill_intents(
     text: str,
-    intents: list[str],
+    intent_patterns: tuple[tuple[str, re.Pattern[str]], ...],
     scopes: tuple[ClauseScope, ...],
+    ignored_spans: tuple[tuple[int, int], ...],
+    lexical_positive_action_starts: frozenset[int],
 ) -> tuple[int, list[tuple[int, int]]]:
     score = 0
     skill_spans: list[tuple[int, int]] = []
-    for intent in intents:
-        phrase = _normalize(intent)
-        spans = _positive_intent_spans(text, phrase, scopes) if phrase else []
+    for phrase, pattern in intent_patterns:
+        spans = _positive_intent_spans(
+            text,
+            pattern,
+            scopes,
+            ignored_spans,
+            lexical_positive_action_starts,
+        )
         if spans:
             score += max(1, len(phrase))
             skill_spans.extend(spans)
@@ -674,10 +821,38 @@ def route(text: str, registry_path: Path | None = None) -> dict[str, Any]:
 
     registry = load_registry(registry_path)
     action_index = build_action_phrase_index(registry)
+    intent_index = build_intent_index(registry)
     workflow_gap_prefix = _workflow_gap_prefix(normalized)
-    scopes = _parse_clause_scopes(normalized, action_index, workflow_gap_prefix)
+    lexical_positive_spans = tuple(
+        match.span() for match in _LEXICAL_POSITIVE_ZHI_RE.finditer(normalized)
+    )
+    lexical_positive_action_starts = frozenset(
+        action_span[0]
+        for lexical_start, _ in lexical_positive_spans
+        if (
+            action_span := _registered_action_span(
+                normalized,
+                action_index,
+                lexical_start,
+            )
+        )
+        is not None
+    )
+    scopes = _parse_clause_scopes(
+        normalized,
+        action_index,
+        workflow_gap_prefix,
+        lexical_positive_spans,
+    )
+    ignored_spans = _quoted_or_code_spans(normalized)
     analyses = {
-        skill["id"]: _analyze_skill_intents(normalized, skill["intents"], scopes)
+        skill["id"]: _analyze_skill_intents(
+            normalized,
+            intent_index.patterns_by_skill[skill["id"]],
+            scopes,
+            ignored_spans,
+            lexical_positive_action_starts,
+        )
         for skill in registry["skills"]
     }
     ranked = [

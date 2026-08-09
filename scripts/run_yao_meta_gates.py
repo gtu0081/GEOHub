@@ -213,7 +213,12 @@ def sanitize_generated_reports(paths: list[Path], meta_root: Path) -> None:
     for path in paths:
         if path.is_file() and path.suffix in {".json", ".md", ".html"}:
             text = path.read_text(encoding="utf-8")
-            portable = portable_text(text, meta_root)
+            portable = re.sub(
+                r"[ \t]+(?=\r?$)",
+                "",
+                portable_text(text, meta_root),
+                flags=re.MULTILINE,
+            )
             if portable != text:
                 path.write_text(portable, encoding="utf-8")
 

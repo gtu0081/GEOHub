@@ -604,9 +604,9 @@
     "text": "citation share measurement",
     "category": "mixed",
     "expected": {
-      "skill_id": "geo-measure",
+      "skill_id": "geo",
       "workflow_id": null,
-      "runnable": false
+      "runnable": true
     }
   },
   {
@@ -2320,5 +2320,197 @@
     "text": "不要拓词但写文章",
     "category": "active",
     "expected": {"skill_id": "geo-content", "workflow_id": null, "runnable": true}
+  },
+  {
+    "id": "r342",
+    "text": "No keyword research then a website audit",
+    "category": "active",
+    "expected": {"skill_id": "geo-diagnose", "workflow_id": null, "runnable": true}
+  },
+  {
+    "id": "r343",
+    "text": "No keyword research followed by an page audit",
+    "category": "active",
+    "expected": {"skill_id": "geo-diagnose", "workflow_id": null, "runnable": true}
+  },
+  {
+    "id": "r344",
+    "text": "Skip keyword research then the title",
+    "category": "active",
+    "expected": {"skill_id": "geo-content", "workflow_id": null, "runnable": true}
+  },
+  {
+    "id": "r345",
+    "text": "跳过拓词然后一个页面蓝图",
+    "category": "active",
+    "expected": {"skill_id": "geo-content", "workflow_id": null, "runnable": true}
+  },
+  {
+    "id": "r346",
+    "text": "拓词并个页面蓝图",
+    "category": "mixed",
+    "expected": {"skill_id": "geo-discover", "workflow_id": "content-campaign", "runnable": true}
+  },
+  {
+    "id": "r347",
+    "text": "跳过拓词然后个性化页面蓝图",
+    "category": "adversarial",
+    "expected": {"skill_id": "geo", "workflow_id": null, "runnable": true}
+  },
+  {
+    "id": "r348",
+    "text": "No keyword research then a note quoting website audit",
+    "category": "adversarial",
+    "expected": {"skill_id": "geo", "workflow_id": null, "runnable": true}
+  },
+  {
+    "id": "r349",
+    "text": "不要拓词然后一个说明引用诊断一词",
+    "category": "adversarial",
+    "expected": {"skill_id": "geo", "workflow_id": null, "runnable": true}
+  },
+  {
+    "id": "r350",
+    "text": "不再仅拓词一再诊断网站，然后写文章",
+    "category": "adversarial",
+    "expected": {"skill_id": "geo-discover", "workflow_id": "content-campaign", "runnable": true}
+  },
+  {
+    "id": "r351",
+    "text": "不再仅拓词涉及诊断网站，然后写文章",
+    "category": "adversarial",
+    "expected": {"skill_id": "geo-discover", "workflow_id": "content-campaign", "runnable": true}
+  },
+  {
+    "id": "r352",
+    "text": "不再仅拓词一再诊断网站涉及页面诊断，然后写文章",
+    "category": "adversarial",
+    "expected": {"skill_id": "geo-discover", "workflow_id": "content-campaign", "runnable": true}
+  },
+  {
+    "id": "r353",
+    "text": "不再仅发布涉及诊断网站，然后写文章",
+    "category": "adversarial",
+    "expected": {"skill_id": "geo-publish", "workflow_id": null, "runnable": false}
+  },
+  {
+    "id": "r354",
+    "text": "Audit the website and review the publisher biography",
+    "category": "adversarial",
+    "expected": {"skill_id": "geo-diagnose", "workflow_id": null, "runnable": true}
+  },
+  {
+    "id": "r355",
+    "text": "Audit the website and document publishing workflow",
+    "category": "adversarial",
+    "expected": {"skill_id": "geo-diagnose", "workflow_id": null, "runnable": true}
+  },
+  {
+    "id": "r356",
+    "text": "Audit the website and record measurement details",
+    "category": "adversarial",
+    "expected": {"skill_id": "geo-diagnose", "workflow_id": null, "runnable": true}
+  },
+  {
+    "id": "r357",
+    "text": "Audit the website and use a pre-publish checklist",
+    "category": "adversarial",
+    "expected": {"skill_id": "geo-diagnose", "workflow_id": null, "runnable": true}
+  },
+  {
+    "id": "r358",
+    "text": "诊断网站并参加发布会",
+    "category": "adversarial",
+    "expected": {"skill_id": "geo-diagnose", "workflow_id": null, "runnable": true}
+  },
+  {
+    "id": "r359",
+    "text": "写文章并联系发布者",
+    "category": "adversarial",
+    "expected": {"skill_id": "geo-content", "workflow_id": null, "runnable": true}
+  },
+  {
+    "id": "r360",
+    "text": "Audit the website and mention \"publish to CMS\"",
+    "category": "adversarial",
+    "expected": {"skill_id": "geo-diagnose", "workflow_id": null, "runnable": true}
+  },
+  {
+    "id": "r361",
+    "text": "Audit the website and mention 'strategy'",
+    "category": "adversarial",
+    "expected": {"skill_id": "geo-diagnose", "workflow_id": null, "runnable": true}
+  },
+  {
+    "id": "r362",
+    "text": "Audit the website and use `measure` as a field",
+    "category": "adversarial",
+    "expected": {"skill_id": "geo-diagnose", "workflow_id": null, "runnable": true}
+  },
+  {
+    "id": "r363",
+    "text": "诊断网站并说明“监测”只是字段名",
+    "category": "adversarial",
+    "expected": {"skill_id": "geo-diagnose", "workflow_id": null, "runnable": true}
+  },
+  {
+    "id": "r364",
+    "text": "写文章并说明‘知识库’只是标签",
+    "category": "adversarial",
+    "expected": {"skill_id": "geo-content", "workflow_id": null, "runnable": true}
+  },
+  {
+    "id": "r365",
+    "text": "Audit the website and mention \"publish",
+    "category": "adversarial",
+    "expected": {"skill_id": "geo-diagnose", "workflow_id": null, "runnable": true}
+  },
+  {
+    "id": "r366",
+    "text": "publish to CMS",
+    "category": "planned",
+    "expected": {"skill_id": "geo-publish", "workflow_id": null, "runnable": false}
+  },
+  {
+    "id": "r367",
+    "text": "发布",
+    "category": "planned",
+    "expected": {"skill_id": "geo-publish", "workflow_id": null, "runnable": false}
+  },
+  {
+    "id": "r368",
+    "text": "发布文章",
+    "category": "planned",
+    "expected": {"skill_id": "geo-publish", "workflow_id": null, "runnable": false}
+  },
+  {
+    "id": "r369",
+    "text": "monitor AI visibility",
+    "category": "planned",
+    "expected": {"skill_id": "geo-measure", "workflow_id": null, "runnable": false}
+  },
+  {
+    "id": "r370",
+    "text": "监测 AI 可见度",
+    "category": "planned",
+    "expected": {"skill_id": "geo-measure", "workflow_id": null, "runnable": false}
+  },
+  {
+    "id": "r371",
+    "text": "衡量效果",
+    "category": "planned",
+    "expected": {"skill_id": "geo-measure", "workflow_id": null, "runnable": false}
+  },
+  {
+    "id": "r372",
+    "text": "制定策略",
+    "category": "planned",
+    "expected": {"skill_id": "geo-strategy", "workflow_id": null, "runnable": false}
+  },
+  {
+    "id": "r373",
+    "text": "构建知识库",
+    "category": "planned",
+    "expected": {"skill_id": "geo-knowledge", "workflow_id": null, "runnable": false}
   }
 ]

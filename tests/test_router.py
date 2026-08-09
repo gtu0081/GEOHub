@@ -1044,6 +1044,47 @@ def test_connector_substrings_do_not_cancel_exclusivity_negation(text):
     assert "workflow" not in result
 
 
+@pytest.mark.parametrize(
+    "text,skill_id,workflow_id,runnable",
+    (
+        (
+            "不再仅拓词一再诊断网站，然后写文章",
+            "geo-discover",
+            "content-campaign",
+            True,
+        ),
+        (
+            "不再仅拓词涉及诊断网站，然后写文章",
+            "geo-discover",
+            "content-campaign",
+            True,
+        ),
+        (
+            "不再仅拓词一再诊断网站涉及页面诊断，然后写文章",
+            "geo-discover",
+            "content-campaign",
+            True,
+        ),
+        (
+            "不再仅发布涉及诊断网站，然后写文章",
+            "geo-publish",
+            None,
+            False,
+        ),
+    ),
+)
+def test_exclusivity_scan_continues_after_invalid_connector_candidates(
+    text,
+    skill_id,
+    workflow_id,
+    runnable,
+):
+    result = route(text)
+    assert result["skill_id"] == skill_id
+    assert result.get("workflow", {}).get("id") == workflow_id
+    assert result["runnable"] is runnable
+
+
 def test_incremental_chinese_lead_in_stops_at_registered_full_action():
     content = route("跳过拓词，然后做页面蓝图")
     assert content["skill_id"] == "geo-content"
@@ -1073,6 +1114,94 @@ def test_governed_chinese_object_articles_share_action_adjacency(
     result = route(text)
     assert result["skill_id"] == skill_id
     assert result.get("workflow", {}).get("id") == workflow_id
+
+
+@pytest.mark.parametrize(
+    "text,skill_id,workflow_id",
+    (
+        ("No keyword research then a website audit", "geo-diagnose", None),
+        ("No keyword research followed by an page audit", "geo-diagnose", None),
+        ("Skip keyword research then the title", "geo-content", None),
+        ("跳过拓词然后一个页面蓝图", "geo-content", None),
+        ("拓词并个页面蓝图", "geo-discover", "content-campaign"),
+    ),
+)
+def test_governed_articles_can_directly_precede_registered_actions(
+    text,
+    skill_id,
+    workflow_id,
+):
+    result = route(text)
+    assert result["skill_id"] == skill_id
+    assert result.get("workflow", {}).get("id") == workflow_id
+
+
+@pytest.mark.parametrize(
+    "text",
+    (
+        "跳过拓词然后个性化页面蓝图",
+        "No keyword research then a note quoting website audit",
+        "不要拓词然后一个说明引用诊断一词",
+    ),
+)
+def test_governed_articles_require_an_immediate_registered_action(text):
+    result = route(text)
+    assert result["skill_id"] == "geo"
+    assert "workflow" not in result
+
+
+@pytest.mark.parametrize(
+    "text,skill_id",
+    (
+        ("Audit the website and review the publisher biography", "geo-diagnose"),
+        ("Audit the website and document publishing workflow", "geo-diagnose"),
+        ("Audit the website and record measurement details", "geo-diagnose"),
+        ("Audit the website and use a pre-publish checklist", "geo-diagnose"),
+        ("诊断网站并参加发布会", "geo-diagnose"),
+        ("写文章并联系发布者", "geo-content"),
+    ),
+)
+def test_intent_patterns_reject_compound_and_word_substrings(text, skill_id):
+    result = route(text)
+    assert result["skill_id"] == skill_id
+    assert result["runnable"] is True
+
+
+@pytest.mark.parametrize(
+    "text,skill_id",
+    (
+        ('Audit the website and mention "publish to CMS"', "geo-diagnose"),
+        ("Audit the website and mention 'strategy'", "geo-diagnose"),
+        ("Audit the website and use `measure` as a field", "geo-diagnose"),
+        ("诊断网站并说明“监测”只是字段名", "geo-diagnose"),
+        ("写文章并说明‘知识库’只是标签", "geo-content"),
+        ('Audit the website and mention "publish', "geo-diagnose"),
+    ),
+)
+def test_balanced_or_unclosed_quoted_mentions_do_not_route(text, skill_id):
+    result = route(text)
+    assert result["skill_id"] == skill_id
+    assert result["runnable"] is True
+
+
+@pytest.mark.parametrize(
+    "text,skill_id",
+    (
+        ("publish to CMS", "geo-publish"),
+        ("发布", "geo-publish"),
+        ("发布文章", "geo-publish"),
+        ("monitor AI visibility", "geo-measure"),
+        ("监测 AI 可见度", "geo-measure"),
+        ("衡量效果", "geo-measure"),
+        ("制定策略", "geo-strategy"),
+        ("构建知识库", "geo-knowledge"),
+    ),
+)
+def test_standalone_planned_intents_keep_registered_routes(text, skill_id):
+    result = route(text)
+    assert result["skill_id"] == skill_id
+    assert result["status"] == "planned"
+    assert result["runnable"] is False
 
 
 @pytest.mark.parametrize(
@@ -1495,6 +1624,51 @@ def test_registry_action_index_is_compiled_once_and_checked_once_per_sequence(mo
     assert build_calls == 1
     connector_count = text.count("then") + text.count(",") + text.count(";")
     assert match_calls <= connector_count + text.count("No")
+
+
+def test_intent_index_and_quote_mask_are_precomputed_once(monkeypatch):
+    original_builder = router_module.build_intent_index
+    original_quote_scanner = router_module._quoted_or_code_spans
+    build_calls = 0
+    quote_calls = 0
+    finditer_calls = 0
+    pattern_count = 0
+
+    class CountingPattern:
+        def __init__(self, wrapped):
+            self.wrapped = wrapped
+
+        def finditer(self, text):
+            nonlocal finditer_calls
+            finditer_calls += 1
+            return self.wrapped.finditer(text)
+
+    def counting_builder(registry):
+        nonlocal build_calls, pattern_count
+        build_calls += 1
+        index = original_builder(registry)
+        pattern_count = sum(len(items) for items in index.patterns_by_skill.values())
+        return router_module.IntentIndex(
+            patterns_by_skill={
+                skill_id: tuple(
+                    (phrase, CountingPattern(pattern))
+                    for phrase, pattern in items
+                )
+                for skill_id, items in index.patterns_by_skill.items()
+            }
+        )
+
+    def counting_quote_scanner(text):
+        nonlocal quote_calls
+        quote_calls += 1
+        return original_quote_scanner(text)
+
+    monkeypatch.setattr(router_module, "build_intent_index", counting_builder)
+    monkeypatch.setattr(router_module, "_quoted_or_code_spans", counting_quote_scanner)
+    route(('Audit the website and mention "publish". ' * 100)[:3_000])
+    assert build_calls == 1
+    assert quote_calls == 1
+    assert finditer_calls == pattern_count
 
 
 def test_bare_chinese_request_marker_starts_positive_clause():
