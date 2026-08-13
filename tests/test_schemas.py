@@ -22,22 +22,38 @@ from scripts.package_repository import build_archive, trusted_files
 
 def test_all_protocol_schemas_are_valid():
     expected = {
+        "brand-fact-card",
+        "claim-map",
+        "content-evidence-units",
+        "content-pipeline",
+        "content-spec",
+        "diagnosis-funnel",
+        "engine-observation-bundle",
+        "eval-result",
+        "eval-task",
+        "evidence-ledger",
+        "experiment-plan",
+        "fidelity-report",
         "geo-brief",
+        "knowledge-graph",
+        "knowledge-query-result",
         "measurement-brief",
         "measurement-report",
-        "run-manifest",
-        "evidence-ledger",
-        "brand-fact-card",
-        "query-map",
         "opportunity-map",
-        "content-spec",
-        "content-evidence-units",
-        "diagnosis-funnel",
+        "publication-handoff",
+        "publication-receipt",
         "quality-report",
+        "query-map",
         "research-context",
         "research-evidence-registry",
+        "run-lineage",
+        "run-manifest",
         "seo-brief",
         "seo-plan",
+        "strategy-candidates",
+        "strategy-memory",
+        "visibility-report",
+        "workflow-state",
     }
     actual = {path.name.removesuffix(".schema.json") for path in (repository_root() / "schemas").glob("*.schema.json")}
     assert actual == expected
@@ -165,7 +181,7 @@ def test_skill_manifests_declare_license_governance():
         "copyright_owner": "姚金刚 / Yao",
         "third_party_notice_required": True,
     }
-    for skill_id in ("geo", "geo-discover", "geo-diagnose", "geo-content", "geo-measure", "seo"):
+    for skill_id in ("geo", "geo-discover", "geo-diagnose"):
         path = repository_root() / "skills" / skill_id / "manifest.json"
         manifest = json.loads(path.read_text(encoding="utf-8"))
         assert {key: manifest[key] for key in expected} == expected

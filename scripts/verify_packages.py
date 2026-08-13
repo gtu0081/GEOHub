@@ -13,16 +13,16 @@ from pathlib import Path, PurePosixPath
 import yaml
 
 ROOT = Path(__file__).resolve().parents[1]
+sys.path.insert(0, str(ROOT / "src"))
+
+from geo_seo_hub.release_manifest import build_release_manifest  # noqa: E402
+
 DIST = ROOT / "dist"
 REPORTS = ROOT / "reports"
-VERSION = (ROOT / "VERSION").read_text(encoding="utf-8").strip()
-EXPECTED = {
-    f"geo-seo-hub-source-{VERSION}.zip",
-    f"geo-seo-hub-unified-community-{VERSION}.zip",
-    *(f"{skill}-community-{VERSION}.zip" for skill in ("geo", "geo-discover", "geo-diagnose", "geo-content", "geo-measure", "seo")),
-    f"geo-seo-hub-codex-community-{VERSION}.zip",
-    f"geo-seo-hub-claude-community-{VERSION}.zip",
-}
+RELEASE = build_release_manifest(ROOT)
+VERSION = RELEASE["version"]
+EXPECTED = RELEASE["archive_names"]
+SKILL_IDS = RELEASE["active_skill_ids"]
 REQUIRED_LEGAL = {"VERSION", "LICENSE", "LICENSE-SCOPE.md", "COMMERCIAL-LICENSING.md", "THIRD_PARTY_NOTICES.md"}
 FORBIDDEN_NAMES = re.compile(r"(?:^|/)(?:\.env|id_rsa|credentials|secrets?)(?:\.|/|$)", re.I)
 FORBIDDEN_CONTENT = (b"BEGIN PRIVATE KEY", b"OPENAI_API_KEY=", b"/Users/", b"C:\\Users\\")
@@ -64,11 +64,20 @@ def verify_archive(path: Path) -> dict:
         skill_count = sum(name.endswith("SKILL.md") for name in names)
         if not path.name.startswith("geo-seo-hub-source-") and skill_count != 1:
             raise ValueError(f"{path.name} must contain exactly one SKILL.md; found {skill_count}")
-        skill_ids = ("geo", "geo-discover", "geo-diagnose", "geo-content", "geo-measure", "seo")
+        skill_ids = SKILL_IDS
         if path.name.startswith("geo-seo-hub-source-"):
             if "SECURITY.md" not in stripped:
                 raise ValueError(f"{path.name} missing SECURITY.md")
-            expected_manifests = {f"skills/{skill_id}/manifest.json": skill_id for skill_id in skill_ids}
+            expected_manifests = {
+                name: PurePosixPath(name).parts[1]
+                for name in stripped
+                if name.startswith("skills/") and name.endswith("/manifest.json")
+            }
+            missing_active = sorted(
+                set(skill_ids) - set(expected_manifests.values())
+            )
+            if missing_active:
+                raise ValueError(f"{path.name} missing active skill manifests: {missing_active}")
         else:
             metadata = json.loads(archive.read(members["PACKAGE-METADATA.json"]))
             if metadata["kind"] == "provider":
@@ -121,7 +130,7 @@ def verify_archive(path: Path) -> dict:
                 if missing_references:
                     raise ValueError(f"{path.name} provider entry {skill['id']} references missing resources: {missing_references}")
             resolved_entries = len(active_entries)
-            expected_wrappers = {f"scripts/run_{name}.py" for name in ("route", "discover", "diagnose", "content", "measure", "seo")}
+            expected_wrappers = {f"scripts/run_{name}.py" for name in ("route", "discover", "diagnose", "content", "measure", "strategy", "knowledge")}
             if not expected_wrappers <= set(members):
                 raise ValueError(f"{path.name} missing provider wrappers")
     return {"name": path.name, "sha256": sha256(path), "members": len(names), "skill_count": skill_count, "self_installable": self_installable, "resolved_active_entries": resolved_entries, "status": "pass"}

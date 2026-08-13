@@ -1,0 +1,96 @@
+{
+  "build": {
+    "command": [
+      "python",
+      "scripts/package.py",
+      "--target",
+      "all",
+      "--channel",
+      "community"
+    ],
+    "network_requirement": "dependency installation only; package build is offline",
+    "package_count": 11
+  },
+  "builder": {
+    "attestation_status": "missing evidence",
+    "identity": "local-unsigned",
+    "slsa_level_claim": null,
+    "trusted": false
+  },
+  "generated_at": "2026-08-13T02:20:45.471271Z",
+  "sbom_sha256": "0eeefbc94b40cdc8db20a764ddfbe7138e21cdb61929d87749f833a65e23417a",
+  "schema_version": "1.0.0",
+  "source": {
+    "revision": "d3c2b5045105175d4061f1a2a04505f95c71de19",
+    "source_digest": "36bdbab22e6919537622a1e984a6ec9c4fb5edd015711b3bc607daabf9877fed",
+    "state": "committed release source snapshot"
+  },
+  "subject": {
+    "artifacts": [
+      {
+        "name": "geo-community-0.5.0.zip",
+        "sha256": "110e0ffca24ef84e2b2877ab4b78e55314a73d5006d7566cb1105c18ddc54a99",
+        "size_bytes": 203950
+      },
+      {
+        "name": "geo-content-community-0.5.0.zip",
+        "sha256": "45ab2d220f06be58ab7508d43b570f2e57386ba12e53896e826461284813da75",
+        "size_bytes": 205949
+      },
+      {
+        "name": "geo-diagnose-community-0.5.0.zip",
+        "sha256": "00a52058330db8635d1e4865f2ee2b5027ab8f4d42a6a09a029e00783a69b524",
+        "size_bytes": 204432
+      },
+      {
+        "name": "geo-discover-community-0.5.0.zip",
+        "sha256": "4aafecc031b580b3de22161f3a3cfd6e9f21dd050c99dd21932ca93e8a9f620a",
+        "size_bytes": 202875
+      },
+      {
+        "name": "geo-knowledge-community-0.5.0.zip",
+        "sha256": "23d59ff4785024728d54f2bc2aadb8ce98fc0a82b95773f76a4e4f57f4f78a74",
+        "size_bytes": 201472
+      },
+      {
+        "name": "geo-measure-community-0.5.0.zip",
+        "sha256": "a3e3979c22b6409ff5d793e2967fafbe5b7739bc95048e15f95cb300d7e5d40b",
+        "size_bytes": 202133
+      },
+      {
+        "name": "geo-seo-hub-claude-community-0.5.0.zip",
+        "sha256": "d727e66ea47dfbb8d98f1641834c2024a936eddf631169de97381812cacf177d",
+        "size_bytes": 208859
+      },
+      {
+        "name": "geo-seo-hub-codex-community-0.5.0.zip",
+        "sha256": "f6e52231e7005b0a99d72ac98996436c368819ddd3134e9089663006a4c69b99",
+        "size_bytes": 208857
+      },
+      {
+        "name": "geo-seo-hub-source-0.5.0.zip",
+        "sha256": "f882275a04a4d7b053bfa069e97068f76c11d235749ece7259d430198280d4d3",
+        "size_bytes": 1259751
+      },
+      {
+        "name": "geo-seo-hub-unified-community-0.5.0.zip",
+        "sha256": "d0890ab4f8bc74953ae3699414ce0c34a095681e5c8c52420076879fe46c5674",
+        "size_bytes": 208651
+      },
+      {
+        "name": "geo-strategy-community-0.5.0.zip",
+        "sha256": "73a88ca060b0f6098ea86b1acb6fa6e2812a43a582922df7ba3acdfcdafa7df3",
+        "size_bytes": 201512
+      }
+    ],
+    "name": "geo-seo-hub",
+    "version": "0.5.0"
+  },
+  "verification": {
+    "command": [
+      "python",
+      "scripts/verify_provenance.py"
+    ],
+    "status": "pending independent verification"
+  }
+}

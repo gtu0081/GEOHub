@@ -1370,9 +1370,9 @@
     "upgrade_check": {},
     "manifest": {
       "name": "geo",
-      "version": "0.3.1",
+      "version": "0.5.0",
       "owner": "姚金刚 / Yao",
-      "updated_at": "2026-08-11",
+      "updated_at": "2026-08-12",
       "review_cadence": "per-release",
       "status": "experimental",
       "maturity_tier": "library",
@@ -1417,7 +1417,7 @@
     },
     "interface": {
       "interface": {
-        "display_name": "GEOHub",
+        "display_name": "GEO SEO Hub Router",
         "short_description": "Route GEO requests through an honest capability registry",
         "default_prompt": "Use $geo to route this GEO request and report unavailable stages honestly.",
         "input_contract": {
