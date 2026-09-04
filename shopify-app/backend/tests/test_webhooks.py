@@ -68,20 +68,25 @@ def test_webhook_rejects_invalid_shop_domain(client):
 
 def test_shop_redact_deletes_shop_jobs(client):
     job = submit_demo_job(client, shop_domain=SHOP.split(".")[0])
-    wait_for_job(client, job["job_id"])
-    assert client.get(f"/api/diagnosis-jobs/{job['job_id']}", headers=HEADERS).status_code == 200
+    shop_headers = {**HEADERS, "x-shop-domain": SHOP}
+    wait_for_job(client, job["job_id"], headers=shop_headers)
+    assert (
+        client.get(f"/api/diagnosis-jobs/{job['job_id']}", headers=shop_headers).status_code == 200
+    )
 
     response = webhook_post(client, "/webhooks/shop_redact", topic="shop/redact")
     assert response.status_code == 200
     assert response.json()["removed_jobs"] == 1
-    assert client.get(f"/api/diagnosis-jobs/{job['job_id']}", headers=HEADERS).status_code == 404
-    listing = client.get("/api/diagnosis-jobs", headers=HEADERS).json()["jobs"]
+    assert (
+        client.get(f"/api/diagnosis-jobs/{job['job_id']}", headers=shop_headers).status_code == 404
+    )
+    listing = client.get("/api/diagnosis-jobs", headers=shop_headers).json()["jobs"]
     assert all(item["job_id"] != job["job_id"] for item in listing)
 
 
 def test_service_key_forwarded_webhook_is_accepted(client):
     job = submit_demo_job(client, shop_domain=SHOP.split(".")[0])
-    wait_for_job(client, job["job_id"])
+    wait_for_job(client, job["job_id"], headers={**HEADERS, "x-shop-domain": SHOP})
     raw = json.dumps(PAYLOAD).encode("utf-8")
     headers = {
         "content-type": "application/json",

@@ -1,7 +1,7 @@
 import { useEffect, useMemo, useState } from "react";
 import type { ActionFunctionArgs, LoaderFunctionArgs } from "@remix-run/node";
 import { json } from "@remix-run/node";
-import { useFetcher, useLoaderData, useNavigate } from "@remix-run/react";
+import { useFetcher, useLoaderData } from "@remix-run/react";
 import {
   Banner,
   BlockStack,
@@ -20,63 +20,47 @@ import { authenticate } from "../shopify.server";
 import { backendFetch, backendErrorMessage, fetchJobs } from "../lib/backend.server";
 import { JOB_ACTIVE, type Job } from "../lib/jobs";
 import { JobStatusBadge } from "../components/JobStatusBadge";
-import { ScoreSnapshot } from "../components/ScoreSnapshot";
-import { CrawlerAccessCard } from "../components/CrawlerAccessCard";
-import { DiagnosisModal } from "../components/DiagnosisModal";
-import { InsightCallouts } from "../components/InsightCallouts";
+import { DiscoverModal } from "../components/DiscoverModal";
+import { DiscoverSummary } from "../components/DiscoverSummary";
+import { OpportunityTable } from "../components/OpportunityTable";
+import { QueryMapList } from "../components/QueryMapList";
 
 export const loader = async ({ request }: LoaderFunctionArgs) => {
   const { session, admin } = await authenticate.admin(request);
 
-  // Primary storefront URL is the default diagnosis target.
+  // Shop name prefills the brand field.
   const shopResponse = await admin.graphql(
     `#graphql
-      query GetShopInfo {
+      query GetShopName {
         shop {
           name
-          myshopifyDomain
-          primaryDomain {
-            url
-          }
         }
       }`,
   );
-  const shopData = (await shopResponse.json()) as {
-    shop?: {
-      name?: string;
-      myshopifyDomain?: string;
-      primaryDomain?: { url?: string } | null;
-    };
-  };
-  const defaultUrl =
-    shopData.shop?.primaryDomain?.url ||
-    (shopData.shop?.myshopifyDomain ? `https://${shopData.shop.myshopifyDomain}` : "");
+  const shopData = (await shopResponse.json()) as { shop?: { name?: string } };
 
-  const { jobs, error } = await fetchJobs(session.shop, "diagnosis-jobs");
+  const { jobs, error } = await fetchJobs(session.shop, "discover-jobs");
 
-  return json({
-    shop: session.shop,
-    shopName: shopData.shop?.name ?? session.shop,
-    defaultUrl,
-    jobs,
-    backendError: error,
-  });
+  return json({ shopName: shopData.shop?.name ?? session.shop, jobs, backendError: error });
 };
 
 export const action = async ({ request }: ActionFunctionArgs) => {
   const { session } = await authenticate.admin(request);
   const form = await request.formData();
 
-  const response = await backendFetch("/api/diagnosis-jobs", {
+  const response = await backendFetch("/api/discover-jobs", {
     method: "POST",
     body: JSON.stringify({
-      target_url: String(form.get("target_url") || ""),
       shop_domain: session.shop,
+      subject: String(form.get("subject") || ""),
+      brand: String(form.get("brand") || ""),
+      seed_queries: String(form.get("seed_queries") || "")
+        .split("\n")
+        .map((line: string) => line.trim())
+        .filter((line: string) => line.length > 0),
       locale: String(form.get("locale") || "en-US"),
-      max_pages: Number(form.get("max_pages") || 10),
-      render_mode: "auto",
-      demo: form.get("demo") === "1",
     }),
+    headers: { "x-shop-domain": session.shop },
   });
 
   if (!response.ok) {
@@ -86,15 +70,13 @@ export const action = async ({ request }: ActionFunctionArgs) => {
   return json({ job: (await response.json()) as Job });
 };
 
-export default function DiagnosisIndex() {
+export default function DiscoverIndex() {
   const fetcher = useFetcher<typeof action>();
   const loaderData = useLoaderData<typeof loader>();
-  const navigate = useNavigate();
 
   const [jobs, setJobs] = useState<Job[]>(loaderData.jobs);
   const [modalOpen, setModalOpen] = useState(false);
 
-  // Adopt a freshly submitted job.
   useEffect(() => {
     const payload = fetcher.data;
     if (payload && "job" in payload && payload.job) {
@@ -109,33 +91,17 @@ export default function DiagnosisIndex() {
     [jobs],
   );
 
-  // Poll active jobs through the authenticated resource route.
   useEffect(() => {
     if (!hasActive) return;
-    let pollFailures = 0;
     const timer = setInterval(async () => {
       const active = jobs.filter((job) => JOB_ACTIVE.has(job.status));
       const updates = await Promise.all(
         active.map((job) =>
-          fetch(`/api/jobs/${job.job_id}`)
+          fetch(`/api/discover-jobs/${job.job_id}`)
             .then((response) => (response.ok ? response.json() : null))
             .catch(() => null),
         ),
       );
-      if (updates.every((update) => update === null)) {
-        pollFailures += 1;
-        if (pollFailures >= 3) {
-          setJobs((prev) =>
-            prev.map((job) =>
-              JOB_ACTIVE.has(job.status)
-                ? { ...job, status: "failed", error: "Polling stopped: job is no longer reachable" }
-                : job,
-            ),
-          );
-        }
-        return;
-      }
-      pollFailures = 0;
       setJobs((prev) =>
         prev.map((job) => {
           const update = updates.find(
@@ -148,42 +114,42 @@ export default function DiagnosisIndex() {
     return () => clearInterval(timer);
   }, [hasActive, jobs]);
 
-  const latestSnapshot = jobs.find((job) => job.status === "succeeded");
+  const latest = jobs.find((job) => job.status === "succeeded");
   const failedJob = jobs.find((job) => job.status === "failed");
   const actionError =
     (fetcher.data && "error" in fetcher.data ? fetcher.data.error : null) ??
     failedJob?.error ??
     null;
 
-  const submitJob = (values: {
-    targetUrl: string;
+  const submitMap = (values: {
+    subject: string;
+    brand: string;
+    seedQueries: string[];
     locale: string;
-    maxPages: number;
-    demo: boolean;
   }) => {
     const formData = new FormData();
-    formData.set("target_url", values.targetUrl);
+    formData.set("subject", values.subject);
+    formData.set("brand", values.brand);
+    formData.set("seed_queries", values.seedQueries.join("\n"));
     formData.set("locale", values.locale);
-    formData.set("max_pages", String(values.maxPages));
-    formData.set("demo", values.demo ? "1" : "0");
     fetcher.submit(formData, { method: "POST" });
     setModalOpen(false);
   };
 
-  const rowMarkup = jobs.map((job, index) => (
+  const historyRows = jobs.map((job, index) => (
     <IndexTable.Row id={job.job_id} key={job.job_id} position={index}>
       <IndexTable.Cell>
-        <Button variant="plain" onClick={() => navigate(`/app/diagnosis/${job.job_id}`)}>
-          {job.target_url}
-          {job.demo ? " (demo)" : ""}
-        </Button>
+        <Text as="span" variant="bodyMd">
+          {job.subject ?? "–"}
+          {job.brand ? ` · ${job.brand}` : ""}
+        </Text>
       </IndexTable.Cell>
       <IndexTable.Cell>
         <JobStatusBadge job={job} />
       </IndexTable.Cell>
       <IndexTable.Cell>
         <Text as="span" variant="bodyMd" numeric>
-          {job.overall_score ?? "–"}
+          {job.query_map?.length ?? "–"}
         </Text>
       </IndexTable.Cell>
       <IndexTable.Cell>
@@ -195,22 +161,20 @@ export default function DiagnosisIndex() {
   ));
 
   return (
-    <Page>
-      <TitleBar title="AI search readiness">
+    <Page backAction={{ content: "Diagnoses", url: "/app" }} title="AI question map">
+      <TitleBar title="AI question map">
         <button variant="primary" onClick={() => setModalOpen(true)}>
-          Run diagnosis
+          New question map
         </button>
-        <button onClick={() => navigate("/app/discover")}>Question map</button>
       </TitleBar>
       <BlockStack gap="500">
         {hasActive && (
-          <Banner tone="info" title="Diagnosis in progress">
-            Your store is being analyzed. Results appear automatically when the run
-            finishes — you can stay on this page.
+          <Banner tone="info" title="Generating question map…">
+            Your questions are being expanded and ranked. Results appear automatically.
           </Banner>
         )}
         {(actionError || loaderData.backendError) && (
-          <Banner tone="warning" title="Last diagnosis did not complete">
+          <Banner tone="warning" title="Last run did not complete">
             {actionError || loaderData.backendError}
           </Banner>
         )}
@@ -219,37 +183,37 @@ export default function DiagnosisIndex() {
             {jobs.length === 0 ? (
               <Card>
                 <EmptyState
-                  heading="Check how AI engines read your store"
+                  heading="Find the questions buyers ask AI"
                   image="https://cdn.shopify.com/s/files/1/0262/4071/2726/files/emptystate-files.png"
                   action={{
-                    content: "Run diagnosis",
+                    content: "New question map",
                     onAction: () => setModalOpen(true),
                   }}
                 >
                   <p>
-                    ChatGPT, Gemini and Perplexity decide from your pages whether to
-                    cite your store. Run your first diagnosis to see your AI search
-                    readiness score.
+                    Expand a few seed questions into a ranked map of AI-search demand, then
+                    turn the top opportunities into content your store can be cited for.
                   </p>
                 </EmptyState>
               </Card>
             ) : (
               <>
-                {latestSnapshot && <ScoreSnapshot job={latestSnapshot} />}
-                {latestSnapshot && <InsightCallouts job={latestSnapshot} />}
+                {latest && <DiscoverSummary job={latest} />}
+                {latest && <OpportunityTable job={latest} />}
+                {latest && <QueryMapList job={latest} />}
                 <Card padding="0">
                   <IndexTable
-                    resourceName={{ singular: "diagnosis", plural: "diagnoses" }}
-                    itemCount={jobs.length}
+                    resourceName={{ singular: "run", plural: "runs" }}
+                    itemCount={historyRows.length}
                     selectable={false}
                     headings={[
-                      { title: "Target" },
+                      { title: "Subject" },
                       { title: "Status" },
-                      { title: "Score", alignment: "end" },
+                      { title: "Questions", alignment: "end" },
                       { title: "Date" },
                     ]}
                   >
-                    {rowMarkup}
+                    {historyRows}
                   </IndexTable>
                 </Card>
               </>
@@ -259,32 +223,38 @@ export default function DiagnosisIndex() {
             <Card>
               <BlockStack gap="300">
                 <Text as="h2" variant="headingMd">
-                  What we score
-                </Text>
-                <Text as="p" variant="bodyMd" tone="subdued">
-                  Eight dimensions of AI-search readiness, from crawler access to
-                  citation-ready evidence. Every finding links back to the page it
-                  came from — nothing is guessed.
+                  How to use this map
                 </Text>
                 <List>
-                  <List.Item>AI crawler access &amp; discoverability</List.Item>
-                  <List.Item>Citation-ready evidence on product pages</List.Item>
-                  <List.Item>Answerability of common buyer questions</List.Item>
-                  <List.Item>Entity clarity across your storefront</List.Item>
-                  <List.Item>Structured data &amp; extractability</List.Item>
+                  <List.Item>
+                    Start from what buyers actually type into ChatGPT or Perplexity —
+                    your seed questions anchor the map.
+                  </List.Item>
+                  <List.Item>
+                    Work the opportunities top-down: each one names the asset type
+                    (FAQ, comparison, article) with the highest demand.
+                  </List.Item>
+                  <List.Item>
+                    Then run a diagnosis to check whether your store already answers
+                    these questions.
+                  </List.Item>
                 </List>
+                <InlineStack gap="200">
+                  <Button url="/app" variant="plain">
+                    Run a diagnosis
+                  </Button>
+                </InlineStack>
               </BlockStack>
             </Card>
-            {latestSnapshot && <CrawlerAccessCard job={latestSnapshot} />}
           </Layout.Section>
         </Layout>
       </BlockStack>
-      <DiagnosisModal
+      <DiscoverModal
         open={modalOpen}
-        defaultUrl={loaderData.defaultUrl}
+        defaultBrand={loaderData.shopName}
         submitting={fetcher.state !== "idle"}
         onClose={() => setModalOpen(false)}
-        onSubmit={submitJob}
+        onSubmit={submitMap}
       />
     </Page>
   );

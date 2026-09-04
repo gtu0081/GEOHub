@@ -4,6 +4,7 @@ import html
 from pathlib import Path
 
 from fastapi import Depends, FastAPI, HTTPException, Query, Request
+from fastapi.exceptions import RequestValidationError
 from fastapi.responses import FileResponse, HTMLResponse, JSONResponse, RedirectResponse
 from pydantic import BaseModel, Field
 
@@ -23,6 +24,14 @@ class JobSpecIn(BaseModel):
     demo: bool = False
 
 
+class DiscoverSpecIn(BaseModel):
+    shop_domain: str | None = Field(default=None, max_length=255)
+    subject: str = Field(min_length=1, max_length=300)
+    brand: str = Field(default="", max_length=300)
+    seed_queries: list[str] = Field(min_length=1, max_length=20)
+    locale: str = "en-US"
+
+
 def create_app(settings: Settings | None = None) -> FastAPI:
     settings = settings or settings_from_env()
     app = FastAPI(title="GEOHub Shopify backend", version=__version__ or "0.1.0")
@@ -33,6 +42,20 @@ def create_app(settings: Settings | None = None) -> FastAPI:
         max_workers=settings.max_workers,
     )
     app.include_router(webhooks_router)
+
+    @app.exception_handler(RequestValidationError)
+    async def _plain_validation_error(request: Request, exc: RequestValidationError):
+        # Return a string detail: array details crash the React Banner renderer.
+        messages = []
+        for error in exc.errors():
+            loc = ".".join(str(part) for part in error.get("loc", []) if part != "body")
+            message = str(error.get("msg", "invalid input"))
+            messages.append(f"{loc}: {message}" if loc else message)
+        return JSONResponse(status_code=422, content={"detail": "; ".join(messages)})
+
+    @app.on_event("shutdown")
+    def _shutdown_job_manager() -> None:
+        app.state.job_manager.shutdown()
 
     def require_identity(request: Request) -> Identity:
         header = request.headers.get("authorization", "")
@@ -56,6 +79,42 @@ def create_app(settings: Settings | None = None) -> FastAPI:
             return Identity(principal="dev", kind="dev")
         raise HTTPException(status_code=401, detail="missing or invalid credentials")
 
+    def authorize_job(request: Request, identity: Identity, job) -> None:
+        """Single-job endpoints must not leak data across shops (IDOR guard)."""
+        if identity.kind == "session":
+            if job.shop_domain != identity.principal:
+                raise HTTPException(status_code=404, detail="job not found")
+            return
+        if identity.kind == "service":
+            # The Remix proxy must forward the authenticated session's shop.
+            shop = (request.headers.get("x-shop-domain") or "").strip().lower()
+            if not shop:
+                raise HTTPException(status_code=403, detail="x-shop-domain header is required")
+            if job.shop_domain != shop:
+                raise HTTPException(status_code=404, detail="job not found")
+            return
+        # dev identity: dev mode only, no cross-shop isolation
+        return
+
+    def bind_shop(request: Request, identity: Identity, payload_shop: object) -> str | None:
+        """Create endpoints never trust the body's shop_domain (tenant binding)."""
+        if identity.kind == "session":
+            return identity.principal
+        if identity.kind == "service":
+            header_shop = (request.headers.get("x-shop-domain") or "").strip().lower()
+            if not header_shop:
+                raise HTTPException(status_code=403, detail="x-shop-domain header is required")
+            declared = str(payload_shop or "").strip().lower()
+            if declared and "." not in declared:
+                declared = f"{declared}.myshopify.com"
+            if declared and declared != header_shop:
+                raise HTTPException(
+                    status_code=403,
+                    detail="shop_domain does not match the authenticated shop",
+                )
+            return header_shop
+        return None  # dev identity
+
     @app.get("/api/health")
     def health() -> dict:
         return {
@@ -67,17 +126,14 @@ def create_app(settings: Settings | None = None) -> FastAPI:
         }
 
     @app.post("/api/diagnosis-jobs", status_code=202)
-    def create_job(spec: JobSpecIn, identity: Identity = Depends(require_identity)) -> dict:
+    def create_job(
+        spec: JobSpecIn, request: Request, identity: Identity = Depends(require_identity)
+    ) -> dict:
         try:
-            shop_domain = spec.shop_domain
-            if shop_domain:
-                shop_domain = shop_domain.strip().lower()
-                if "." not in shop_domain:
-                    shop_domain = f"{shop_domain}.myshopify.com"
             job = app.state.job_manager.submit(
                 JobSpec(
                     target_url=spec.target_url.strip(),
-                    shop_domain=shop_domain,
+                    shop_domain=bind_shop(request, identity, spec.shop_domain),
                     locale=spec.locale,
                     max_pages=spec.max_pages,
                     render_mode=spec.render_mode,
@@ -90,22 +146,40 @@ def create_app(settings: Settings | None = None) -> FastAPI:
 
     @app.get("/api/diagnosis-jobs")
     def list_jobs(
+        request: Request,
         shop_domain: str | None = Query(default=None),
         limit: int = Query(default=50, ge=1, le=200),
         identity: Identity = Depends(require_identity),
     ) -> dict:
-        jobs = app.state.job_manager.list(shop_domain=shop_domain, limit=limit)
+        # List results are always scoped to one shop; no cross-shop enumeration.
+        if identity.kind == "session":
+            if shop_domain and shop_domain != identity.principal:
+                raise HTTPException(status_code=403, detail="cannot list another shop's jobs")
+            shop_domain = identity.principal
+        elif identity.kind == "service":
+            header_shop = (request.headers.get("x-shop-domain") or "").strip().lower()
+            if not header_shop:
+                raise HTTPException(status_code=403, detail="x-shop-domain header is required")
+            if shop_domain and shop_domain != header_shop:
+                raise HTTPException(status_code=403, detail="cannot list another shop's jobs")
+            shop_domain = header_shop
+        jobs = app.state.job_manager.list(shop_domain=shop_domain, limit=limit, kind="diagnosis")
         return {"jobs": [job.to_public_dict() for job in jobs]}
 
     @app.get("/api/diagnosis-jobs/{job_id}")
-    def get_job(job_id: str, identity: Identity = Depends(require_identity)) -> dict:
+    def get_job(job_id: str, request: Request, identity: Identity = Depends(require_identity)) -> dict:
         job = app.state.job_manager.get(job_id)
         if job is None:
             raise HTTPException(status_code=404, detail="job not found")
+        authorize_job(request, identity, job)
         return job.to_public_dict()
 
     @app.get("/api/diagnosis-jobs/{job_id}/report")
-    def get_report(job_id: str, identity: Identity = Depends(require_identity)) -> FileResponse:
+    def get_report(job_id: str, request: Request, identity: Identity = Depends(require_identity)) -> FileResponse:
+        job = app.state.job_manager.get(job_id)
+        if job is None:
+            raise HTTPException(status_code=404, detail="report is not available")
+        authorize_job(request, identity, job)
         report = app.state.job_manager.report_path(job_id)
         if report is None:
             raise HTTPException(status_code=404, detail="report is not available")
@@ -113,12 +187,205 @@ def create_app(settings: Settings | None = None) -> FastAPI:
 
     @app.get("/api/diagnosis-jobs/{job_id}/artifacts/{name}")
     def get_artifact(
-        job_id: str, name: str, identity: Identity = Depends(require_identity)
+        job_id: str, name: str, request: Request, identity: Identity = Depends(require_identity)
     ) -> FileResponse:
+        job = app.state.job_manager.get(job_id)
+        if job is None:
+            raise HTTPException(status_code=404, detail="artifact is not available")
+        authorize_job(request, identity, job)
         artifact = app.state.job_manager.artifact_path(job_id, name)
         if artifact is None:
             raise HTTPException(status_code=404, detail="artifact is not available")
-        return FileResponse(artifact, media_type="application/json")
+        media = "text/markdown; charset=utf-8" if name.endswith(".md") else "application/json"
+        return FileResponse(artifact, media_type=media)
+
+    @app.post("/api/discover-jobs", status_code=202)
+    def create_discover_job(
+        spec: DiscoverSpecIn, request: Request, identity: Identity = Depends(require_identity)
+    ) -> dict:
+        try:
+            job = app.state.job_manager.submit(
+                JobSpec(
+                    kind="discover",
+                    subject=spec.subject.strip(),
+                    brand=spec.brand.strip(),
+                    seed_queries=tuple(q.strip() for q in spec.seed_queries if q.strip()),
+                    locale=spec.locale,
+                    shop_domain=bind_shop(request, identity, spec.shop_domain),
+                )
+            )
+        except JobError as exc:
+            raise HTTPException(status_code=422, detail=str(exc)) from exc
+        return job.to_public_dict()
+
+    @app.get("/api/discover-jobs")
+    def list_discover_jobs(
+        request: Request,
+        shop_domain: str | None = Query(default=None),
+        limit: int = Query(default=50, ge=1, le=200),
+        identity: Identity = Depends(require_identity),
+    ) -> dict:
+        if identity.kind == "session":
+            if shop_domain and shop_domain != identity.principal:
+                raise HTTPException(status_code=403, detail="cannot list another shop's jobs")
+            shop_domain = identity.principal
+        elif identity.kind == "service":
+            header_shop = (request.headers.get("x-shop-domain") or "").strip().lower()
+            if not header_shop:
+                raise HTTPException(status_code=403, detail="x-shop-domain header is required")
+            if shop_domain and shop_domain != header_shop:
+                raise HTTPException(status_code=403, detail="cannot list another shop's jobs")
+            shop_domain = header_shop
+        jobs = app.state.job_manager.list(shop_domain=shop_domain, limit=limit, kind="discover")
+        return {"jobs": [job.to_public_dict() for job in jobs]}
+
+    @app.get("/api/discover-jobs/{job_id}")
+    def get_discover_job(
+        job_id: str, request: Request, identity: Identity = Depends(require_identity)
+    ) -> dict:
+        job = app.state.job_manager.get(job_id)
+        if job is None:
+            raise HTTPException(status_code=404, detail="job not found")
+        authorize_job(request, identity, job)
+        return job.to_public_dict()
+
+    # -- generic registry for the remaining skill endpoints ----------------
+
+    def str_field(payload: dict, key: str, *, max_length: int = 5000, default: str = "") -> str:
+        """Type- and length-safe string extraction for raw skill payloads."""
+        value = payload.get(key, default)
+        if value is None:
+            value = default
+        if isinstance(value, bool) or not isinstance(value, str):
+            raise JobError(f"{key} must be a string")
+        if len(value) > max_length:
+            raise JobError(f"{key} exceeds {max_length} characters")
+        return value
+
+    def register_kind_endpoints(prefix: str, kind: str, build_spec) -> None:
+        """Create the POST/list/get triplet for one skill, shop-scoped."""
+
+        @app.post(f"/api/{prefix}", status_code=202, name=f"create_{kind}")
+        def create_skill_job(
+            request: Request, payload: dict, identity: Identity = Depends(require_identity)
+        ) -> dict:
+            if not isinstance(payload, dict):
+                raise HTTPException(status_code=422, detail="request body must be a JSON object")
+            try:
+                job = app.state.job_manager.submit(build_spec(payload, bind_shop(request, identity, payload.get("shop_domain"))))
+            except JobError as exc:
+                raise HTTPException(status_code=422, detail=str(exc)) from exc
+            return job.to_public_dict()
+
+        @app.get(f"/api/{prefix}", name=f"list_{kind}")
+        def list_skill_jobs(
+            request: Request,
+            shop_domain: str | None = Query(default=None),
+            limit: int = Query(default=50, ge=1, le=200),
+            identity: Identity = Depends(require_identity),
+        ) -> dict:
+            if identity.kind == "session":
+                if shop_domain and shop_domain != identity.principal:
+                    raise HTTPException(status_code=403, detail="cannot list another shop's jobs")
+                shop_domain = identity.principal
+            elif identity.kind == "service":
+                header_shop = (request.headers.get("x-shop-domain") or "").strip().lower()
+                if not header_shop:
+                    raise HTTPException(status_code=403, detail="x-shop-domain header is required")
+                if shop_domain and shop_domain != header_shop:
+                    raise HTTPException(status_code=403, detail="cannot list another shop's jobs")
+                shop_domain = header_shop
+            jobs = app.state.job_manager.list(shop_domain=shop_domain, limit=limit, kind=kind)
+            return {"jobs": [job.to_public_dict() for job in jobs]}
+
+        @app.get(f"/api/{prefix}/{{job_id}}", name=f"get_{kind}")
+        def get_skill_job(
+            job_id: str, request: Request, identity: Identity = Depends(require_identity)
+        ) -> dict:
+            job = app.state.job_manager.get(job_id)
+            if job is None:
+                raise HTTPException(status_code=404, detail="job not found")
+            authorize_job(request, identity, job)
+            return job.to_public_dict()
+
+    def clean_observations(payload: dict) -> tuple[dict, ...]:
+        raw = payload.get("observations")
+        if not isinstance(raw, list):
+            raise JobError("observations must be an array")
+        cleaned = []
+        for index, item in enumerate(raw):
+            if not isinstance(item, dict):
+                raise JobError(f"observations[{index}] must be an object")
+            cleaned.append(
+                {
+                    "query_id": str_field(item, "query_id", max_length=200),
+                    "answered": bool(item.get("answered", True)),
+                    "cited": item.get("cited"),
+                    "collected_at": item.get("collected_at"),
+                }
+            )
+        return tuple(cleaned)
+
+    register_kind_endpoints(
+        "content-jobs", "content",
+        lambda p, shop: JobSpec(
+            kind="content",
+            shop_domain=shop,
+            mode=str_field(p, "mode", max_length=50),
+            topic=str_field(p, "topic", max_length=1000),
+            audience=str_field(p, "audience", max_length=300),
+            brand=str_field(p, "brand", max_length=300),
+            source_content=str_field(p, "source_content", max_length=100000),
+            locale=str_field(p, "locale", max_length=10, default="en-US"),
+        ),
+    )
+    register_kind_endpoints(
+        "measure-jobs", "measure",
+        lambda p, shop: JobSpec(
+            kind="measure",
+            shop_domain=shop,
+            subject=str_field(p, "subject", max_length=500),
+            brand=str_field(p, "brand", max_length=300),
+            engine=str_field(p, "engine", max_length=100),
+            observations=clean_observations(p),
+            locale=str_field(p, "locale", max_length=10, default="en-US"),
+        ),
+    )
+    register_kind_endpoints(
+        "knowledge-jobs", "knowledge",
+        lambda p, shop: JobSpec(
+            kind="knowledge",
+            shop_domain=shop or "",
+            brand=str_field(p, "brand", max_length=300),
+            locale=str_field(p, "locale", max_length=10, default="en-US"),
+        ),
+    )
+    register_kind_endpoints(
+        "compare-jobs", "compare",
+        lambda p, shop: JobSpec(
+            kind="compare",
+            shop_domain=shop,
+            my_url=str_field(p, "my_url", max_length=2048),
+            competitor_urls=tuple(
+                url.strip() for url in (
+                    p.get("competitor_urls") if isinstance(p.get("competitor_urls"), list) else []
+                ) if isinstance(url, str) and url.strip()
+            ),
+            locale=str_field(p, "locale", max_length=10, default="en-US"),
+        ),
+    )
+
+    @app.get("/api/retention")
+    def retention_preview(identity: Identity = Depends(require_identity)) -> dict:
+        if identity.kind not in ("service", "dev"):
+            raise HTTPException(status_code=403, detail="service credentials required")
+        return app.state.job_manager.retention_sweep(confirm=False)
+
+    @app.post("/api/retention/apply")
+    def retention_apply(identity: Identity = Depends(require_identity)) -> dict:
+        if identity.kind not in ("service", "dev"):
+            raise HTTPException(status_code=403, detail="service credentials required")
+        return app.state.job_manager.retention_sweep(confirm=True)
 
     @app.get("/", include_in_schema=False)
     def index() -> RedirectResponse:

@@ -1,46 +1,51 @@
 # This file stores configurations for your Shopify app.
 
 name = "GEOHub AI Search Readiness"
-client_id = ""
+client_id = "28ffa67db2c5e10df094fed324b58fe4"
+application_url = "https://example.com"
+embedded = true
+
+[build]
+automatically_update_urls_on_dev = true
+dev_store_url = "jie-dev.myshopify.com"
+# Keep the placeholder application_url out of the cloud: `shopify app deploy`
+# would otherwise push it and break OAuth. URLs are updated by `app dev`
+# (tunnel) or managed in the Dev Dashboard for releases.
+include_config_on_deploy = false
 
 [access_scopes]
 # Learn more at https://shopify.dev/docs/apps/tools/cli/configuration#access_scopes
 # Phase 0 only reads shop metadata for the default diagnosis target.
 scopes = "read_products"
+use_legacy_install_flow = false
+
+[auth]
+redirect_urls = [
+  "https://example.com/auth/callback",
+  "https://example.com/auth/shopify/callback",
+]
 
 [webhooks]
 api_version = "2024-10"
 
   # Handled by: /app/routes/webhooks.app.uninstalled.tsx
   [[webhooks.subscriptions]]
-  uri = "/webhooks/app/uninstalled"
   topics = ["app/uninstalled"]
+  uri = "/webhooks/app/uninstalled"
 
   # Handled by: /app/routes/webhooks.app.scopes_update.tsx
   [[webhooks.subscriptions]]
-  topics = [ "app/scopes_update" ]
+  topics = ["app/scopes_update"]
   uri = "/webhooks/app/scopes_update"
 
-  # Webhooks can have filters
-  # Only receive webhooks for product updates with a product price >= 10.00
-  # See: https://shopify.dev/docs/apps/build/webhooks/customize/filters
-  # [[webhooks.subscriptions]]
-  # topics = ["products/update"]
-  # uri = "/webhooks/products/update"
-  # filter = "variants.price:>=10.00"
+# Mandatory compliance webhooks for public apps.
+# Each route verifies Shopify's HMAC, then forwards to the GEOHub backend,
+# which deletes the shop's diagnosis data (see shopify-app/backend).
+# See: https://shopify.dev/docs/apps/build/privacy-law-compliance
+[webhooks.privacy_compliance]
+customers_data_request_url = "/webhooks/customers/data_request"
+customers_redact_url = "/webhooks/customers/redact"
+shop_redact_url = "/webhooks/shop/redact"
 
-  # Mandatory compliance webhooks for public apps.
-  # Each route verifies Shopify's HMAC, then forwards to the GEOHub backend,
-  # which deletes the shop's diagnosis data (see shopify-app/backend).
-  # See: https://shopify.dev/docs/apps/build/privacy-law-compliance
-  [[webhooks.subscriptions]]
-  uri = "/webhooks/customers/data_request"
-  compliance_topics = ["customers/data_request"]
-
-  [[webhooks.subscriptions]]
-  uri = "/webhooks/customers/redact"
-  compliance_topics = ["customers/redact"]
-
-  [[webhooks.subscriptions]]
-  uri = "/webhooks/shop/redact"
-  compliance_topics = ["shop/redact"]
+[pos]
+embedded = false

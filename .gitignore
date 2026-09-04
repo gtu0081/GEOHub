@@ -16,6 +16,7 @@ shopify-app/.npm-cache/
 shopify-app/frontend/node_modules/
 shopify-app/frontend/build/
 shopify-app/frontend/.env
+shopify-app/backend/.env
 shopify-app/frontend/.env.*
 !shopify-app/frontend/.env.example
 .shopify/

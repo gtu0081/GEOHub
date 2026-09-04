@@ -2,19 +2,17 @@ import type { LoaderFunctionArgs } from "@remix-run/node";
 import { authenticate } from "../shopify.server";
 import { backendFetch } from "../lib/backend.server";
 
+// Polling proxy for discover jobs, scoped to the session's shop.
 export const loader = async ({ request, params }: LoaderFunctionArgs) => {
   const { session } = await authenticate.admin(request);
   const response = await backendFetch(
-    `/api/diagnosis-jobs/${encodeURIComponent(params.jobId || "")}/report`,
+    `/api/discover-jobs/${encodeURIComponent(params.jobId || "")}`,
     {
       headers: { "x-shop-domain": session.shop },
     },
   );
-  if (!response.ok) {
-    return new Response("Report is not available yet.", { status: response.status });
-  }
   return new Response(response.body, {
-    status: 200,
-    headers: { "content-type": "text/html; charset=utf-8" },
+    status: response.status,
+    headers: { "content-type": "application/json" },
   });
 };

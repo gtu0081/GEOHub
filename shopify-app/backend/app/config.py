@@ -14,6 +14,25 @@ def _flag(name: str) -> bool:
     return os.environ.get(name, "").strip().lower() in {"1", "true", "yes", "on"}
 
 
+def load_dotenv(path: Path | None = None) -> None:
+    """Minimal KEY=VALUE loader for a local .env (no external dependency).
+
+    Existing environment variables always win; the file only fills gaps.
+    """
+    candidate = path or (Path(__file__).resolve().parents[1] / ".env")
+    if not candidate.is_file():
+        return
+    for line in candidate.read_text(encoding="utf-8").splitlines():
+        line = line.strip()
+        if not line or line.startswith("#") or "=" not in line:
+            continue
+        key, _, value = line.partition("=")
+        key = key.strip()
+        value = value.strip().strip('"').strip("'")
+        if key and key not in os.environ:
+            os.environ[key] = value
+
+
 @dataclass(frozen=True)
 class Settings:
     shopify_api_key: str | None
@@ -34,6 +53,7 @@ class Settings:
 
 
 def settings_from_env() -> Settings:
+    load_dotenv()
     data_root = Path(
         os.environ.get("GEOHUB_APP_DATA_ROOT", str(SHOPIFY_APP_ROOT / "data"))
     ).resolve()
